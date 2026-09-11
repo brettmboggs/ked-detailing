@@ -4,7 +4,11 @@ import { business } from '../data/site';
 import { withBase } from '../lib/url';
 
 /**
- * Client approval page. Staging only — it is how Jacob first sees the rebuild.
+ * Delivery page. Staging only — it is how the finished rebuild is handed over.
+ *
+ * Deliberately not framed as an approval request. The work is done; what is
+ * left is a handful of facts only Jacob can confirm and one action only he can
+ * take. Asking him to sign off invites him to redesign it.
  *
  * Deleted at cutover along with the rest of the staging copy; the guard below
  * means it renders as a pointer home if it ever ships to the live domain.
@@ -67,8 +71,8 @@ const decisions = [
 ---
 
 <Base
-  title="Your new site | Knock Em' Down Detailing"
-  description="A first look at the rebuilt Knock Em' Down Detailing site."
+  title="Knock Em' Down Detailing — rebuilt"
+  description="The rebuilt Knock Em' Down Detailing site, and the one thing left before it goes live."
 >
   {
     !isStaging ? (
@@ -97,14 +101,14 @@ const decisions = [
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/40 to-ink-950/50" />
 
           <div class="relative z-10 mx-auto flex min-h-[86svh] max-w-[105rem] flex-col justify-end px-5 pb-12 pt-28 sm:px-8">
-            <p class="eyebrow mb-6">Jacob — a first look</p>
+            <p class="eyebrow mb-6">Jacob — it's built</p>
             <h1 class="text-bone-50">
-              <span class="approve-hero block">Your new</span>
-              <span class="approve-hero block text-gold-500">site.</span>
+              <span class="launch-hero block">Knock Em Down,</span>
+              <span class="launch-hero block text-gold-500">rebuilt.</span>
             </h1>
             <p class="mt-7 max-w-lg text-base leading-relaxed text-bone-200 lg:text-lg">
-              Built from your own photos and footage. Have a look, then tell me what you want
-              changed. Nothing goes live until you say so.
+              Off the Squarespace template and onto something that sells the work — built from your
+              own photos and footage. Below is what changed, and the one thing left on your side.
             </p>
             <div class="mt-9 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <a href={withBase('/')} class="btn-gold w-full sm:w-auto">
@@ -113,7 +117,7 @@ const decisions = [
                   <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
                 </svg>
               </a>
-              <a href="#decisions" class="btn-ghost w-full sm:w-auto">What I need from you</a>
+              <a href="#confirm" class="btn-ghost w-full sm:w-auto">What is left</a>
             </div>
           </div>
         </section>
@@ -147,18 +151,19 @@ const decisions = [
         </section>
 
         {/* ----------------------------------------------------- decisions */}
-        <section id="decisions" class="border-y border-ink-800 bg-ink-900 py-20 lg:py-28">
+        <section id="confirm" class="border-y border-ink-800 bg-ink-900 py-20 lg:py-28">
           <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
             <div class="rise mb-4 flex items-center gap-4">
               <span class="h-px w-10 bg-gold-500" />
-              <p class="eyebrow">Six quick calls</p>
+              <p class="eyebrow">Six facts to confirm</p>
             </div>
             <h2 class="display-lg rise mb-4 max-w-3xl text-bone-50" data-delay="0.06">
-              Only you can<br /><span class="text-gold-500">answer these.</span>
+Things I could not<br /><span class="text-gold-500">check myself.</span>
             </h2>
             <p class="rise mb-10 max-w-xl text-bone-400" data-delay="0.12">
-              Tick them off as you go — this page remembers on your phone. None of them block
-              anything, they just make the site more accurate.
+              Each one is a claim about your business that only you can verify. Confirm it or
+              correct it and the site gets updated. Tick them off as you go — this page remembers
+              on your phone.
             </p>
 
             <ul data-stagger class="space-y-px overflow-hidden border border-ink-800 bg-ink-800">
@@ -245,19 +250,22 @@ const decisions = [
             </div>
 
             <div class="rise mt-12 border-t border-ink-800 pt-10">
-              <p class="display-sm text-bone-50">Tell Brett what you think.</p>
+              <p class="display-sm text-bone-50">Anything factually wrong, send it over.</p>
               <p class="mt-3 max-w-lg text-sm leading-relaxed text-bone-400">
-                Anything at all — a word that is wrong, a photo you hate, a service missing. Easier
-                to change now than later.
+                A service described wrong, a car named wrong, a price that is not right. Those get
+                fixed the same day.
               </p>
               <div class="mt-7 flex flex-wrap gap-3">
                 <a href={withBase('/')} class="btn-gold">Open the site</a>
-                <a href={`mailto:brettmboggs@gmail.com?subject=${encodeURIComponent("The new KED site")}`} class="btn-ghost">
-                  Email Brett
+                <a
+                  href={`mailto:brettmboggs@gmail.com?subject=${encodeURIComponent('Knock Em Down — the new site')}`}
+                  class="btn-ghost"
+                >
+                  Send Brett a note
                 </a>
               </div>
               <p class="mt-8 text-xs text-bone-500">
-                Preview only, hidden from Google. {business.legalName}.
+Staged here until the domain moves across. Hidden from search. {business.legalName}.
               </p>
             </div>
           </div>
@@ -268,7 +276,7 @@ const decisions = [
 </Base>
 
 <style>
-  .approve-hero {
+  .launch-hero {
     font-family: var(--font-display);
     font-variation-settings: 'wdth' 74, 'wght' 850;
     font-size: clamp(3.2rem, 17vw, 11rem);
@@ -298,7 +306,7 @@ const decisions = [
 
   // Remember the ticked questions on his own device. No account, no backend —
   // he is reading this on a phone and will not do it in one sitting.
-  const KEY = 'ked-approve-checks';
+  const KEY = 'ked-launch-checks';
   const boxes = document.querySelectorAll<HTMLInputElement>('[data-check]');
   let saved: number[] = [];
   try {
