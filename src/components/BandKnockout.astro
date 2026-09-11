@@ -4,11 +4,18 @@ import { band, business } from '../data/site';
 /**
  * Type-knockout band.
  *
- * A solid panel in the page colour is painted over the clip, with the brand
- * name punched out of it, so the footage only shows inside the letterforms.
- * `textLength` pins each line to the viewBox width, which means the lockup
- * fills the band identically whether or not the webfont has landed yet.
+ * A solid panel in the page colour is painted over the clip with the brand name
+ * punched out of it, so the footage only shows inside the letterforms.
+ * `textLength` pins each line to the viewBox width, so the lockup fills the band
+ * identically whether or not the webfont has landed.
+ *
+ * On scroll the letters topple like pins — see the script at the foot of the
+ * file. The two <text> lines below are the readable, no-JS state; the script
+ * replaces them with per-letter copies only once it can measure them exactly.
  */
+
+const LINES = ['KNOCK EM', 'DOWN'];
+const BASELINES = [146, 300];
 ---
 
 <section class="relative overflow-hidden bg-ink-950 py-16 lg:py-24" aria-labelledby="band-heading">
@@ -31,36 +38,33 @@ import { band, business } from '../data/site';
 
       <!-- The panel: opaque everywhere except the letters. -->
       <svg
+        data-knockout
         viewBox="0 0 1000 322"
         class="relative block w-full"
         role="presentation"
         aria-hidden="true"
       >
         <defs>
-          <mask id="ked-knockout">
+          <mask id="ked-knockout" data-knockout-mask>
             <rect width="1000" height="322" fill="white" />
-            <text
-              x="0"
-              y="146"
-              textLength="1000"
-              lengthAdjust="spacingAndGlyphs"
-              fill="black"
-              font-family="Archivo, system-ui, sans-serif"
-              font-size="168"
-              font-weight="900"
-              style="font-variation-settings:'wdth' 70,'wght' 900"
-            >KNOCK EM</text>
-            <text
-              x="0"
-              y="300"
-              textLength="1000"
-              lengthAdjust="spacingAndGlyphs"
-              fill="black"
-              font-family="Archivo, system-ui, sans-serif"
-              font-size="168"
-              font-weight="900"
-              style="font-variation-settings:'wdth' 70,'wght' 900"
-            >DOWN</text>
+            {
+              LINES.map((line, i) => (
+                <text
+                  data-knockout-line={i}
+                  x="0"
+                  y={BASELINES[i]}
+                  textLength="1000"
+                  lengthAdjust="spacingAndGlyphs"
+                  fill="black"
+                  font-family="Archivo, system-ui, sans-serif"
+                  font-size="168"
+                  font-weight="900"
+                  style="font-variation-settings:'wdth' 70,'wght' 900"
+                >
+                  {line}
+                </text>
+              ))
+            }
           </mask>
         </defs>
         <rect width="1000" height="322" fill="#07080a" mask="url(#ked-knockout)" />
@@ -91,15 +95,25 @@ import { band, business } from '../data/site';
 </section>
 
 <script>
+  import gsap from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const section = document.querySelector<HTMLElement>('#band-heading')?.closest('section');
+  const svg = document.querySelector<SVGSVGElement>('[data-knockout]');
+  const mask = document.querySelector<SVGElement>('[data-knockout-mask]');
   const video = document.querySelector<HTMLVideoElement>('[data-band-video]');
 
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* -------------------------------------------------- video ---------------- */
+
   if (video) {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const conn = (navigator as any).connection;
     const thrifty = Boolean(conn?.saveData) || /2g/.test(conn?.effectiveType ?? '');
 
     if (!reduced && !thrifty) {
-      // Same file as the hero, so this is a cache hit rather than a second download.
+      // Small, separate clip — only fetched when the band is close to view.
       const io = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -114,4 +128,106 @@ import { band, business } from '../data/site';
       io.observe(video);
     }
   }
+
+  /* ------------------------------------------------ the topple ------------- */
+
+  type Pin = { el: SVGTextElement; x: number; y: number; dir: 1 | -1 };
+
+  /**
+   * Rebuild each line as one <text> per character, positioned from the laid-out
+   * original. Measuring the original matters because `lengthAdjust` stretches
+   * the glyphs to fill the band — a naively re-typeset letter would be the
+   * wrong width. Each copy carries its own textLength equal to the advance it
+   * occupied in the stretched line, which reproduces it exactly.
+   */
+  function explode(): Pin[] {
+    if (!mask) return [];
+    const pins: Pin[] = [];
+    const lines = Array.from(mask.querySelectorAll<SVGTextElement>('[data-knockout-line]'));
+
+    for (const line of lines) {
+      const text = line.textContent ?? '';
+      const total = line.getNumberOfChars();
+
+      for (let i = 0; i < total; i++) {
+        const ch = text[i];
+        if (!ch || ch === ' ') continue;
+
+        const start = line.getStartPositionOfChar(i);
+        const advance =
+          i < total - 1
+            ? line.getStartPositionOfChar(i + 1).x - start.x
+            : line.getEndPositionOfChar(i).x - start.x;
+
+        const glyph = document.createElementNS(SVG_NS, 'text') as SVGTextElement;
+        glyph.setAttribute('x', String(start.x));
+        glyph.setAttribute('y', String(start.y));
+        glyph.setAttribute('textLength', String(Math.max(advance, 1)));
+        glyph.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+        glyph.setAttribute('fill', 'black');
+        glyph.setAttribute('font-family', 'Archivo, system-ui, sans-serif');
+        glyph.setAttribute('font-size', '168');
+        glyph.setAttribute('font-weight', '900');
+        glyph.style.fontVariationSettings = "'wdth' 70,'wght' 900";
+        glyph.textContent = ch;
+        mask.appendChild(glyph);
+
+        // Letters near the right edge fall left, so nothing topples out of frame.
+        pins.push({ el: glyph, x: start.x, y: start.y, dir: start.x > 760 ? -1 : 1 });
+      }
+
+      line.setAttribute('visibility', 'hidden');
+    }
+
+    return pins;
+  }
+
+  async function init() {
+    if (!section || !svg || !mask || reduced) return;
+
+    // getStartPositionOfChar only reports the real layout once the face is in.
+    try {
+      await (document as any).fonts?.ready;
+    } catch {
+      /* older browsers just measure with the fallback face */
+    }
+
+    let pins: Pin[] = [];
+    try {
+      pins = explode();
+    } catch {
+      return; // leave the readable two-line version in place
+    }
+    if (!pins.length) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Upright while the band is being read, toppling as it leaves.
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: 'center 62%',
+        end: 'bottom 12%',
+        scrub: 0.8,
+      },
+    });
+
+    pins.forEach((pin, i) => {
+      // A little variance so it reads as knocked over, not as a rigid sweep.
+      const angle = pin.dir * (74 + ((i * 37) % 17));
+      tl.to(
+        pin.el,
+        {
+          rotation: angle,
+          y: 10 + ((i * 13) % 9),
+          svgOrigin: `${pin.x} ${pin.y}`,
+          ease: 'power2.in',
+          duration: 1,
+        },
+        i * 0.11,
+      );
+    });
+  }
+
+  init();
 </script>
