@@ -141,7 +141,7 @@ const numeral = (level: string) => level.replace('Level ', '');
                 {/* Media sits in the layout and wipes open with the panel. */}
                 <figure
                   data-panel-media
-                  class="relative overflow-hidden bg-ink-850 lg:col-span-5"
+                  class="relative aspect-[16/10] overflow-hidden bg-ink-850 lg:col-span-5 lg:aspect-auto lg:min-h-[16rem]"
                   style="clip-path: inset(0 0 0 100%)"
                 >
                   <Image
@@ -150,7 +150,7 @@ const numeral = (level: string) => level.replace('Level ', '');
                     widths={[520, 900, 1200]}
                     sizes="(min-width: 1024px) 40vw, 92vw"
                     loading="eager"
-                    class="aspect-[16/10] w-full scale-[1.08] object-cover lg:aspect-[16/9]"
+                    class="absolute inset-0 h-full w-full scale-[1.08] object-cover"
                   />
                   <figcaption
                     class="absolute bottom-0 left-0 bg-ink-950/85 px-4 py-2.5 font-display text-[0.65rem] uppercase tracking-[0.2em] text-gold-500 backdrop-blur-sm"

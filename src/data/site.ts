@@ -170,7 +170,7 @@ export const services: Service[] = [
       'Six-month paint protectant',
     ],
     closer: 'For drivers who want depth and reflection back, not just clean.',
-    photo: 'escalade-v.jpg',
+    photo: 'gwagon-estate.jpg',
   },
 ];
 
@@ -332,7 +332,7 @@ export const gallery: GalleryItem[] = [
     src: 'foam-panamera.jpg',
     alt: 'White Porsche Panamera buried under thick foam during a contact wash',
   },
-  { src: 'gwagon-dusk.jpg', alt: 'Blacked-out Mercedes-Benz G-Class finished and parked at dusk' },
+  { src: 'escalade-v.jpg', alt: 'Cadillac Escalade-V with gloss-finished black paint' },
   {
     src: 'wheel-cloth.jpg',
     alt: 'Hand cleaning a wheel face with a red microfiber cloth',

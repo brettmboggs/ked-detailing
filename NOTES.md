@@ -139,13 +139,22 @@ nothing, so the profile and the site's SEO are both upside, not maintenance.
 
 ## Media
 
-All photography and footage is his own, from
-`/media/brett/BBOGGS SSD/Old Mac Harddrive/Knock Em Down`.
+**Brett shot all of it.** The stills and the video are his commercial work for
+Knock Em Down, not Jacob's phone footage — originals live on
+`/media/brett/BBOGGS SSD/Old Mac Harddrive/Knock Em Down`, and his own graded
+exports are published at `brettboggs.dev/photo/ked/`.
 
-- **Photos** — a professional golden-hour shoot of a white Porsche Panamera
-  Turbo, plus van and crew shots. Originals are 5472×3648; the selects in
-  `src/assets/photos/` are downscaled to 2400px long edge.
-- **Video** — 4K 60fps from a G63 detail. Two gotchas:
+Prefer the graded exports where they exist. `gwagon-estate.jpg` on the Revival
+tier came from `brettboggs.dev/photo/ked/estate.webp` and beats anything
+recoverable from the raw files here. Most of the portfolio set is only 900px
+wide though, so **ask Brett for full-resolution graded exports of the whole
+shoot** — they would replace several photos currently processed straight from
+the camera originals.
+
+- **Photos** — a golden-hour shoot of a white Porsche Panamera Turbo, plus the
+  G-Class estate set, van and crew shots. Camera originals are 5472×3648; the
+  selects in `src/assets/photos/` are downscaled to 2400px long edge.
+- **Video** — 4K 60fps from the G-Class shoot. Two gotchas:
   - **No rotation metadata.** Shot with the camera physically turned, so
     everything needs `transpose=2` on ingest. Corrected footage is 2160×3840
     portrait, which is why the hero is built around a portrait clip — it suits
