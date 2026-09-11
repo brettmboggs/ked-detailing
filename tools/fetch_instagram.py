@@ -41,6 +41,25 @@ from pathlib import Path
 API = "https://graph.instagram.com"
 FIELDS = "id,caption,media_type,media_url,permalink,timestamp"
 
+# Where the token may live. All of these are gitignored; the value is never
+# printed, logged or committed.
+TOKEN_FILES = (Path("tools/.env"), Path(".env"))
+
+
+def load_token() -> str | None:
+    """Environment first, then a local env file. Never echoes the value."""
+    token = os.environ.get("IG_TOKEN")
+    if token:
+        return token.strip()
+    for f in TOKEN_FILES:
+        if not f.exists():
+            continue
+        for line in f.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("IG_TOKEN="):
+                return line.split("=", 1)[1].strip().strip("\"'")
+    return None
+
 
 def _get(url: str) -> dict:
     with urllib.request.urlopen(url, timeout=30) as r:
@@ -95,13 +114,15 @@ def main() -> None:
     ap.add_argument("--refresh-token", action="store_true", help="extend the token and exit")
     args = ap.parse_args()
 
-    token = os.environ.get("IG_TOKEN")
+    token = load_token()
     if not token:
         print(
-            "IG_TOKEN is not set.\n\n"
-            "This needs Jacob to switch his account to Professional and authorise a\n"
-            "Meta app against it — see the notes at the top of this file. Until then\n"
-            "the row on the site stays hand-picked, and does not claim to be live.",
+            "No IG_TOKEN found.\n\n"
+            "Put it in tools/.env as a single line:\n"
+            "    IG_TOKEN=your-long-lived-token\n\n"
+            "That file is gitignored and the value is never printed or committed.\n"
+            "Getting a token needs a Professional account and a Meta app — see the\n"
+            "notes at the top of this file.",
             file=sys.stderr,
         )
         raise SystemExit(2)

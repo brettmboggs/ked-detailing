@@ -5,8 +5,8 @@ Image pipeline for the Instagram row on the home page.
 ```bash
 python3 -m venv tools/.venv && tools/.venv/bin/pip install numpy pillow
 
-# 1. pull the feed  (blocked — see below)
-export IG_TOKEN=...
+# 1. pull the feed — put the token in tools/.env first (gitignored)
+echo 'IG_TOKEN=...' > tools/.env
 tools/.venv/bin/python tools/fetch_instagram.py --out tools/feed --limit 25
 
 # 2. score it, reject the weak ones, grade the keepers
@@ -16,15 +16,24 @@ tools/.venv/bin/python tools/curate.py tools/feed --out src/assets/instagram --t
 Either step works on its own. `curate.py` takes any folder, which is how it is
 tested against the archive on the SSD.
 
-## Why the fetch is blocked
+## The token
 
-Meta retired the Basic Display API, so reading a personal account now needs a
-Professional account, a Meta app, and Jacob clicking authorise. None of that
-can be done for him. Details are at the top of `fetch_instagram.py`.
+`fetch_instagram.py` reads `IG_TOKEN` from the environment, then from
+`tools/.env`. Both are gitignored; the value is never printed, logged or
+committed. Confirm it with `git check-ignore -v tools/.env` before putting a
+real one in.
 
-Until then the four images in `recent` are hand-picked, and no copy on the site
-claims the row is live. A stale "latest posts" strip that has not moved in six
-months is worse than an honest one.
+Authorising the app is not the same as having a token. Authorising produces a
+short-lived code; that has to be exchanged for a long-lived token, which is
+what goes in the file. The quickest route is the Meta app dashboard under
+Instagram → API setup, which will hand back a long-lived token directly.
+
+Long-lived tokens last 60 days. `--refresh-token` extends one and is what a
+scheduled action would call monthly.
+
+Until a token is in place the four images in `recent` are hand-picked, and no
+copy on the site claims the row is live. A stale "latest posts" strip that has
+not moved in six months is worse than an honest one.
 
 ## What the scoring actually does
 
