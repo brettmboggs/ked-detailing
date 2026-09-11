@@ -66,3 +66,8 @@ results. The rating is shown to visitors and linked to its source instead.
 - Restart the dev server after any `npm install`. The running process caches
   module paths and will throw `MissingSharp` on every image even though sharp is
   fine on disk.
+- Editing `content.config.ts` needs more than a dev server restart. Astro caches
+  the parsed collections in `.astro/`, so a newly added frontmatter field reads
+  back as `undefined` and anything strict about it — `<Image alt>`, for one —
+  throws in dev while `astro build` passes happily. Clear `.astro` and
+  `node_modules/.astro`, then restart.
