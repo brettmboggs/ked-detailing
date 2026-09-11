@@ -6,7 +6,7 @@ import Marquee from '../components/Marquee.astro';
 import Intro from '../components/Intro.astro';
 import BandKnockout from '../components/BandKnockout.astro';
 import Services from '../components/Services.astro';
-import Gallery from '../components/Gallery.astro';
+import FollowStrip from '../components/FollowStrip.astro';
 import Testimonials from '../components/Testimonials.astro';
 import Faq from '../components/Faq.astro';
 import Cta from '../components/Cta.astro';
@@ -22,14 +22,19 @@ import Footer from '../components/Footer.astro';
 
   <main id="main">
     <Hero />
-    <!-- Angled gold stripe cutting between the hero and the brand statement. -->
+    <!-- Angled gold stripe cutting between the hero and the story. -->
     <Marquee angle={-2.2} variant="gold" speed={58} />
-    {/* The lockup lands straight after the stripe — hero, stripe, name — rather
-        than sitting behind a long block of copy. The story follows it. */}
-    <BandKnockout />
     <Intro />
     <Services />
-    <Gallery />
+    {/*
+      The lockup sits here deliberately, several screens below the hero.
+      Both it and the hero are video, so placing them together made each read
+      as the same trick twice and neither landed. Down here it has distance
+      from the hero and a job of its own: it breaks a long page and hands off
+      into the work.
+    */}
+    <BandKnockout />
+    <FollowStrip />
     <Testimonials />
     <Faq />
     <Cta />
