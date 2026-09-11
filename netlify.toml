@@ -1,0 +1,21 @@
+# Netlify build settings. Committing them means the deploy is configured by the
+# repo rather than by hand in the dashboard — connect the repo and the build
+# command, publish directory and Node version are already right.
+#
+# Netlify was chosen over Cloudflare Pages for one reason: Pages will only serve
+# an apex domain when the domain is a zone on the Cloudflare account, which
+# means moving nameservers off Squarespace. Netlify serves the apex from a plain
+# A record, so kedservice.com can go live by editing two DNS records in the
+# panel Squarespace already provides. See GOING-LIVE.md.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # .nvmrc pins 22 and Astro 7 will not run on 20. Netlify reads .nvmrc too,
+  # but stating it here means a change to either file is visible in review.
+  NODE_VERSION = "22"
+
+# public/_redirects carries the 301 map itself — Netlify reads it natively from
+# the publish directory. Nothing to duplicate here.

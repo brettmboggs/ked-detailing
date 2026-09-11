@@ -1,26 +1,33 @@
 # 301s for every URL the Squarespace site exposed, so nothing 404s
 # after the cutover. Generated from the old sitemap — see NOTES.md.
+#
+# The trailing "!" forces each rule. astro.config.mjs mirrors this map and emits
+# a meta-refresh stub at the same paths as a fallback for hosts that ignore this
+# file; on Netlify a real file at the path wins over a redirect rule unless the
+# rule is forced, so without the "!" every one of these would serve the stub
+# instead of a genuine 301. Google follows both, but only one passes full link
+# equity, and these paths carry the old site's only search ranking.
 
-/blog/category/Info  /blog  301
-/blog/tag/auto+detailing  /blog  301
-/blog/tag/auto+detailing+tips  /blog  301
-/blog/tag/car+care+st.+louis  /blog  301
-/blog/tag/car+care+tips  /blog  301
-/blog/tag/car+detailing+near+me  /blog  301
-/blog/tag/car+detailing+schedule  /blog  301
-/blog/tag/mobile+detailing+St.+Louis  /blog  301
-/blog/tag/paint+protection  /blog  301
-/blog/tag/regular+car+detailing  /blog  301
-/blog/tag/resale+value  /blog  301
-/blog/tag/seasonal+car+care  /blog  301
-/blog/tag/st+louis  /blog  301
-/blog/tag/vehicle+maintenance  /blog  301
-/blog/tag/vehicle+protection  /blog  301
-/cart  /store  301
-/home  /  301
-/store/p/level-i-the-tune-up  /#services  301
+/blog/category/Info  /blog  301!
+/blog/tag/auto+detailing  /blog  301!
+/blog/tag/auto+detailing+tips  /blog  301!
+/blog/tag/car+care+st.+louis  /blog  301!
+/blog/tag/car+care+tips  /blog  301!
+/blog/tag/car+detailing+near+me  /blog  301!
+/blog/tag/car+detailing+schedule  /blog  301!
+/blog/tag/mobile+detailing+St.+Louis  /blog  301!
+/blog/tag/paint+protection  /blog  301!
+/blog/tag/regular+car+detailing  /blog  301!
+/blog/tag/resale+value  /blog  301!
+/blog/tag/seasonal+car+care  /blog  301!
+/blog/tag/st+louis  /blog  301!
+/blog/tag/vehicle+maintenance  /blog  301!
+/blog/tag/vehicle+protection  /blog  301!
+/cart  /store  301!
+/home  /  301!
+/store/p/level-i-the-tune-up  /#services  301!
 
 # Catch anything else Squarespace generated under these prefixes.
-/blog/tag/*  /blog  301
-/blog/category/*  /blog  301
-/store/p/*  /#services  301
+/blog/tag/*  /blog  301!
+/blog/category/*  /blog  301!
+/store/p/*  /#services  301!

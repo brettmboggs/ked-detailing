@@ -15,8 +15,9 @@ export default defineConfig({
   base,
   integrations: [sitemap()],
 
-  // Mirrors public/_redirects. Cloudflare serves real 301s from that file;
-  // these are the static fallback for any host that ignores it.
+  // Mirrors public/_redirects, which Netlify serves as real forced 301s. These
+  // are the meta-refresh fallback for any host that ignores that file, and the
+  // reason its rules carry a trailing "!" — an unforced rule loses to the stub.
   redirects: {
     '/blog/category/Info': '/blog',
     '/blog/tag/auto+detailing': '/blog',
