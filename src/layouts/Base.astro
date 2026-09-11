@@ -21,10 +21,15 @@ const {
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
 
-// Anything served from a sub-path is the staging copy on brettboggs.dev. Keep
-// it out of search so it never competes with the real site, and point the
-// canonical at the production URL instead.
+// Anything served from a sub-path is the staging copy on brettboggs.dev. Point
+// its canonical at the production URL instead.
 const isStaging = (import.meta.env.BASE_URL || '/') !== '/';
+
+// Keep every staging copy out of search so none of them competes with the real
+// site. The sub-path build gives itself away through BASE_URL. The Cloudflare
+// Pages copy serves from the root of a pages.dev subdomain and cannot, so the
+// Pages project sets KED_NOINDEX instead. Remove it there at cutover.
+const noindex = isStaging || process.env.KED_NOINDEX === 'true';
 const liveCanonical = isStaging
   ? new URL(Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/',
             'https://www.kedservice.com')
@@ -147,7 +152,7 @@ const schema = {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href={liveCanonical.href} />
-    {isStaging && <meta name="robots" content="noindex, nofollow" />}
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <title>{title}</title>
     <meta name="description" content={description} />
