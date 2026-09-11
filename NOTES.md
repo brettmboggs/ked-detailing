@@ -41,13 +41,20 @@ Verified against Jacob's public business listings, then confirmed by Brett.
 | Operator | Jacob |
 | Base | High Ridge, MO — **a home address, deliberately not published** |
 | Service area | Greater St. Louis, St. Charles, Jefferson County |
-| Hours | Mon–Fri, 9am–5pm. **Not** seven days a week |
-| Rating | 5.0 across 25+ reviews |
+| Hours | Seven days a week, per Brett. His Google profile disagrees — see below |
+| Rating | 5.0 across exactly 25 Google reviews, verified 10 Sep 2026 |
 | Booking | Housecall Pro |
 
-**Marine work is real.** It is in the registered LLC name and Brett confirmed
-it. There are no marine photos yet, so the site states it in copy and FAQ but
-never illustrates it. Get boat photos when he next does one.
+**Marine work is real.** It is in the registered LLC name, Brett confirmed it,
+and *Marine Maintenance* is a bookable service on his Housecall Pro page. There
+are no marine photos yet, so the site states it in copy and FAQ but never
+illustrates it. Get boat photos when he next does one.
+
+**Two services were missing from the old site entirely.** His booking page
+offers *Marine Maintenance* and *Paint Correction & Ceramic Coating* alongside
+Levels 1–4. Ceramic coating is high-value work that was completely invisible to
+anyone reading the website. Both now appear in an "Also available" block under
+the packages.
 
 **Pricing is by quote on every tier**, per Brett — every vehicle is different.
 The old $180 Level I price has been removed. `Service.price` is still on the
@@ -59,16 +66,18 @@ revisiting: a visible "from" price usually lifts inbound enquiries.
 ## Reviews
 
 The four testimonials on the Squarespace site were unattributed and appear to
-have been written rather than collected. They have been **replaced with six real
-five-star Google reviews** pulled from Jacob's public review profile:
+have been written rather than collected. They are **replaced with eight real
+five-star Google reviews**, read directly off the live profile:
 
-Ian R. (Rivian R1S paint correction), Rich Z. (Maserati, salvage to showroom),
-Nina Hanser, Brandon Crites (1972 Monte Carlo), Jenna Jordan (repeat customer),
-Costa Raptis.
+Ian R. (Rivian R1S paint correction), Richard Zajac (Maserati, salvage to
+showroom), Nina Hanser, Jen Robson (gas spill, 101-degree day), Brandon Crites
+(1972 Monte Carlo), Fairway Automotive (trade customer), Samantha Charpentier
+(SUV, dog hair) and Franco Ignelzi (customer since 2019).
 
-Nina's is excerpted because the source itself truncates it. Everything else is
-verbatim. Before launch, confirm with Jacob that he is happy to display these
-with names attached, and re-check they are still live.
+Long ones are trimmed to their strongest passage; nothing is reworded. Brett's
+own review is deliberately **excluded** — putting it on a site he built would
+read as self-serving. Before launch, confirm Jacob is happy to display these
+with names attached.
 
 `aggregateRating` is **deliberately not** in the structured data. Google treats
 a business marking up its own rating as self-serving and disallows it in rich
@@ -76,31 +85,53 @@ results. The 5.0 is still shown to visitors and links to its source.
 
 ---
 
-## Blockers — things only Brett or Jacob can supply
+## Blockers — checked against the live accounts on 10 Sep 2026
 
-1. **Registrar access for `kedservice.com`.** Nameservers are
-   `ns-cloud-e*.googledomains.com`, which is what Squarespace uses for domains
-   it manages. The domain is registered *through Squarespace*. Everything else
-   can be built without it. **Do not cancel Squarespace until DNS has moved.**
-2. **Google Business Profile access.** It exists and is the source of the
-   reviews. For a mobile detailer it drives more calls than the website. It
-   should be set up as a service-area business with the address hidden.
+1. **Jacob owns the domain, not Brett.** Squarespace lists `kedservice.com`
+   under "Domains managed by Squarespace", but opening the domain overview at
+   `account.squarespace.com/domains/managed/kedservice.com` returns **Access
+   Denied**. Brett's login can edit the site; it cannot unlock, transfer or
+   change nameservers. Jacob has to either do the DNS step himself or grant
+   owner-level access. This is the one true blocker on cutover.
+   **Do not cancel Squarespace until DNS has moved.**
+2. **The Google Business Profile is on Jacob's account too.** Brett's Business
+   Profile Manager holds three businesses — Brett Boggs Photography, Datum CI
+   and Providence House Buyers. Knock Em Down is not among them.
 3. **Newsletter subscribers.** Export from Squarespace before the account
    lapses, if anyone ever signed up.
 4. **Marine photography**, so the boat side is shown and not just claimed.
+
+### The Google profile is actively costing him work
+
+Worth more than anything on the website, and all fixable in ten minutes by
+whoever owns the profile:
+
+- It currently reads **"Closed · Opens 9 AM Fri."** If he works seven days a
+  week, the profile is turning people away on the days it says he is shut.
+- **Areas served is set to "Chesterfield and nearby areas"** only. He is based
+  in High Ridge and works the whole metro. Chesterfield is one suburb.
+- **Category is only "Car detailing service."** There is a separate boat
+  detailing category, and marine work is in his registered name.
+
+For context on why this matters: Squarespace analytics show 207 visits in the
+last 30 days with **78% arriving direct**. Search is contributing almost
+nothing, so the profile and the site's SEO are both upside, not maintenance.
 
 ---
 
 ## Still open
 
 - **Level III vs Level IV.** Level III "The Knockout" calls itself the top-tier
-  detail, yet Level IV "The Revival" sits above it. The Revival is really a
-  paint-correction track rather than a higher tier. Copy was left as Jacob wrote
-  it; the ordering question is his to settle.
-- **The dealership photos.** Several archive shots show the van and finished
-  cars at what looks like a Porsche dealership. If that is a real trade
-  relationship it is his strongest credibility asset. It is **not** claimed
-  anywhere on the site, because it has not been confirmed.
+  detail, yet Level IV "The Revival" sits above it. His Housecall Pro booking
+  page suggests the real structure: Levels 1–4 are detail packages, and *Paint
+  Correction & Ceramic Coating* is a **separate** track alongside them. The site
+  still mirrors the old four-tier copy. Worth reconciling with Jacob.
+- **Trade work is real, and still under-claimed.** *Fairway Automotive* left a
+  review as a business — "have detailed numerous vehicles for us" — and Josh
+  Ogilvie mentions Jacob looking after "a majority of my clients cars". Combined
+  with the archive shots of the van at a Porsche dealership, there is a genuine
+  B2B story here that the site only hints at. Confirm the details and it belongs
+  on the page.
 - **The three blog posts** are archived but not carried over. If they are kept,
   keep the existing URL paths so nothing 404s.
 
@@ -171,6 +202,24 @@ branded email.
   registrar.
 - **Forms** — a Pages Function if a contact form is ever added. Today every call
   to action goes to Housecall Pro or the phone.
+
+### Booking
+
+Booking stays on Housecall Pro, which is where his jobs, invoicing and customers
+already live. Replacing it with something prettier would split his operations,
+so do not.
+
+The hosted booking page takes a logo and little else. Two ways to make it feel
+like part of the site, in order of effort:
+
+1. **Embed the Housecall Pro booking widget** in a branded section of the new
+   site, so the surrounding page is on-brand even though the widget is theirs.
+   Keeps people on `kedservice.com` instead of bouncing to a Housecall domain.
+2. **Set the logo and brand colour** inside Housecall Pro's online booking
+   settings. Small win, five minutes.
+
+A fully custom booking flow would need the Housecall Pro API, which sits on
+their higher tiers. Not worth it unless he outgrows the widget.
 
 **Staging:** `ked.brettboggs.dev` via a CNAME at Namecheap. Add
 `<meta name="robots" content="noindex">` to `Base.astro` while it lives there so

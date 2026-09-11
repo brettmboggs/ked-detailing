@@ -67,7 +67,7 @@ export const business = {
   baseCity: 'High Ridge',
   city: 'St. Louis',
   region: 'MO',
-  hours: 'Mon–Fri, 9am–5pm',
+  hours: 'Seven days a week',
   phone: '(314) 223-2988',
   phoneHref: 'tel:+13142232988',
   email: 'knockemdowndetailing@gmail.com',
@@ -76,7 +76,7 @@ export const business = {
   facebook: 'https://www.facebook.com/knockemdowndetailing/',
   reviewsUrl: 'https://reviews.birdeye.com/knock-em-down-auto-marine-detailing-167601558157721',
   rating: '5.0',
-  /** Google Business Profile count. Rendered as "25+" so it does not go stale. */
+  /** Exact count on the Google Business Profile, verified 10 Sep 2026. */
   reviewCount: 25,
   bookingUrl:
     'https://book.housecallpro.com/book/Knock-Em-Down-Auto--Marine-Detailing/18c82a94d510423988a8e7909d38557d?v2=true',
@@ -174,6 +174,23 @@ export const services: Service[] = [
   },
 ];
 
+/**
+ * Also bookable on his Housecall Pro page but missing from the old website.
+ * Ceramic coating in particular is a high-value service that was invisible.
+ */
+export const alsoAvailable: { name: string; blurb: string }[] = [
+  {
+    name: 'Paint Correction & Ceramic Coating',
+    blurb:
+      'Multi-stage correction followed by a ceramic coat for paint that needs more than a six-month sealant. Quoted after we see the panels.',
+  },
+  {
+    name: 'Marine Maintenance',
+    blurb:
+      'Hulls, gelcoat, upholstery and trailers. Same process and the same standard, on a bigger canvas.',
+  },
+];
+
 /* ----------------------------------------------------------- testimonials */
 
 /**
@@ -191,16 +208,23 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote:
-      'Jacob did an incredible job restoring a Maserati from salvage to showroom ready! I would highly recommend his services to anyone who values their car’s long term longevity!',
-    name: 'Rich Z.',
-    detail: 'Maserati — salvage restoration',
+      'Jacob did an incredible job restoring a Maserati from salvage to showroom ready! I would highly recommend his services to anyone who values their car’s long term longevity! I will never trust anyone other than KED to detail my cars!',
+    name: 'Richard Zajac',
+    detail: 'Maserati — salvage to showroom',
     source: 'Google',
   },
   {
     quote:
-      'I don’t write reviews often, but this experience absolutely deserved one. My car looks absolutely incredible. I genuinely don’t think it has ever looked this good, not even when I first got it from the dealership.',
+      'My car looks absolutely incredible. I genuinely don’t think it has ever looked this good, not even when I first got it from the dealership. Every inch of the interior and exterior was spotless, and it was obvious that Jacob treated my car with the same care and pride as if it were his own.',
     name: 'Nina Hanser',
     detail: 'Full detail',
+    source: 'Google',
+  },
+  {
+    quote:
+      'After spilling a can of gas in the back of my car, Jacob came out the next day and worked tirelessly to get it cleaned up. It was 101 degrees out with 1000% humidity and he never complained or even really took a break.',
+    name: 'Jen Robson',
+    detail: 'Interior rescue',
     source: 'Google',
   },
   {
@@ -211,17 +235,23 @@ export const testimonials: Testimonial[] = [
     source: 'Google',
   },
   {
-    quote:
-      'We’ve used Jacob several times over the last few years for detailing — from a mini van to a pickup truck. His attention to detail and cleanliness is unmatched.',
-    name: 'Jenna Jordan',
-    detail: 'Repeat customer',
+    quote: 'Have detailed numerous vehicles for us and the service is always top notch!',
+    name: 'Fairway Automotive',
+    detail: 'Trade customer',
     source: 'Google',
   },
   {
     quote:
-      'Jacob did an amazing job. I am highly particular about detailing my car and Jacob exceeded expectations. Highly recommend.',
-    name: 'Costa Raptis',
-    detail: 'Full detail',
+      'My car carries around my multiple dogs and he was able to get all of the hair out from the floorboards. Everything looks so great on the inside and out!',
+    name: 'Samantha Charpentier',
+    detail: 'SUV — interior',
+    source: 'Google',
+  },
+  {
+    quote:
+      'He has been taking care of my car since 2019 and has always done a tremendous job. He makes the car look like new again.',
+    name: 'Franco Ignelzi',
+    detail: 'Customer since 2019',
     source: 'Google',
   },
 ];

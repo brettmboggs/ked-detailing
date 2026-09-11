@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { business, faqs, services } from '../data/site';
+import { alsoAvailable, business, faqs, services } from '../data/site';
 
 interface Props {
   title: string;
@@ -65,7 +65,15 @@ const schema = {
       openingHoursSpecification: [
         {
           '@type': 'OpeningHoursSpecification',
-          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          dayOfWeek: [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+          ],
           opens: '09:00',
           closes: '17:00',
         },
@@ -73,13 +81,25 @@ const schema = {
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
         name: 'Detailing packages',
-        itemListElement: services.map((s) => ({
-          '@type': 'Offer',
-          name: `${s.level} — ${s.name}`,
-          description: s.summary,
-          ...(s.price ? { price: s.price.replace('$', ''), priceCurrency: 'USD' } : {}),
-          itemOffered: { '@type': 'Service', name: s.name, serviceType: 'Auto detailing' },
-        })),
+        itemListElement: [
+          ...services.map((s) => ({
+            '@type': 'Offer',
+            name: `${s.level} — ${s.name}`,
+            description: s.summary,
+            ...(s.price ? { price: s.price.replace('$', ''), priceCurrency: 'USD' } : {}),
+            itemOffered: { '@type': 'Service', name: s.name, serviceType: 'Auto detailing' },
+          })),
+          ...alsoAvailable.map((a) => ({
+            '@type': 'Offer',
+            name: a.name,
+            description: a.blurb,
+            itemOffered: {
+              '@type': 'Service',
+              name: a.name,
+              serviceType: a.name.includes('Marine') ? 'Marine detailing' : 'Auto detailing',
+            },
+          })),
+        ],
       },
       potentialAction: {
         '@type': 'ReserveAction',
