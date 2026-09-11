@@ -291,6 +291,9 @@ function initReveals() {
 /* ------------------------------------------------------------------- boot */
 
 export function initMotion() {
+  // Tells the inline failsafe in Base.astro to stand down.
+  (window as any).__kedMotionReady = true;
+
   initAccordion();
   initMenu();
 

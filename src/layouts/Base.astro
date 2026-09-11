@@ -173,6 +173,32 @@ const schema = {
 
     <!-- set:html is a directive on the element, not a standalone tag. -->
     <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />
+
+    <!--
+      Reveal-on-scroll starts elements at opacity 0, so if the motion bundle
+      never runs — a JS error, a blocked script, an old browser — the page would
+      render blank. This is the net: if motion has not reported ready shortly
+      after load, everything is forced visible. Inline and dependency-free so it
+      cannot fail the same way the bundle can.
+    -->
+    <script is:inline>
+      (function () {
+        function reveal() {
+          if (window.__kedMotionReady) return;
+          var sel = '.rise,[data-stagger-item],[data-hero-fade]';
+          document.querySelectorAll(sel).forEach(function (el) {
+            el.style.opacity = '1';
+            el.style.transform = 'none';
+          });
+          document.querySelectorAll('[data-hero-line] > span').forEach(function (el) {
+            el.style.transform = 'none';
+          });
+        }
+        window.addEventListener('load', function () {
+          setTimeout(reveal, 2500);
+        });
+      })();
+    </script>
   </head>
 
   <body class="antialiased">
