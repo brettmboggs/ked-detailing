@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { alsoAvailable, business, faqs, services } from '../data/site';
+import { withBase } from '../lib/url';
 
 interface Props {
   title: string;
@@ -19,6 +20,15 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
+
+// Anything served from a sub-path is the staging copy on brettboggs.dev. Keep
+// it out of search so it never competes with the real site, and point the
+// canonical at the production URL instead.
+const isStaging = (import.meta.env.BASE_URL || '/') !== '/';
+const liveCanonical = isStaging
+  ? new URL(Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/',
+            'https://www.kedservice.com')
+  : canonical;
 const ogUrl = new URL(ogImage, Astro.site ?? 'https://www.kedservice.com');
 
 const site = Astro.site ?? 'https://www.kedservice.com';
@@ -136,7 +146,8 @@ const schema = {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="canonical" href={canonical.href} />
+    <link rel="canonical" href={liveCanonical.href} />
+    {isStaging && <meta name="robots" content="noindex, nofollow" />}
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -150,8 +161,8 @@ const schema = {
     <meta property="og:site_name" content={business.name} />
     <meta name="twitter:card" content="summary_large_image" />
 
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" href={withBase("/favicon.ico")} sizes="any" />
+    <link rel="apple-touch-icon" href={withBase("/apple-touch-icon.png")} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

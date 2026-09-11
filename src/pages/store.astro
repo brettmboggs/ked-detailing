@@ -10,6 +10,7 @@ import vanLogo from '../assets/photos/van-logo.jpg';
 import { business } from '../data/site';
 import { getCollection } from 'astro:content';
 import { storeMeta } from '../data/store';
+import { withBase } from '../lib/url';
 
 const merch = import.meta.glob<{ default: ImageMetadata }>('../assets/merch/*.{jpg,jpeg,png,webp}', {
   eager: true,
@@ -142,7 +143,7 @@ const isLive = products.length > 0;
                 <a href={business.instagram} target="_blank" rel="noopener" class="btn-gold">
                   Follow {business.instagramHandle}
                 </a>
-                <a href="/#services" class="btn-ghost">Book a detail instead</a>
+                <a href={withBase("/#services")} class="btn-ghost">Book a detail instead</a>
               </div>
             </div>
 

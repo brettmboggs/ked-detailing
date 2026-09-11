@@ -3,8 +3,16 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
 
+// The production build serves from the root of kedservice.com. Setting
+// KED_BASE (and KED_SITE) produces the staging copy that lives at a sub-path of
+// brettboggs.dev instead. Base.astro derives `noindex` from the base, so the
+// staging copy can never be indexed by accident.
+const base = process.env.KED_BASE || undefined;
+const site = process.env.KED_SITE || 'https://www.kedservice.com';
+
 export default defineConfig({
-  site: 'https://www.kedservice.com',
+  site,
+  base,
   integrations: [sitemap()],
 
   // Mirrors public/_redirects. Cloudflare serves real 301s from that file;

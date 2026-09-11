@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 import { business, footerNav } from '../data/site';
+import { withBase } from '../lib/url';
 
 const year = new Date().getFullYear();
 ---
@@ -24,7 +25,7 @@ const year = new Date().getFullYear();
             footerNav.map((item) => (
               <li>
                 <a
-                  href={item.href}
+                  href={withBase(item.href)}
                   class="text-sm text-bone-200 transition-colors hover:text-gold-400"
                 >
                   {item.label}

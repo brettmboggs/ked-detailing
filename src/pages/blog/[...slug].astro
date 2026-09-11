@@ -6,6 +6,7 @@ import Base from '../../layouts/Base.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { business } from '../../data/site';
+import { withBase } from '../../lib/url';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);
@@ -34,7 +35,7 @@ const fmt = (d: Date) =>
       <header class="relative overflow-hidden bg-ink-950 pt-36 pb-12 lg:pt-44 lg:pb-14">
         <div class="mx-auto max-w-3xl px-5 sm:px-8">
           <a
-            href="/blog"
+            href={withBase("/blog")}
             class="group inline-flex items-center gap-2 font-display text-[0.72rem] uppercase tracking-[0.16em] text-bone-500 transition-colors hover:text-gold-400"
             style="font-variation-settings:'wdth' 100,'wght' 650"
           >

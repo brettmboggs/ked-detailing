@@ -11,7 +11,8 @@
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
-    "verify": "astro check && astro build"
+    "verify": "astro check && astro build",
+    "build:staging": "KED_BASE=/ked/ KED_SITE=https://brettboggs.dev astro build"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

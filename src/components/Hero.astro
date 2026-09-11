@@ -1,13 +1,14 @@
 ---
 import { business, hero } from '../data/site';
+import { withBase } from '../lib/url';
 ---
 
 <section id="top" class="relative min-h-[100svh] w-full overflow-hidden bg-ink-950 grain">
   <!-- Poster paints instantly; the clip is attached by script once it is safe to. -->
   <video
     data-hero-video
-    data-src="/video/hero-foam.mp4"
-    poster="/video/hero-foam.jpg"
+    data-src={withBase("/video/hero-foam.mp4")}
+    poster={withBase("/video/hero-foam.jpg")}
     muted
     loop
     playsinline

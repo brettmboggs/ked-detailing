@@ -1,5 +1,6 @@
 ---
 import { band, business } from '../data/site';
+import { withBase } from '../lib/url';
 
 /**
  * Type-knockout band.
@@ -25,8 +26,8 @@ const BASELINES = [146, 300];
     <div class="relative">
       <video
         data-band-video
-        data-src={band.video}
-        poster={band.poster}
+        data-src={withBase(band.video)}
+        poster={withBase(band.poster)}
         muted
         loop
         playsinline

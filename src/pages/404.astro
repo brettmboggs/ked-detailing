@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { business } from '../data/site';
+import { withBase } from '../lib/url';
 ---
 
 <Base
@@ -29,8 +30,8 @@ import { business } from '../data/site';
       </p>
 
       <div class="rise mt-10 flex flex-wrap gap-3" data-delay="0.22">
-        <a href="/#services" class="btn-gold">See the packages</a>
-        <a href="/" class="btn-ghost">Back to the start</a>
+        <a href={withBase("/#services")} class="btn-gold">See the packages</a>
+        <a href={withBase("/")} class="btn-ghost">Back to the start</a>
         <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
       </div>
     </div>

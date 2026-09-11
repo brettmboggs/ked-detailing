@@ -91,7 +91,7 @@ export const hero = {
 } as const;
 
 export const intro =
-  "Jacob has put hands on a salvage-title Maserati, a '72 Monte Carlo and a brand-new Rivian, and the daily driver with crushed goldfish under the back seat gets the same process as the show car. Nothing is rushed and nothing is handed off to someone else. Founded on quality, built on service, continued on referrals.";
+  "Jacob details for Porsche St. Louis, and the daily driver with crushed goldfish under the back seat gets the same process as anything sitting on that showroom floor. Nothing is rushed and nothing is handed to someone else. Founded on quality, built on service, continued on referrals.";
 
 /* --------------------------------------------------------------- services */
 
@@ -208,9 +208,9 @@ export const testimonials: Testimonial[] = [
   },
   {
     quote:
-      'Jacob did an incredible job restoring a Maserati from salvage to showroom ready! I would highly recommend his services to anyone who values their car’s long term longevity! I will never trust anyone other than KED to detail my cars!',
-    name: 'Richard Zajac',
-    detail: 'Maserati — salvage to showroom',
+      'Always been the best. He has looked after not only mine but a majority of my clients cars too. I would not trust anyone else with my clients.',
+    name: 'Josh Ogilvie',
+    detail: 'Looks after his clients’ cars',
     source: 'Google',
   },
   {
@@ -237,7 +237,7 @@ export const testimonials: Testimonial[] = [
   {
     quote: 'Have detailed numerous vehicles for us and the service is always top notch!',
     name: 'Fairway Automotive',
-    detail: 'Trade customer',
+    detail: 'Dealer, multiple vehicles',
     source: 'Google',
   },
   {
@@ -269,7 +269,7 @@ export const faqs: Faq[] = [
   },
   {
     q: 'Will you work on exotics, classics and collector cars?',
-    a: 'That is a lot of what we do. Porsches, air-cooled classics, a salvage-title Maserati brought back to showroom, a 1972 Monte Carlo taken to a mirror finish. Extra precautions come standard on anything rare or irreplaceable.',
+    a: 'That is a lot of what we do. We detail for Porsche St. Louis, and privately for air-cooled classics and cars like a 1972 Monte Carlo taken to a mirror finish. Anything rare or irreplaceable is routine here rather than a special occasion.',
   },
   {
     q: 'Do you detail boats?',
@@ -317,6 +317,11 @@ export const gallery: GalleryItem[] = [
   {
     src: 'van-logo.jpg',
     alt: 'The Knock Em Down Mobile Detailing Service logo on the side of the work van',
+  },
+  {
+    src: 'van-porsche-dealer.jpg',
+    alt: 'The Knock Em Down van working on site at a Porsche dealership',
+    span: 'tall',
   },
   {
     src: 'golden-hour-flare.jpg',
