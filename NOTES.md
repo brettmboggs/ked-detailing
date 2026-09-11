@@ -155,6 +155,32 @@ real photographs from the shoot.
 5. Cancel the Squarespace *website* plan only once DNS has settled. The domain
    registration is separate.
 
+## Instagram feed — parked, needs Jacob
+
+The row of four images under "Ride along with us" is **hand-picked**, and no
+copy claims otherwise. Swapping the file names in `recent` (src/data/site.ts)
+refreshes it.
+
+Pulling his actual feed is built but cannot run. Meta retired the Basic Display
+API, and checking the developer account showed the only app on it is **Datum
+Social** — Datum CI's app, unpublished, configured for Datum's own Instagram use
+case. There was never a Knock Em Down app, so nothing had been authorised and no
+token existed. Do not reuse the Datum app: it would route a client's Instagram
+data through the startup's Meta app, which is a poor ownership position for very
+little gain.
+
+Four steps when Jacob is available, three of which need him present:
+
+1. His Instagram switched to Professional. Free, in-app, reversible.
+2. A new Meta app for Knock Em Down, Instagram added, Instagram Login set up.
+3. Jacob signing in to authorise it — nobody can do this for him.
+4. Generate the long-lived token, then `./tools/set-token.sh` and paste it.
+
+Roughly twenty minutes together. Everything downstream is done and tested:
+`tools/curate.py` scores a folder on six measures, rejects what fails and says
+why, and grades the keepers. Verified against 64 archive photographs — 59 pass,
+and all five rejections hold up. See `tools/README.md`.
+
 ## Still open
 
 - **Level III vs Level IV.** Level III "The Knockout" calls itself the top-tier
