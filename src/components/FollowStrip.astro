@@ -1,26 +1,31 @@
 ---
-import { business } from '../data/site';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { business, recent } from '../data/site';
 
 /**
  * The one part of the old gallery worth keeping on the home page.
  *
  * A sixteen-thumbnail grid was not earning its space — the work is already
  * shown in the hero and on each package — but the handoff to Instagram was,
- * because that is where current jobs actually land.
+ * because that is where current jobs actually land. This keeps a taste of the
+ * work so the section is not just a bare call to action.
  */
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', {
+  eager: true,
+});
+const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
 ---
 
-<section class="relative bg-ink-950 py-16 lg:py-20">
+<section class="relative overflow-hidden bg-ink-950 py-16 lg:py-24">
   <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
-    <a
-      href={business.instagram}
-      target="_blank"
-      rel="noopener"
-      class="rise group flex flex-col items-start justify-between gap-6 border border-ink-800 bg-ink-900 p-7 transition-colors duration-500 hover:border-gold-600 sm:flex-row sm:items-center sm:gap-8 lg:p-9"
+    <div
+      class="flex flex-col gap-6 border-b border-ink-800 pb-7 sm:flex-row sm:items-end sm:justify-between"
     >
       <div>
-        <div class="mb-4 flex items-center gap-3 text-gold-500">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <div class="rise mb-5 flex items-center gap-3 text-gold-500">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path
               d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zm0 5.68a4.16 4.16 0 100 8.32 4.16 4.16 0 000-8.32zm0 6.86a2.7 2.7 0 110-5.4 2.7 2.7 0 010 5.4zm5.3-7.02a.97.97 0 11-1.94 0 .97.97 0 011.94 0z"
             />
@@ -32,18 +37,61 @@ import { business } from '../data/site';
             Ride along with us
           </span>
         </div>
-        <p class="display-sm text-bone-50">Every job, as it happens.</p>
-        <p class="mt-2.5 max-w-lg text-sm leading-relaxed text-bone-400">
-          Current work goes up on {business.instagramHandle} first. Follow along to see what came
-          through this week.
-        </p>
+        <h2 class="display-lg rise text-bone-50" data-delay="0.06">
+          Every job,<br /><span class="text-gold-500">as it happens.</span>
+        </h2>
       </div>
-      <span class="btn-gold shrink-0 !px-6 !py-3.5 !text-[0.72rem]">
-        Follow along
+
+      <a
+        href={business.instagram}
+        target="_blank"
+        rel="noopener"
+        class="rise btn-gold shrink-0"
+        data-delay="0.14"
+      >
+        Follow {business.instagramHandle}
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
         </svg>
-      </span>
-    </a>
+      </a>
+    </div>
+
+    {/* Scrolls sideways on a phone rather than shrinking to four thumbnails. */}
+    <ul
+      data-stagger
+      class="-mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0"
+      style="scrollbar-width: none"
+    >
+      {
+        recent.map((item) => (
+          <li
+            data-stagger-item
+            class="w-[62vw] shrink-0 translate-y-8 snap-start opacity-0 sm:w-auto"
+          >
+            <a
+              href={business.instagram}
+              target="_blank"
+              rel="noopener"
+              class="group block overflow-hidden bg-ink-850"
+            >
+              <Image
+                src={photoFor(item.src)}
+                alt={item.alt}
+                widths={[360, 720]}
+                sizes="(min-width: 640px) 24vw, 62vw"
+                loading="lazy"
+                class="aspect-square w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.05]"
+              />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </div>
 </section>
+
+<style>
+  ul::-webkit-scrollbar {
+    display: none;
+  }
+</style>

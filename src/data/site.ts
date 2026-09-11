@@ -391,6 +391,20 @@ export const gallery: GalleryItem[] = [
   },
 ];
 
+/**
+ * The small row of work under the Instagram handoff.
+ *
+ * Curated, not pulled live — a real feed needs a Graph API token on Jacob's
+ * account. Deliberately only four, so it stays a taste of the work rather than
+ * turning back into a gallery. Swap the file names to refresh it.
+ */
+export const recent: GalleryItem[] = [
+  { src: 'porsche-badge-foam.jpg', alt: 'Foam sheeting across the Panamera Turbo badge' },
+  { src: 'caliper-macro.jpg', alt: 'Yellow brake caliper cleaned behind the spokes of a wheel' },
+  { src: 'golden-hour-flare.jpg', alt: 'Rinsing a white Porsche into low golden-hour sun' },
+  { src: 'ferrari-f12.jpg', alt: 'A white Ferrari F12 and a blue Ferrari at a dealership' },
+];
+
 /** Clip used for the type-masked band — a separate shot from the hero. */
 export const band = {
   video: '/video/band-splash.mp4',
