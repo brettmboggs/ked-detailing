@@ -8,14 +8,25 @@ import Marquee from '../components/Marquee.astro';
 import hoodie from '../assets/photos/ked-hoodie.jpg';
 import vanLogo from '../assets/photos/van-logo.jpg';
 import { business } from '../data/site';
-import { products, storeMeta } from '../data/store';
+import { getCollection } from 'astro:content';
+import { storeMeta } from '../data/store';
 
-const merch = import.meta.glob<{ default: ImageMetadata }>('../assets/merch/*.{jpg,png,webp}', {
+const merch = import.meta.glob<{ default: ImageMetadata }>('../assets/merch/*.{jpg,jpeg,png,webp}', {
   eager: true,
 });
-const merchPhoto = (file: string) => merch[`../assets/merch/${file}`]?.default;
 
-const isLive = storeMeta.live && products.length > 0;
+/** The CMS may write a full repo path or a bare file name — accept either. */
+const merchPhoto = (file?: string) => {
+  if (!file) return undefined;
+  const name = file.split('/').pop();
+  return merch[`../assets/merch/${name}`]?.default;
+};
+
+// Published products drive the page state, so nothing has to be toggled by hand.
+const products = (await getCollection('products', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.order - b.data.order || a.data.name.localeCompare(b.data.name),
+);
+const isLive = products.length > 0;
 ---
 
 <Base
@@ -50,7 +61,8 @@ const isLive = storeMeta.live && products.length > 0;
         <section class="bg-ink-950 py-20 lg:py-28">
           <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
             <div data-stagger class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((p) => {
+              {products.map((entry) => {
+                const p = entry.data;
                 const img = merchPhoto(p.photo);
                 return (
                   <a

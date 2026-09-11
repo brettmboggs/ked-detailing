@@ -1,0 +1,67 @@
+# Config for the visual editor at https://app.pagescms.org
+# Jacob signs in with GitHub, picks this repo, and edits the entries below.
+# Saving commits to the repo, which rebuilds and deploys the site.
+
+media:
+  input: src/assets/merch
+  output: src/assets/merch
+
+content:
+  - name: products
+    label: Merch
+    type: collection
+    path: src/content/products
+    filename: '{fields.name}.yaml'
+    view:
+      fields: [name, price, draft]
+      primary: name
+    fields:
+      - name: name
+        label: Product name
+        type: string
+        required: true
+      - name: price
+        label: Price
+        type: string
+        required: true
+        description: Type it exactly as it should appear, e.g. $65
+      - name: blurb
+        label: Short description
+        type: text
+        description: One or two lines shown under the name.
+      - name: photo
+        label: Photo
+        type: image
+        description: Square images look best.
+      - name: href
+        label: Link to buy
+        type: string
+        required: true
+        description: The product page on your merch store.
+      - name: tag
+        label: Badge
+        type: string
+        description: Optional, e.g. New or Limited. Leave blank for none.
+      - name: order
+        label: Sort order
+        type: number
+        description: Lower numbers show first.
+      - name: draft
+        label: Hide from the site
+        type: boolean
+
+  - name: settings
+    label: Store settings
+    type: file
+    path: src/data/store-settings.json
+    fields:
+      - name: storefrontUrl
+        label: Full shop link
+        type: string
+        description: Optional. Adds a "See the full shop" button under the products.
+      - name: blurbPreLaunch
+        label: Text shown before any products exist
+        type: text
+      - name: blurbLive
+        label: Text shown once products are live
+        type: text

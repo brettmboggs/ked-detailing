@@ -1,0 +1,9 @@
+# Draft example so the shape is visible in the CMS. Leave draft: true, or
+# delete this file once there are real products.
+name: Embroidered Hoodie
+price: $65
+blurb: Heavyweight hoodie with the logo stitched on the chest.
+href: https://example.com/replace-with-the-real-product-link
+tag: Example
+order: 0
+draft: true

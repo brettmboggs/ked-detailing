@@ -1,39 +1,18 @@
 /**
- * Merch catalogue.
+ * Store copy that is part of the design rather than the catalogue.
  *
- * Products are intentionally data-only. Once a print-on-demand provider is
- * chosen, each entry gets the provider's product URL in `href` and a product
- * image dropped into `src/assets/merch/`. Until then `products` stays empty and
- * the store renders its pre-launch state.
+ * Products themselves live in `src/content/products/` as one YAML file each,
+ * edited through the CMS. The store page goes live on its own as soon as a
+ * published product exists — there is no flag to remember to flip.
  *
- * See NOTES.md — "Store / merch" for the provider comparison.
+ * The three strings below are editable in the CMS too, via store-settings.json.
  */
-
-export interface Product {
-  name: string;
-  /** Blurb shown under the name. */
-  blurb: string;
-  /** Display price, e.g. "$48". */
-  price: string;
-  /** File name inside src/assets/merch/. */
-  photo: string;
-  /** Provider-hosted product page. Opens in a new tab. */
-  href: string;
-  /** Optional flag shown as a small tag. */
-  tag?: string;
-}
-
-export const products: Product[] = [];
+import settings from './store-settings.json';
 
 export const storeMeta = {
-  /** Flip to true once `products` is populated and the provider is live. */
-  live: false,
-  /** Storefront landing page, if the provider hosts one. */
-  storefrontUrl: '',
   heading: ['Wear', 'the work.'],
   eyebrow: 'Merch',
-  blurbPreLaunch:
-    "Hoodies, tees, and caps are on the way. Everything is printed and shipped on demand, so there's no box of unsold shirts sitting in the van.",
-  blurbLive:
-    'Printed and shipped on demand. Ships anywhere in the US, usually within a week of ordering.',
+  storefrontUrl: settings.storefrontUrl,
+  blurbPreLaunch: settings.blurbPreLaunch,
+  blurbLive: settings.blurbLive,
 } as const;
