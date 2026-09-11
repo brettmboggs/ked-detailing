@@ -202,31 +202,48 @@ const BASELINES = [146, 300];
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Upright while the band is being read, toppling as it leaves.
+    // Pin the band in the middle of the viewport and play the whole topple
+    // there. Scheduling it against the section's exit meant most of the fall
+    // happened off screen, which made the effect invisible in practice.
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: 'center 62%',
-        end: 'bottom 12%',
-        scrub: 0.8,
+        start: 'center center',
+        end: '+=95%',
+        scrub: 0.55,
+        pin: true,
+        pinSpacing: true,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
       },
     });
+
+    // Hold upright briefly so the name is read before anything moves.
+    tl.to({}, { duration: 0.35 });
 
     pins.forEach((pin, i) => {
       // A little variance so it reads as knocked over, not as a rigid sweep.
       const angle = pin.dir * (74 + ((i * 37) % 17));
+      const at = 0.35 + i * 0.08;
+      const origin = `${pin.x} ${pin.y}`;
+
+      // No vertical drop. A pin pivots on its base, and translating the glyphs
+      // downward pushed the lower line past the mask edge, where it vanished.
       tl.to(
         pin.el,
-        {
-          rotation: angle,
-          y: 10 + ((i * 13) % 9),
-          svgOrigin: `${pin.x} ${pin.y}`,
-          ease: 'power2.in',
-          duration: 1,
-        },
-        i * 0.11,
+        { rotation: angle * 1.07, svgOrigin: origin, ease: 'power3.in', duration: 0.7 },
+        at,
+      );
+      // Overshoot, then rock back — reads as landing rather than stopping dead.
+      tl.to(
+        pin.el,
+        { rotation: angle, svgOrigin: origin, ease: 'power2.out', duration: 0.28 },
+        at + 0.7,
       );
     });
+
+    // Let the last pin land before the section releases.
+    tl.to({}, { duration: 0.3 });
   }
 
   init();
