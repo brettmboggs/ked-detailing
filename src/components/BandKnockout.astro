@@ -205,22 +205,21 @@ const BASELINES = [146, 300];
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Pin so the whole thing plays at viewport centre rather than on the way out.
+    // No pin. Pinning has to stop the page to hold the section, so it always
+    // ends in a hitch when it releases — and any dead time in the timeline
+    // becomes scrolling where nothing moves. The collapse is instead driven by
+    // the band's own travel through the viewport, so it stays continuous with
+    // the rest of the page. The window is chosen so it finishes while the band
+    // is still well in view rather than on the way out.
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: 'center center',
-        end: '+=110%',
-        scrub: 1.1,
-        pin: true,
-        pinSpacing: true,
-        anticipatePin: 1,
+        start: 'top 75%',
+        end: 'center 35%',
+        scrub: 1.2,
         invalidateOnRefresh: true,
       },
     });
-
-    // Hold upright so the name is read before anything moves.
-    tl.to({}, { duration: 0.3 });
 
     for (const g of glyphs) {
       const centre = g.x + g.advance / 2;
@@ -231,7 +230,7 @@ const BASELINES = [146, 300];
       // Outer letters start first, so the lockup falls inward on itself rather
       // than sweeping across. The windows overlap heavily — it reads as one
       // gesture instead of eleven separate events.
-      const at = 0.3 + (1 - reach) * 0.22;
+      const at = (1 - reach) * 0.3;
 
       tl.to(
         g.el,
@@ -248,9 +247,6 @@ const BASELINES = [146, 300];
         at,
       );
     }
-
-    // Let the collapse settle before the section releases.
-    tl.to({}, { duration: 0.25 });
   }
 
   init();
