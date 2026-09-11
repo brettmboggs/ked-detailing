@@ -1,59 +1,113 @@
 ---
 import '../styles/global.css';
-import { business } from '../data/site';
+import { business, faqs, services } from '../data/site';
 
 interface Props {
   title: string;
   description: string;
   /** Absolute or site-relative path to the social share image. */
   ogImage?: string;
+  /** Emit FAQPage markup. Only true on the page that actually renders the FAQs. */
+  includeFaq?: boolean;
 }
 
 const {
   title,
   description,
   ogImage = '/og.jpg',
+  includeFaq = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
 const ogUrl = new URL(ogImage, Astro.site ?? 'https://www.kedservice.com');
 
+const site = Astro.site ?? 'https://www.kedservice.com';
+
+/**
+ * LocalBusiness + FAQPage.
+ *
+ * aggregateRating is deliberately NOT marked up. Google treats self-hosted
+ * ratings for a LocalBusiness as self-serving and disallows them in rich
+ * results. The rating is still shown to visitors and linked to its source.
+ */
 const schema = {
   '@context': 'https://schema.org',
-  '@type': 'AutoWash',
-  name: business.legalName,
-  alternateName: business.name,
-  description:
-    'Mobile auto detailing in St. Louis, Missouri. Paint decontamination, machine polishing, interior restoration, and paint protection for daily drivers, exotics, and collector cars.',
-  url: 'https://www.kedservice.com',
-  telephone: '+13142232988',
-  email: business.email,
-  image: ogUrl.href,
-  priceRange: '$$-$$$',
-  sameAs: [business.instagram],
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: 'St. Louis',
-    addressRegion: 'MO',
-    addressCountry: 'US',
-  },
-  areaServed: [
-    { '@type': 'City', name: 'St. Louis' },
-    { '@type': 'City', name: 'St. Charles' },
-    { '@type': 'AdministrativeArea', name: 'Greater St. Louis' },
-  ],
-  potentialAction: {
-    '@type': 'ReserveAction',
-    target: {
-      '@type': 'EntryPoint',
-      urlTemplate: business.bookingUrl,
-      inLanguage: 'en-US',
-      actionPlatform: [
-        'http://schema.org/DesktopWebPlatform',
-        'http://schema.org/MobileWebPlatform',
+  '@graph': [
+    {
+      '@type': 'AutoWash',
+      '@id': `${site}#business`,
+      name: business.legalName,
+      alternateName: business.name,
+      slogan: business.motto,
+      description:
+        'Mobile auto and marine detailing across the greater St. Louis area. Maintenance washes, paint decontamination, one-step machine polishing, interior restoration and paint protection, carried out at your home or workplace.',
+      url: site,
+      telephone: '+13142232988',
+      email: business.email,
+      image: ogUrl.href,
+      logo: new URL('/apple-touch-icon.png', site).href,
+      priceRange: '$$-$$$',
+      currenciesAccepted: 'USD',
+      sameAs: [business.instagram, business.facebook],
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: business.baseCity,
+        addressRegion: business.region,
+        addressCountry: 'US',
+      },
+      areaServed: [
+        { '@type': 'City', name: 'St. Louis' },
+        { '@type': 'City', name: 'St. Charles' },
+        { '@type': 'City', name: 'High Ridge' },
+        { '@type': 'AdministrativeArea', name: 'Jefferson County' },
+        { '@type': 'AdministrativeArea', name: 'Greater St. Louis' },
       ],
+      openingHoursSpecification: [
+        {
+          '@type': 'OpeningHoursSpecification',
+          dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+          opens: '09:00',
+          closes: '17:00',
+        },
+      ],
+      hasOfferCatalog: {
+        '@type': 'OfferCatalog',
+        name: 'Detailing packages',
+        itemListElement: services.map((s) => ({
+          '@type': 'Offer',
+          name: `${s.level} — ${s.name}`,
+          description: s.summary,
+          ...(s.price ? { price: s.price.replace('$', ''), priceCurrency: 'USD' } : {}),
+          itemOffered: { '@type': 'Service', name: s.name, serviceType: 'Auto detailing' },
+        })),
+      },
+      potentialAction: {
+        '@type': 'ReserveAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: business.bookingUrl,
+          inLanguage: 'en-US',
+          actionPlatform: [
+            'https://schema.org/DesktopWebPlatform',
+            'https://schema.org/MobileWebPlatform',
+          ],
+        },
+      },
     },
-  },
+    ...(includeFaq
+      ? [
+          {
+            '@type': 'FAQPage',
+            '@id': `${site}#faq`,
+            mainEntity: faqs.map((f) => ({
+              '@type': 'Question',
+              name: f.q,
+              acceptedAnswer: { '@type': 'Answer', text: f.a },
+            })),
+          },
+        ]
+      : []),
+  ],
 };
 ---
 
@@ -86,7 +140,8 @@ const schema = {
       href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter:wght@400;500;600;700&display=swap"
     />
 
-    <set:html value={`<script type="application/ld+json">${JSON.stringify(schema)}</script>`} />
+    <!-- set:html is a directive on the element, not a standalone tag. -->
+    <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />
   </head>
 
   <body class="antialiased">

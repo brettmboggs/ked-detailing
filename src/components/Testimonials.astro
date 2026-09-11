@@ -1,39 +1,75 @@
 ---
-import { testimonials } from '../data/site';
+import { business, testimonials } from '../data/site';
 ---
 
 <section id="reviews" class="relative overflow-hidden bg-ink-900 py-24 lg:py-32">
-  <div class="mx-auto mb-14 max-w-[90rem] px-5 sm:px-8">
-    <p class="eyebrow rise mb-6">What our clients say</p>
-    <h2 class="display-lg rise max-w-3xl text-bone-50" data-delay="0.08">
-      Judged by people<br />who notice everything.
-    </h2>
+  <div class="mx-auto mb-14 max-w-[105rem] px-5 sm:px-8">
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <div class="rise mb-6 flex items-center gap-4">
+          <span class="h-px w-10 bg-gold-500"></span>
+          <p class="eyebrow">In their words</p>
+        </div>
+        <h2 class="display-lg rise max-w-3xl text-bone-50" data-delay="0.08">
+          Judged by people<br />who notice<span class="text-gold-500"> everything.</span>
+        </h2>
+      </div>
+
+      <!-- Real aggregate rating, linked to the source so it can be checked. -->
+      <a
+        href={business.reviewsUrl}
+        target="_blank"
+        rel="noopener"
+        class="rise group flex shrink-0 items-center gap-5 border border-ink-800 bg-ink-950 px-6 py-5 transition-colors duration-500 hover:border-gold-600"
+        data-delay="0.16"
+      >
+        <span
+          class="font-display text-4xl leading-none text-bone-50"
+          style="font-variation-settings:'wdth' 84,'wght' 800"
+        >
+          {business.rating}
+        </span>
+        <span>
+          <span class="flex gap-0.5 text-gold-500" aria-hidden="true">
+            {
+              Array.from({ length: 5 }).map(() => (
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 0l2.6 6.6L20 7.3l-5.4 4.7 1.7 7L10 15.3 3.7 19l1.7-7L0 7.3l7.4-.7L10 0z" />
+                </svg>
+              ))
+            }
+          </span>
+          <span class="mt-1.5 block text-xs text-bone-400">
+            {business.reviewCount}+ five-star reviews
+            <span class="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-0.5"
+              >&rarr;</span
+            >
+          </span>
+        </span>
+      </a>
+    </div>
   </div>
 
-  <div
-    data-marquee
-    data-marquee-speed="64"
-    class="relative overflow-hidden"
-  >
+  <div data-marquee data-marquee-speed="80" class="relative overflow-hidden">
     <div data-marquee-track class="flex w-max gap-5 px-5 will-change-transform sm:px-8">
       {
         testimonials.map((t) => (
-          <figure class="flex w-[min(86vw,30rem)] shrink-0 flex-col justify-between border border-ink-800 bg-ink-950 p-8 lg:p-10">
+          <figure class="flex w-[min(86vw,29rem)] shrink-0 flex-col justify-between border border-ink-800 bg-ink-950 p-8 lg:p-9">
             <div>
-              <svg
-                width="30"
-                height="24"
-                viewBox="0 0 30 24"
-                fill="none"
-                class="mb-7 text-gold-600"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12.5 0v9.6C12.5 17.9 7.2 23.2 0 24v-4.8c4.1-.8 6.7-3.5 6.7-7.2H0V0h12.5zm17.5 0v9.6c0 8.3-5.3 13.6-12.5 14.4v-4.8c4.1-.8 6.7-3.5 6.7-7.2h-6.7V0H30z"
-                  fill="currentColor"
-                />
-              </svg>
-              <blockquote class="text-lg leading-relaxed text-bone-200 lg:text-xl">
+              <div class="mb-6 flex items-center justify-between gap-4">
+                <span class="flex gap-0.5 text-gold-500" aria-label="Five out of five stars">
+                  {Array.from({ length: 5 }).map(() => (
+                    <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path d="M10 0l2.6 6.6L20 7.3l-5.4 4.7 1.7 7L10 15.3 3.7 19l1.7-7L0 7.3l7.4-.7L10 0z" />
+                    </svg>
+                  ))}
+                </span>
+                <span class="text-[0.68rem] uppercase tracking-[0.16em] text-bone-500">
+                  {t.source}
+                </span>
+              </div>
+
+              <blockquote class="text-[0.98rem] leading-relaxed text-bone-200 lg:text-base">
                 {t.quote}
               </blockquote>
             </div>

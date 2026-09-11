@@ -2,12 +2,12 @@
 import { Image } from 'astro:assets';
 import vanPhoto from '../assets/photos/van-on-site.jpg';
 import wheelPhoto from '../assets/photos/panamera-foam-side.jpg';
-import { intro } from '../data/site';
+import { business, intro } from '../data/site';
 
 const proof = [
-  { k: 'Fully mobile', v: 'We bring the bay to your driveway or office lot.' },
-  { k: 'Daily to collector', v: 'Commuters, exotics, air-cooled classics, and show cars.' },
-  { k: 'St. Louis & St. Charles', v: 'Serving the greater metro, seven days a week.' },
+  { k: 'Fully mobile', v: 'The whole setup arrives in the van. You never leave the driveway.' },
+  { k: 'Auto & marine', v: 'Daily drivers, exotics, air-cooled classics, boats and trailers.' },
+  { k: 'St. Louis metro', v: `Based in ${business.baseCity}. ${business.hours}.` },
 ];
 ---
 
