@@ -5,8 +5,8 @@ Image pipeline for the Instagram row on the home page.
 ```bash
 python3 -m venv tools/.venv && tools/.venv/bin/pip install numpy pillow
 
-# 1. pull the feed — put the token in tools/.env first (gitignored)
-echo 'IG_TOKEN=...' > tools/.env
+# 1. pull the feed — store the token first (prompts, nothing to paste inline)
+./tools/set-token.sh
 tools/.venv/bin/python tools/fetch_instagram.py --out tools/feed --limit 25
 
 # 2. score it, reject the weak ones, grade the keepers
@@ -18,10 +18,15 @@ tested against the archive on the SSD.
 
 ## The token
 
-`fetch_instagram.py` reads `IG_TOKEN` from the environment, then from
-`tools/.env`. Both are gitignored; the value is never printed, logged or
-committed. Confirm it with `git check-ignore -v tools/.env` before putting a
-real one in.
+Run `./tools/set-token.sh` and paste at the prompt. The value never appears in
+a command line, in shell history, or in a chat message, and the script refuses
+placeholder text and anything under 60 characters — both of which have already
+happened once, because an example command with a placeholder in it is a command
+someone will run verbatim.
+
+`fetch_instagram.py` then reads `IG_TOKEN` from the environment, falling back to
+`tools/.env`. Both are gitignored; the value is never printed or logged.
+Verified with `git check-ignore -v tools/.env`.
 
 Authorising the app is not the same as having a token. Authorising produces a
 short-lived code; that has to be exchanged for a long-lived token, which is
