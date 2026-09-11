@@ -22,10 +22,12 @@ import Footer from '../components/Footer.astro';
 
   <main id="main">
     <Hero />
-    <!-- Angled gold stripe cutting between the hero and the story. -->
+    <!-- Angled gold stripe cutting between the hero and the brand statement. -->
     <Marquee angle={-2.2} variant="gold" speed={58} />
-    <Intro />
+    {/* The lockup lands straight after the stripe — hero, stripe, name — rather
+        than sitting behind a long block of copy. The story follows it. */}
     <BandKnockout />
+    <Intro />
     <Services />
     <Gallery />
     <Testimonials />
