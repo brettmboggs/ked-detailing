@@ -289,16 +289,40 @@ export const faqs: Faq[] = [
 
 /* ----------------------------------------------------------------- marque */
 
-/** Vehicles actually worked on, drawn from the photo library and public reviews. */
+/**
+ * Marquee ticker. Reads as scope — the kind of work that comes through — rather
+ * than a claim that each specific car did.
+ *
+ * Evidenced by the photo library, the reviews or his socials: Porsche, the
+ * Panamera Turbo, the air-cooled 911, the GT3, Ferrari, G-Wagon, Escalade-V,
+ * Rivian R1S, the '72 Monte Carlo, boats and daily drivers.
+ *
+ * The remaining marques are scope claims. Strike any Jacob would not want to
+ * stand behind — they are single lines here.
+ */
 export const marque: string[] = [
   'Porsche',
-  'Panamera Turbo',
-  'Rivian R1S',
+  '911 GT3',
   'Air-Cooled 911',
+  'Panamera Turbo',
+  'Ferrari',
+  'Corvette',
+  'AMG',
   'G-Wagon',
-  'Ferrari F12',
-  'Monte Carlo',
+  'BMW M',
+  'Audi RS',
+  'Range Rover',
   'Escalade-V',
+  'Bronco',
+  'Raptor',
+  'Rivian R1S',
+  'Restomods',
+  'Classics',
+  'Exotics',
+  'Show Cars',
+  'Monte Carlo',
+  'Lifted Trucks',
+  'Work Trucks',
   'Boats & Trailers',
   'Daily Drivers',
 ];

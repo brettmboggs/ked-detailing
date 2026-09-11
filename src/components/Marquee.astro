@@ -4,11 +4,12 @@ import { marque } from '../data/site';
 interface Props {
   dir?: 'left' | 'right';
   speed?: number;
+  /** Scroll speed in pixels per second. */
   /** Tilt in degrees. Non-zero turns the strip into a diagonal stripe. */
   angle?: number;
   variant?: 'dark' | 'gold';
 }
-const { dir = 'left', speed = 46, angle = 0, variant = 'dark' } = Astro.props;
+const { dir = 'left', speed = 55, angle = 0, variant = 'dark' } = Astro.props;
 
 const gold = variant === 'gold';
 const tilted = angle !== 0;

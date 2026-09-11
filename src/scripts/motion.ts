@@ -144,28 +144,39 @@ function initMarquee() {
 
     if (REDUCED) return;
 
-    const dir = el.dataset.marqueeDir === 'right' ? 1 : -1;
-    const speed = Number(el.dataset.marqueeSpeed) || 42;
+    const goingLeft = el.dataset.marqueeDir !== 'right';
 
+    // Duration is derived from how wide the track actually is, so the ticker
+    // moves at a constant speed no matter how many items are in it. A fixed
+    // duration meant adding entries silently sped the whole thing up.
+    const pxPerSecond = Number(el.dataset.marqueeSpeed) || 55;
+    const travel = track.scrollWidth / 2;
+    const duration = travel > 0 ? travel / pxPerSecond : 40;
+
+    // Both directions run the same tween forwards. Rightward simply starts
+    // half a lap in and animates back to zero, which keeps timeScale positive
+    // throughout — a negative timeScale drove the tween back into progress 0,
+    // where it stuck after a single segment.
+    gsap.set(track, { xPercent: goingLeft ? 0 : -50 });
     const loop = gsap.to(track, {
-      xPercent: dir * -50,
-      duration: speed,
+      xPercent: goingLeft ? -50 : 0,
+      duration,
       ease: 'none',
       repeat: -1,
     });
-    if (dir === 1) loop.progress(1).timeScale(-1);
 
-    // Scroll velocity nudges the marquee, so the page feels physically linked.
+    // Scroll velocity speeds it up, so the page feels physically linked. It
+    // only ever scales the magnitude; it must never flip the sign.
     ScrollTrigger.create({
       trigger: el,
       start: 'top bottom',
       end: 'bottom top',
       onUpdate: (self) => {
         const boost = 1 + Math.min(Math.abs(self.getVelocity()) / 1400, 3.2);
-        gsap.to(loop, { timeScale: dir * boost * (dir === 1 ? -1 : 1), duration: 0.3, overwrite: true });
+        gsap.to(loop, { timeScale: boost, duration: 0.3, overwrite: true });
       },
-      onLeave: () => gsap.to(loop, { timeScale: dir === 1 ? -1 : 1, duration: 0.6 }),
-      onLeaveBack: () => gsap.to(loop, { timeScale: dir === 1 ? -1 : 1, duration: 0.6 }),
+      onLeave: () => gsap.to(loop, { timeScale: 1, duration: 0.6 }),
+      onLeaveBack: () => gsap.to(loop, { timeScale: 1, duration: 0.6 }),
     });
   });
 }
