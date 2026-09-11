@@ -129,9 +129,13 @@ const BASELINES = [146, 300];
     }
   }
 
-  /* ------------------------------------------------ the topple ------------- */
+  /* ----------------------------------------------- the collapse ------------ */
 
-  type Pin = { el: SVGTextElement; x: number; y: number; dir: 1 | -1 };
+  const CENTRE_X = 500;
+  const BASELINES = [146, 300];
+  const CAP_HEIGHT = 121; // Archivo caps at 168px, near enough for a pivot.
+
+  type Glyph = { el: SVGTextElement; x: number; line: number; advance: number };
 
   /**
    * Rebuild each line as one <text> per character, positioned from the laid-out
@@ -140,12 +144,12 @@ const BASELINES = [146, 300];
    * wrong width. Each copy carries its own textLength equal to the advance it
    * occupied in the stretched line, which reproduces it exactly.
    */
-  function explode(): Pin[] {
+  function explode(): Glyph[] {
     if (!mask) return [];
-    const pins: Pin[] = [];
+    const glyphs: Glyph[] = [];
     const lines = Array.from(mask.querySelectorAll<SVGTextElement>('[data-knockout-line]'));
 
-    for (const line of lines) {
+    lines.forEach((line, lineIndex) => {
       const text = line.textContent ?? '';
       const total = line.getNumberOfChars();
 
@@ -172,14 +176,13 @@ const BASELINES = [146, 300];
         glyph.textContent = ch;
         mask.appendChild(glyph);
 
-        // Letters near the right edge fall left, so nothing topples out of frame.
-        pins.push({ el: glyph, x: start.x, y: start.y, dir: start.x > 760 ? -1 : 1 });
+        glyphs.push({ el: glyph, x: start.x, line: lineIndex, advance });
       }
 
       line.setAttribute('visibility', 'hidden');
-    }
+    });
 
-    return pins;
+    return glyphs;
   }
 
   async function init() {
@@ -192,25 +195,23 @@ const BASELINES = [146, 300];
       /* older browsers just measure with the fallback face */
     }
 
-    let pins: Pin[] = [];
+    let glyphs: Glyph[] = [];
     try {
-      pins = explode();
+      glyphs = explode();
     } catch {
       return; // leave the readable two-line version in place
     }
-    if (!pins.length) return;
+    if (!glyphs.length) return;
 
     gsap.registerPlugin(ScrollTrigger);
 
-    // Pin the band in the middle of the viewport and play the whole topple
-    // there. Scheduling it against the section's exit meant most of the fall
-    // happened off screen, which made the effect invisible in practice.
+    // Pin so the whole thing plays at viewport centre rather than on the way out.
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
         start: 'center center',
-        end: '+=95%',
-        scrub: 0.55,
+        end: '+=110%',
+        scrub: 1.1,
         pin: true,
         pinSpacing: true,
         anticipatePin: 1,
@@ -218,32 +219,38 @@ const BASELINES = [146, 300];
       },
     });
 
-    // Hold upright briefly so the name is read before anything moves.
-    tl.to({}, { duration: 0.35 });
+    // Hold upright so the name is read before anything moves.
+    tl.to({}, { duration: 0.3 });
 
-    pins.forEach((pin, i) => {
-      // A little variance so it reads as knocked over, not as a rigid sweep.
-      const angle = pin.dir * (74 + ((i * 37) % 17));
-      const at = 0.35 + i * 0.08;
-      const origin = `${pin.x} ${pin.y}`;
+    for (const g of glyphs) {
+      const centre = g.x + g.advance / 2;
+      const offset = centre - CENTRE_X;
+      // 0 at the middle of the lockup, 1 at its outer edges.
+      const reach = Math.min(Math.abs(offset) / CENTRE_X, 1);
 
-      // No vertical drop. A pin pivots on its base, and translating the glyphs
-      // downward pushed the lower line past the mask edge, where it vanished.
+      // Outer letters start first, so the lockup falls inward on itself rather
+      // than sweeping across. The windows overlap heavily — it reads as one
+      // gesture instead of eleven separate events.
+      const at = 0.3 + (1 - reach) * 0.22;
+
       tl.to(
-        pin.el,
-        { rotation: angle * 1.07, svgOrigin: origin, ease: 'power3.in', duration: 0.7 },
+        g.el,
+        {
+          // Everything converges on the centre and settles onto the lower line.
+          x: -offset * 0.42,
+          y: g.line === 0 ? BASELINES[1] - BASELINES[0] - 18 : 8,
+          rotation: (offset > 0 ? -1 : 1) * (6 + reach * 22),
+          scale: 0.74,
+          svgOrigin: `${centre} ${BASELINES[g.line] - CAP_HEIGHT / 2}`,
+          ease: 'power2.inOut',
+          duration: 0.95,
+        },
         at,
       );
-      // Overshoot, then rock back — reads as landing rather than stopping dead.
-      tl.to(
-        pin.el,
-        { rotation: angle, svgOrigin: origin, ease: 'power2.out', duration: 0.28 },
-        at + 0.7,
-      );
-    });
+    }
 
-    // Let the last pin land before the section releases.
-    tl.to({}, { duration: 0.3 });
+    // Let the collapse settle before the section releases.
+    tl.to({}, { duration: 0.25 });
   }
 
   init();
