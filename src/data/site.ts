@@ -367,7 +367,10 @@ export const band = {
   word: 'Knock Em Down',
 } as const;
 
-/** Root-relative so the same nav works from the home page and /store. */
+/**
+ * Header nav. Root-relative so it works from every page.
+ * Blog sits in the footer only — seven items will not fit the header at 1024px.
+ */
 export const nav: NavItem[] = [
   { label: 'Work', href: '/#work' },
   { label: 'Services', href: '/#services' },
@@ -376,3 +379,6 @@ export const nav: NavItem[] = [
   { label: 'Store', href: '/store' },
   { label: 'Contact', href: '/#contact' },
 ];
+
+/** Footer carries everything in the header plus the blog. */
+export const footerNav: NavItem[] = [...nav, { label: 'Notes', href: '/blog' }];

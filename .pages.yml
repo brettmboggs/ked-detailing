@@ -3,8 +3,14 @@
 # Saving commits to the repo, which rebuilds and deploys the site.
 
 media:
-  input: src/assets/merch
-  output: src/assets/merch
+  - name: merch
+    label: Merch photos
+    input: src/assets/merch
+    output: src/assets/merch
+  - name: blog
+    label: Post images
+    input: src/assets/blog
+    output: src/assets/blog
 
 content:
   - name: products
@@ -32,6 +38,8 @@ content:
       - name: photo
         label: Photo
         type: image
+        options:
+          media: merch
         description: Square images look best.
       - name: href
         label: Link to buy
@@ -49,6 +57,49 @@ content:
       - name: draft
         label: Hide from the site
         type: boolean
+
+  - name: posts
+    label: Notes
+    type: collection
+    path: src/content/posts
+    filename: '{fields.title}.md'
+    view:
+      fields: [title, pubDate, draft]
+      primary: title
+      sort: [pubDate]
+    fields:
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: description
+        label: Search summary
+        type: text
+        description: One or two sentences. Shown on the blog index and in Google results.
+      - name: pubDate
+        label: Date
+        type: date
+        required: true
+      - name: hero
+        label: Header image
+        type: image
+        options:
+          media: blog
+        description: Landscape works best.
+      - name: heroAlt
+        label: Image description
+        type: string
+        description: For screen readers. Describe what is in the photo.
+      - name: tags
+        label: Tags
+        type: string
+        list: true
+      - name: draft
+        label: Hide from the site
+        type: boolean
+      - name: body
+        label: Post
+        type: rich-text
 
   - name: settings
     label: Store settings

@@ -28,4 +28,22 @@ const products = defineCollection({
   }),
 });
 
-export const collections = { products };
+/**
+ * Blog posts carried over from the Squarespace site. The file names are the
+ * original slugs, so every published URL keeps working after the cutover.
+ */
+const posts = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
+  schema: z.object({
+    title: z.string(),
+    description: z.string().default(''),
+    pubDate: z.coerce.date(),
+    /** File name inside src/assets/blog/. */
+    hero: z.string().optional(),
+    heroAlt: z.string().default(''),
+    tags: z.array(z.string()).default([]),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { products, posts };

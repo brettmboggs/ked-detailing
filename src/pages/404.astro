@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { business } from '../data/site';
+---
+
+<Base
+  title="Page not found | Knock Em' Down Detailing"
+  description="That page has moved. Head back to the detailing packages or book a slot."
+>
+  <Header />
+
+  <main id="main" class="flex min-h-[70svh] items-center bg-ink-950">
+    <div class="mx-auto w-full max-w-[105rem] px-5 py-28 sm:px-8">
+      <div class="rise mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p class="eyebrow">404</p>
+      </div>
+
+      <h1 class="display-lg max-w-3xl text-bone-50">
+        <span class="rise block">Nothing here.</span>
+        <span class="rise block text-gold-500" data-delay="0.08">Still spotless though.</span>
+      </h1>
+
+      <p class="rise mt-8 max-w-lg text-lg leading-relaxed text-bone-200" data-delay="0.16">
+        That page moved when the site was rebuilt. The packages, the recent work and the booking
+        link are all still where you would expect.
+      </p>
+
+      <div class="rise mt-10 flex flex-wrap gap-3" data-delay="0.22">
+        <a href="/#services" class="btn-gold">See the packages</a>
+        <a href="/" class="btn-ghost">Back to the start</a>
+        <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>

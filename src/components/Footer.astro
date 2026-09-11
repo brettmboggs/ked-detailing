@@ -1,7 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
-import { business, nav } from '../data/site';
+import { business, footerNav } from '../data/site';
 
 const year = new Date().getFullYear();
 ---
@@ -21,7 +21,7 @@ const year = new Date().getFullYear();
         <h2 class="font-display text-[0.7rem] uppercase tracking-[0.22em] text-bone-500">Explore</h2>
         <ul class="mt-5 space-y-3">
           {
-            nav.map((item) => (
+            footerNav.map((item) => (
               <li>
                 <a
                   href={item.href}

@@ -119,6 +119,42 @@ nothing, so the profile and the site's SEO are both upside, not maintenance.
 
 ---
 
+## Launch readiness
+
+**Every URL the old site published still resolves.** Checked against the
+archived Squarespace sitemap — 23 of 23 covered, nothing missing, and zero
+broken internal links in the build.
+
+- **The three blog posts are carried over at their original slugs**, so
+  `/blog/how-often-should-you-detail-your-car` and the other two keep working.
+  They live in `src/content/posts` as markdown.
+- **Everything else 301s.** `public/_redirects` handles it at the edge on
+  Cloudflare or Netlify; `astro.config.mjs` mirrors the same map so the
+  redirects survive on a host that ignores that file. Covers `/home`, `/cart`,
+  all 17 `/blog/tag/*` pages, `/blog/category/Info`, and the old store product.
+- Redirect stubs carry `noindex` and a canonical, and the generated sitemap
+  lists only the six real pages.
+- A 404 page exists and routes back to the packages, the home page and the phone.
+
+**The old blog hero images were AI-generated and had to go.** One showed a man
+in an *STL Detailing* polo — a different company. Another had Subaru and
+St. Louis Chevrolet dealer signage behind a Mazda. All three are replaced with
+real photographs from the shoot.
+
+### Before flipping the domain
+
+1. Jacob points the domain (see Blockers). Nothing else is waiting on anyone.
+2. Add `<meta name="robots" content="noindex">` in `Base.astro` while it sits on
+   the staging subdomain, and take it out at cutover.
+3. Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console after
+   the switch, and keep an eye on Coverage for a fortnight.
+4. Export the Squarespace newsletter list before cancelling. **There is no
+   newsletter signup on the new site** — the old one posted to Squarespace and
+   there is nowhere for it to go now. If he wants to keep collecting addresses,
+   that needs a decision on where they land.
+5. Cancel the Squarespace *website* plan only once DNS has settled. The domain
+   registration is separate.
+
 ## Still open
 
 - **Level III vs Level IV.** Level III "The Knockout" calls itself the top-tier
@@ -181,9 +217,21 @@ paint, and skipped entirely under `prefers-reduced-motion` or data-saver.
 
 ## Store / merch
 
-`/store` is built and styled but **not selling**. It renders a pre-launch state
-until `storeMeta.live` is true and `products` has entries in `src/data/store.ts`.
-Product images go in `src/assets/merch/`.
+`/store` is built and styled but **not selling** — it shows a pre-launch state
+until the first published product exists. Nothing has to be toggled by hand.
+
+Jacob manages both merch and blog posts himself at **app.pagescms.org**: he signs
+in with GitHub, picks this repo, and the config in `.pages.yml` gives him two
+collections — *Merch* and *Notes* — plus the store's surrounding copy. Saving
+commits to the repo, which rebuilds and deploys. Every product and post has a
+**Hide from the site** switch so he can stage things privately.
+
+Products are one YAML file each in `src/content/products/`, typed by the
+collection in `src/content.config.ts`. Images go in `src/assets/merch/`, post
+images in `src/assets/blog/`.
+
+What is still needed is the provider — the store links out to provider-hosted
+product pages, so no payment handling lives in this repo:
 
 | Option | Monthly | Cut | Notes |
 | --- | --- | --- | --- |
