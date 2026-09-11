@@ -1,43 +1,68 @@
-# Astro Starter Kit: Minimal
+# Knock Em' Down Detailing
 
-```sh
-npm create astro@latest -- --template minimal
+Mobile auto and marine detailing in St. Louis. A static marketing site built to
+replace a Squarespace template.
+
+**Stack:** Astro 7 · Tailwind v4 · GSAP + ScrollTrigger · Lenis · TypeScript
+
+## Running it
+
+```bash
+nvm use          # .nvmrc pins Node 22 — Astro 7 will not run on 20
+npm install
+npm run dev      # http://localhost:4321
+npm run check    # astro check
+npm run verify   # check + build; run before deploying
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## How it is put together
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```
+src/
+  components/    Header, Hero, Marquee, Intro, BandKnockout, Services,
+                 Gallery, Testimonials, Faq, Cta, Footer
+  data/          site.ts — all copy, reviews and photo assignments
+                 store.ts — merch catalogue
+  layouts/       Base.astro — meta, fonts, LocalBusiness + FAQPage schema
+  pages/         index.astro, store.astro
+  scripts/       motion.ts — Lenis, GSAP reveals, marquees, accordions
+  styles/        global.css — design tokens and the display type scale
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Copy lives in `src/data/site.ts` rather than inside components, so text changes
+happen in one file.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Notes on the build
 
-Any static assets, like images, can be placed in the `public/` directory.
+**Media.** Photography and 4K video shot by [Brett Boggs](https://brettboggs.dev).
+The source footage carries no rotation metadata and was shot with the camera
+physically turned, so it needs `transpose=2` on ingest — corrected, it is
+portrait, which is why the hero is built around a vertical clip. Video is muted,
+looping, `playsinline`, attached by script only after first paint, and skipped
+entirely under `prefers-reduced-motion` or an explicit data-saver setting.
 
-## 🧞 Commands
+**Motion.** Every animation is opt-out. With reduced motion set, animated
+elements render in their final state and only the behaviour that carries meaning
+stays wired up.
 
-All commands are run from the root of the project, from a terminal:
+**Services.** Hovering a tier opens it in place, with its media wiping in beside
+the description. One row is always open and it does not close on pointer leave,
+so crossing the list cannot leave the section empty. Click toggles on touch and
+keyboard focus opens the row it lands on.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+**Structured data.** `LocalBusiness` on every page, `FAQPage` only on the page
+that renders the FAQs. `aggregateRating` is deliberately omitted — Google treats
+a business marking up its own rating as self-serving and disallows it in rich
+results. The rating is shown to visitors and linked to its source instead.
 
-## 👀 Want to learn more?
+## Gotchas
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- `set:html` is a directive, not a tag. `<set:html value={...} />` silently
+  emits a literal `<set :html="...">` element and no structured data renders.
+  Use `<script type="application/ld+json" set:html={...} is:inline />`.
+- Avoid `as const` on content arrays. It gives each entry its own literal type,
+  so optional fields vanish from the union and property access fails to compile.
+  The arrays in `site.ts` use explicit interfaces.
+- Restart the dev server after any `npm install`. The running process caches
+  module paths and will throw `MissingSharp` on every image even though sharp is
+  fine on disk.
