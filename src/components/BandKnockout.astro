@@ -1,0 +1,117 @@
+---
+import { band, business } from '../data/site';
+
+/**
+ * Type-knockout band.
+ *
+ * A solid panel in the page colour is painted over the clip, with the brand
+ * name punched out of it, so the footage only shows inside the letterforms.
+ * `textLength` pins each line to the viewBox width, which means the lockup
+ * fills the band identically whether or not the webfont has landed yet.
+ */
+---
+
+<section class="relative overflow-hidden bg-ink-950 py-16 lg:py-24" aria-labelledby="band-heading">
+  <h2 id="band-heading" class="sr-only">{business.name}</h2>
+
+  <div class="relative mx-auto max-w-[105rem] px-5 sm:px-8">
+    <div class="relative">
+      <video
+        data-band-video
+        data-src={band.video}
+        poster={band.poster}
+        muted
+        loop
+        playsinline
+        preload="none"
+        aria-hidden="true"
+        tabindex="-1"
+        class="absolute inset-0 h-full w-full object-cover object-[50%_45%]"
+      ></video>
+
+      <!-- The panel: opaque everywhere except the letters. -->
+      <svg
+        viewBox="0 0 1000 322"
+        class="relative block w-full"
+        role="presentation"
+        aria-hidden="true"
+      >
+        <defs>
+          <mask id="ked-knockout">
+            <rect width="1000" height="322" fill="white" />
+            <text
+              x="0"
+              y="146"
+              textLength="1000"
+              lengthAdjust="spacingAndGlyphs"
+              fill="black"
+              font-family="Archivo, system-ui, sans-serif"
+              font-size="168"
+              font-weight="900"
+              style="font-variation-settings:'wdth' 70,'wght' 900"
+            >KNOCK EM</text>
+            <text
+              x="0"
+              y="300"
+              textLength="1000"
+              lengthAdjust="spacingAndGlyphs"
+              fill="black"
+              font-family="Archivo, system-ui, sans-serif"
+              font-size="168"
+              font-weight="900"
+              style="font-variation-settings:'wdth' 70,'wght' 900"
+            >DOWN</text>
+          </mask>
+        </defs>
+        <rect width="1000" height="322" fill="#07080a" mask="url(#ked-knockout)" />
+      </svg>
+    </div>
+
+    <div
+      class="mt-8 flex flex-col gap-5 border-t border-ink-800 pt-7 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p class="rise max-w-md text-sm leading-relaxed text-bone-400">
+        Foam cannon, two-bucket contact wash, decontamination, and a finish you can see your
+        reflection in. Every vehicle, every time.
+      </p>
+      <a
+        href={business.bookingUrl}
+        target="_blank"
+        rel="noopener"
+        class="rise inline-flex shrink-0 items-center gap-2 font-display text-[0.78rem] uppercase tracking-[0.18em] text-gold-400 transition-colors hover:text-gold-500"
+        style="font-variation-settings:'wdth' 100,'wght' 650"
+      >
+        Check availability
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+  const video = document.querySelector<HTMLVideoElement>('[data-band-video]');
+
+  if (video) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const conn = (navigator as any).connection;
+    const thrifty = Boolean(conn?.saveData) || /2g/.test(conn?.effectiveType ?? '');
+
+    if (!reduced && !thrifty) {
+      // Same file as the hero, so this is a cache hit rather than a second download.
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            if (!video.src && video.dataset.src) video.src = video.dataset.src;
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
+        },
+        { rootMargin: '200px' },
+      );
+      io.observe(video);
+    }
+  }
+</script>

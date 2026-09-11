@@ -1,0 +1,134 @@
+---
+import { business, hero } from '../data/site';
+---
+
+<section id="top" class="relative min-h-[100svh] w-full overflow-hidden bg-ink-950 grain">
+  <!-- Poster paints instantly; the clip is attached by script once it is safe to. -->
+  <video
+    data-hero-video
+    data-src="/video/hero-foam.mp4"
+    poster="/video/hero-foam.jpg"
+    muted
+    loop
+    playsinline
+    preload="none"
+    aria-hidden="true"
+    tabindex="-1"
+    class="absolute inset-0 h-full w-full object-cover object-[50%_42%]"
+  ></video>
+
+  <!-- Grade: crush it toward the brand black so type always wins. -->
+  <div class="pointer-events-none absolute inset-0 bg-ink-950/45"></div>
+  <div
+    class="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/35 to-ink-950/55"
+  >
+  </div>
+  <div
+    class="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-ink-950 to-transparent"
+  >
+  </div>
+
+  <!-- Rotated edge label -->
+  <div
+    class="pointer-events-none absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 translate-x-[38%] rotate-90 lg:block"
+    aria-hidden="true"
+  >
+    <span class="font-display text-[0.7rem] uppercase tracking-[0.42em] text-bone-500">
+      Est. St. Louis — Fully Mobile
+    </span>
+  </div>
+
+  <div
+    class="relative z-10 mx-auto flex min-h-[100svh] max-w-[105rem] flex-col justify-end px-5 pb-14 pt-32 sm:px-8 lg:pb-16"
+  >
+    <div data-hero-fade class="mb-7 flex translate-y-4 items-center gap-4 opacity-0">
+      <span class="h-px w-10 bg-gold-500"></span>
+      <p class="eyebrow !text-bone-200">{hero.eyebrow}</p>
+    </div>
+
+    <!-- Headline. Deliberately oversized and stepped so it reads as a poster. -->
+    <h1 class="text-bone-50">
+      <span data-hero-line class="reveal-line display-hero block">
+        <span>{hero.headline[0]}</span>
+      </span>
+      <span data-hero-line class="reveal-line display-hero block lg:pl-[12%]">
+        <span>{hero.headline[1]}</span>
+      </span>
+      <span data-hero-line class="reveal-line display-hero block lg:pl-[5%]">
+        <span class="text-gold-500">{hero.headline[2]}</span>
+      </span>
+    </h1>
+
+    <div
+      class="mt-9 flex flex-col gap-7 border-t border-ink-700/60 pt-7 lg:mt-11 lg:flex-row lg:items-center lg:justify-between lg:gap-12"
+    >
+      <p
+        data-hero-fade
+        class="max-w-lg translate-y-4 text-base leading-relaxed text-bone-200 opacity-0 lg:text-lg"
+      >
+        {hero.sub}
+      </p>
+
+      <div data-hero-fade class="flex w-full translate-y-4 flex-col gap-3 opacity-0 sm:w-auto sm:flex-row sm:flex-wrap">
+        <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold w-full sm:w-auto">
+          Book your detail
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
+          </svg>
+        </a>
+        <a href={business.phoneHref} class="btn-ghost w-full sm:w-auto">
+          {business.phone}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Bigger and tighter than the shared display scale — this is the poster line. */
+  .display-hero {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 70, 'wght' 850;
+    font-size: clamp(3.1rem, 15.5vw, 15rem);
+    line-height: 0.82;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+</style>
+
+<script>
+  const video = document.querySelector<HTMLVideoElement>('[data-hero-video]');
+
+  if (video) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Respect an explicit data-saver setting rather than pushing 2MB at a phone.
+    const conn = (navigator as any).connection;
+    const thrifty = Boolean(conn?.saveData) || /2g/.test(conn?.effectiveType ?? '');
+
+    if (!reduced && !thrifty) {
+      const attach = () => {
+        const src = video.dataset.src;
+        if (!src || video.src) return;
+        video.src = src;
+        video.play().catch(() => {
+          /* Autoplay can still be refused; the poster stays and that is fine. */
+        });
+      };
+
+      // Wait for first paint so the clip never competes with the poster or fonts.
+      if (document.readyState === 'complete') attach();
+      else window.addEventListener('load', attach, { once: true });
+
+      // Stop decoding while the hero is off screen.
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          if (!video.src) return;
+          if (entry.isIntersecting) video.play().catch(() => {});
+          else video.pause();
+        },
+        { threshold: 0 },
+      );
+      io.observe(video);
+    }
+  }
+</script>

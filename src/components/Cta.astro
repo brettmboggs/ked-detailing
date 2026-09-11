@@ -1,0 +1,54 @@
+---
+import { Image } from 'astro:assets';
+import ctaPhoto from '../assets/photos/porsche-targa.jpg';
+import { business } from '../data/site';
+---
+
+<section id="contact" class="relative isolate overflow-hidden bg-ink-900 grain">
+  <Image
+    src={ctaPhoto}
+    alt=""
+    aria-hidden="true"
+    widths={[900, 1600]}
+    sizes="100vw"
+    loading="lazy"
+    data-parallax="10"
+    class="absolute inset-0 -z-10 h-[112%] w-full object-cover object-[60%_38%] opacity-25"
+  />
+  <div class="absolute inset-0 -z-10 bg-gradient-to-br from-ink-950 via-ink-950/85 to-ink-950/60"></div>
+
+  <div class="mx-auto max-w-[90rem] px-5 py-28 sm:px-8 lg:py-40">
+    <p class="eyebrow rise mb-7">Let's bring your vision to life</p>
+
+    <h2 class="display-xl rise max-w-5xl text-bone-50" data-delay="0.06">
+      Ready to turn<br />heads<span class="text-gold-500">?</span>
+    </h2>
+
+    <p class="rise mt-9 max-w-xl text-lg leading-relaxed text-bone-200" data-delay="0.14">
+      Reach out today to schedule a no-obligation consultation and discover how our bespoke
+      detailing solutions can meet your expectations.
+    </p>
+
+    <div class="rise mt-11 flex flex-wrap items-center gap-4" data-delay="0.2">
+      <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold !px-9 !py-5 !text-base">
+        Book online
+        <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
+        </svg>
+      </a>
+      <a href={business.phoneHref} class="btn-ghost !px-9 !py-5 !text-base">
+        Call {business.phone}
+      </a>
+    </div>
+
+    <p class="rise mt-8 text-sm text-bone-500" data-delay="0.26">
+      Prefer email?
+      <a
+        href={`mailto:${business.email}`}
+        class="text-bone-200 underline decoration-ink-600 underline-offset-4 transition-colors hover:text-gold-400 hover:decoration-gold-600"
+      >
+        {business.email}
+      </a>
+    </p>
+  </div>
+</section>

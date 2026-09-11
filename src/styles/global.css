@@ -1,0 +1,235 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Obsidian base — deep automotive black with a cool cast */
+  --color-ink-950: #07080a;
+  --color-ink-900: #0b0d11;
+  --color-ink-850: #111419;
+  --color-ink-800: #171b22;
+  --color-ink-700: #232832;
+  --color-ink-600: #343b48;
+
+  /* Championship gold — the "knockout" accent */
+  --color-gold-400: #f5c76a;
+  --color-gold-500: #e8b14c;
+  --color-gold-600: #c8912f;
+
+  /* Specular — the cold highlight that reads as wet gloss */
+  --color-spec-300: #bfe9ff;
+  --color-spec-400: #7fd9ff;
+
+  --color-bone-50: #f6f7f9;
+  --color-bone-200: #d3d7de;
+  --color-bone-400: #8a919e;
+  --color-bone-500: #666d7a;
+
+  --font-display: 'Archivo', 'Archivo Fallback', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  /* Lenis drives scroll when JS is active; disable native smoothing then. */
+  html.lenis {
+    scroll-behavior: auto;
+  }
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  body {
+    background-color: var(--color-ink-950);
+    color: var(--color-bone-50);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv05';
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-500);
+    color: var(--color-ink-950);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold-400);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* Ultra-condensed motorsport display type */
+  .display-xl {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 74, 'wght' 800;
+    font-size: clamp(3.5rem, 13vw, 13rem);
+    line-height: 0.84;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+  }
+
+  .display-lg {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 82, 'wght' 750;
+    font-size: clamp(2.25rem, 6.5vw, 5.25rem);
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+
+  .display-sm {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 92, 'wght' 700;
+    font-size: clamp(1.35rem, 2.4vw, 2rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 100, 'wght' 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-gold-500);
+  }
+
+  /* Headline words clip up from a mask. Paired with .is-in from motion.ts */
+  .reveal-line {
+    display: block;
+    overflow: hidden;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+  }
+  .reveal-line > span {
+    display: block;
+    transform: translateY(110%);
+    will-change: transform;
+  }
+
+  .rise {
+    opacity: 0;
+    transform: translateY(28px);
+    will-change: transform, opacity;
+  }
+
+  /* A hairline that catches light like a polished panel edge */
+  .edge-light {
+    position: relative;
+  }
+  .edge-light::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--color-spec-300) 55%, transparent),
+      transparent
+    );
+  }
+
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.05rem 2rem;
+    background-color: var(--color-gold-500);
+    color: var(--color-ink-950);
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 100, 'wght' 700;
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    transition:
+      background-color 0.3s var(--ease-out-expo),
+      transform 0.3s var(--ease-out-expo),
+      box-shadow 0.3s var(--ease-out-expo);
+  }
+  .btn-gold:hover {
+    background-color: var(--color-gold-400);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px -10px color-mix(in oklab, var(--color-gold-500) 70%, transparent);
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.05rem 2rem;
+    border: 1px solid var(--color-ink-700);
+    color: var(--color-bone-50);
+    font-family: var(--font-display);
+    font-variation-settings: 'wdth' 100, 'wght' 600;
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    transition:
+      border-color 0.3s var(--ease-out-expo),
+      background-color 0.3s var(--ease-out-expo),
+      transform 0.3s var(--ease-out-expo);
+  }
+  .btn-ghost:hover {
+    border-color: var(--color-gold-500);
+    background-color: color-mix(in oklab, var(--color-gold-500) 8%, transparent);
+    transform: translateY(-2px);
+  }
+
+  /* Fine film grain so large black fields don't band on cheap panels */
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* Honor the OS setting: no transforms, no parallax, no WebGL loop. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal-line > span,
+  .rise {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}

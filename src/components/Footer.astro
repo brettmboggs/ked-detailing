@@ -1,0 +1,97 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import { business, nav } from '../data/site';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-ink-800 bg-ink-950">
+  <div class="mx-auto max-w-[105rem] px-5 py-16 sm:px-8 lg:py-20">
+    <div class="grid gap-12 lg:grid-cols-12">
+      <div class="lg:col-span-5">
+        <Image src={logo} alt={business.name} widths={[220, 440]} sizes="200px" class="h-14 w-auto" />
+        <p class="mt-6 max-w-sm text-sm leading-relaxed text-bone-500">
+          Mobile auto detailing serving St. Louis, St. Charles, and the greater metro. Fully
+          mobile — we come to your home or office.
+        </p>
+      </div>
+
+      <nav aria-label="Footer" class="lg:col-span-3">
+        <h2 class="font-display text-[0.7rem] uppercase tracking-[0.22em] text-bone-500">Explore</h2>
+        <ul class="mt-5 space-y-3">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  class="text-sm text-bone-200 transition-colors hover:text-gold-400"
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="lg:col-span-4">
+        <h2 class="font-display text-[0.7rem] uppercase tracking-[0.22em] text-bone-500">Contact</h2>
+        <ul class="mt-5 space-y-3 text-sm">
+          <li>
+            <a href={business.phoneHref} class="text-bone-200 transition-colors hover:text-gold-400">
+              {business.phone}
+            </a>
+          </li>
+          <li>
+            <a
+              href={`mailto:${business.email}`}
+              class="break-all text-bone-200 transition-colors hover:text-gold-400"
+            >
+              {business.email}
+            </a>
+          </li>
+          <li>
+            <a
+              href={business.instagram}
+              target="_blank"
+              rel="noopener"
+              class="inline-flex items-center gap-2 text-bone-200 transition-colors hover:text-gold-400"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zm0 5.68a4.16 4.16 0 100 8.32 4.16 4.16 0 000-8.32zm0 6.86a2.7 2.7 0 110-5.4 2.7 2.7 0 010 5.4zm5.3-7.02a.97.97 0 11-1.94 0 .97.97 0 011.94 0z"
+                />
+              </svg>
+              {business.instagramHandle}
+            </a>
+          </li>
+        </ul>
+
+        <a
+          href={business.bookingUrl}
+          target="_blank"
+          rel="noopener"
+          class="btn-gold mt-7 !px-6 !py-3.5 !text-[0.72rem]"
+        >
+          Book Now
+        </a>
+      </div>
+    </div>
+
+    <div
+      class="mt-14 flex flex-col gap-3 border-t border-ink-800 pt-7 text-xs text-bone-500 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p>© {year} {business.legalName}. All rights reserved.</p>
+      <p>
+        Built by
+        <a
+          href="https://brettboggs.dev"
+          class="text-bone-400 underline decoration-ink-600 underline-offset-4 transition-colors hover:text-gold-400"
+        >
+          Brett Boggs
+        </a>
+      </p>
+    </div>
+  </div>
+</footer>

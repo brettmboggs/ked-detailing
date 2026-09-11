@@ -1,0 +1,107 @@
+---
+import '../styles/global.css';
+import { business } from '../data/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Absolute or site-relative path to the social share image. */
+  ogImage?: string;
+}
+
+const {
+  title,
+  description,
+  ogImage = '/og.jpg',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
+const ogUrl = new URL(ogImage, Astro.site ?? 'https://www.kedservice.com');
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'AutoWash',
+  name: business.legalName,
+  alternateName: business.name,
+  description:
+    'Mobile auto detailing in St. Louis, Missouri. Paint decontamination, machine polishing, interior restoration, and paint protection for daily drivers, exotics, and collector cars.',
+  url: 'https://www.kedservice.com',
+  telephone: '+13142232988',
+  email: business.email,
+  image: ogUrl.href,
+  priceRange: '$$-$$$',
+  sameAs: [business.instagram],
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: 'St. Louis',
+    addressRegion: 'MO',
+    addressCountry: 'US',
+  },
+  areaServed: [
+    { '@type': 'City', name: 'St. Louis' },
+    { '@type': 'City', name: 'St. Charles' },
+    { '@type': 'AdministrativeArea', name: 'Greater St. Louis' },
+  ],
+  potentialAction: {
+    '@type': 'ReserveAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: business.bookingUrl,
+      inLanguage: 'en-US',
+      actionPlatform: [
+        'http://schema.org/DesktopWebPlatform',
+        'http://schema.org/MobileWebPlatform',
+      ],
+    },
+  },
+};
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href={canonical.href} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#07080a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={ogUrl.href} />
+    <meta property="og:site_name" content={business.name} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Inter:wght@400;500;600;700&display=swap"
+    />
+
+    <set:html value={`<script type="application/ld+json">${JSON.stringify(schema)}</script>`} />
+  </head>
+
+  <body class="antialiased">
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-gold-500 focus:px-5 focus:py-3 focus:text-ink-950 focus:font-semibold"
+    >
+      Skip to content
+    </a>
+
+    <slot />
+
+    <script>
+      import { initMotion } from '../scripts/motion';
+      initMotion();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,72 @@
+---
+import { Image } from 'astro:assets';
+import vanPhoto from '../assets/photos/van-on-site.jpg';
+import wheelPhoto from '../assets/photos/panamera-foam-side.jpg';
+import { intro } from '../data/site';
+
+const proof = [
+  { k: 'Fully mobile', v: 'We bring the bay to your driveway or office lot.' },
+  { k: 'Daily to collector', v: 'Commuters, exotics, air-cooled classics, and show cars.' },
+  { k: 'St. Louis & St. Charles', v: 'Serving the greater metro, seven days a week.' },
+];
+---
+
+<section id="work" class="relative bg-ink-950 py-24 lg:py-36">
+  <div class="mx-auto max-w-[90rem] px-5 sm:px-8">
+    <div class="grid gap-16 lg:grid-cols-12 lg:gap-12">
+      <div class="lg:col-span-7">
+        <p class="eyebrow rise mb-8">Who you're handing the keys to</p>
+
+        <p
+          data-words
+          class="font-display text-[1.6rem] leading-[1.25] text-bone-50 sm:text-[2.1rem] lg:text-[2.6rem]"
+          style="font-variation-settings:'wdth' 96,'wght' 500"
+        >
+          {intro}
+        </p>
+
+        <dl data-stagger class="mt-14 grid gap-px overflow-hidden border border-ink-800 bg-ink-800 sm:grid-cols-3">
+          {
+            proof.map((p) => (
+              <div data-stagger-item class="translate-y-6 bg-ink-950 p-6 opacity-0">
+                <dt
+                  class="font-display text-sm uppercase tracking-[0.14em] text-gold-500"
+                  style="font-variation-settings:'wdth' 96,'wght' 650"
+                >
+                  {p.k}
+                </dt>
+                <dd class="mt-2.5 text-sm leading-relaxed text-bone-400">{p.v}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <div class="lg:col-span-5">
+        <div class="grid grid-cols-2 gap-4">
+          <figure class="rise relative aspect-[4/5] overflow-hidden bg-ink-850 lg:aspect-[3/4]">
+            <Image
+              src={vanPhoto}
+              alt="The Knock Em Down van set up on site beside a customer vehicle"
+              widths={[360, 720]}
+              sizes="(min-width: 1024px) 22vw, 45vw"
+              data-parallax="14"
+              class="h-[118%] w-full object-cover"
+            />
+          </figure>
+
+          <figure class="rise relative aspect-[4/5] overflow-hidden bg-ink-850 lg:mt-12 lg:aspect-[3/4]" data-delay="0.12">
+            <Image
+              src={wheelPhoto}
+              alt="White Porsche Panamera under a full coat of foam during the contact wash"
+              widths={[360, 720]}
+              sizes="(min-width: 1024px) 22vw, 45vw"
+              data-parallax="20"
+              class="h-[118%] w-full object-cover"
+            />
+          </figure>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

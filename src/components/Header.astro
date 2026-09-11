@@ -1,0 +1,116 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
+import { business, nav } from '../data/site';
+---
+
+<header
+  data-header
+  data-stuck="false"
+  data-hidden="false"
+  class="fixed inset-x-0 top-0 z-50 transition-[transform,background-color,border-color,backdrop-filter] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+         border-b border-transparent
+         data-[stuck=true]:border-ink-800 data-[stuck=true]:bg-ink-950/80 data-[stuck=true]:backdrop-blur-xl
+         data-[hidden=true]:-translate-y-full"
+>
+  <div class="mx-auto flex max-w-[105rem] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:py-5">
+    <a href="/" class="shrink-0" aria-label={`${business.name} — home`}>
+      <Image
+        src={logo}
+        alt={business.name}
+        widths={[180, 360]}
+        sizes="160px"
+        class="h-10 w-auto lg:h-12"
+        loading="eager"
+      />
+    </a>
+
+    <nav aria-label="Primary" class="hidden items-center gap-6 lg:flex xl:gap-9">
+      {
+        nav.map((item) => (
+          <a
+            href={item.href}
+            class="group relative py-1 font-display text-[0.8rem] uppercase tracking-[0.18em] text-bone-200 transition-colors hover:text-bone-50"
+            style="font-variation-settings:'wdth' 100,'wght' 550"
+          >
+            {item.label}
+            <span class="absolute inset-x-0 -bottom-0.5 h-px origin-left scale-x-0 bg-gold-500 transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100" />
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a
+        href={business.phoneHref}
+        class="hidden shrink-0 whitespace-nowrap font-display text-sm tracking-[0.08em] text-bone-200 transition-colors hover:text-gold-400 xl:block"
+        style="font-variation-settings:'wdth' 100,'wght' 600"
+      >
+        {business.phone}
+      </a>
+
+      <a
+        href={business.bookingUrl}
+        target="_blank"
+        rel="noopener"
+        class="btn-gold shrink-0 whitespace-nowrap !px-5 !py-3 !text-[0.72rem] sm:!px-6"
+      >
+        Book Now
+      </a>
+
+      <button
+        data-menu-toggle
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        aria-label="Open menu"
+        class="grid h-11 w-11 place-items-center border border-ink-700 text-bone-50 transition-colors hover:border-gold-500 lg:hidden"
+      >
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
+          <path d="M0 1h18M0 6h18M0 11h18" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile menu -->
+<div
+  id="mobile-menu"
+  data-menu
+  data-open="false"
+  class="fixed inset-0 z-40 hidden bg-ink-950/97 backdrop-blur-2xl data-[open=true]:block lg:!hidden"
+>
+  <nav aria-label="Mobile" class="flex h-full flex-col justify-center gap-2 px-8">
+    {
+      nav.map((item, i) => (
+        <a
+          href={item.href}
+          class="display-lg border-b border-ink-800 py-5 text-bone-50 transition-colors hover:text-gold-400"
+          style={`animation: menuIn 0.5s cubic-bezier(0.16,1,0.3,1) ${i * 0.05 + 0.05}s both`}
+        >
+          {item.label}
+        </a>
+      ))
+    }
+    <a
+      href={business.phoneHref}
+      class="mt-8 font-display text-2xl tracking-[0.06em] text-gold-400"
+      style="font-variation-settings:'wdth' 100,'wght' 650"
+    >
+      {business.phone}
+    </a>
+  </nav>
+</div>
+
+<style>
+  @keyframes menuIn {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

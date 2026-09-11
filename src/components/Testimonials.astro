@@ -1,0 +1,67 @@
+---
+import { testimonials } from '../data/site';
+---
+
+<section id="reviews" class="relative overflow-hidden bg-ink-900 py-24 lg:py-32">
+  <div class="mx-auto mb-14 max-w-[90rem] px-5 sm:px-8">
+    <p class="eyebrow rise mb-6">What our clients say</p>
+    <h2 class="display-lg rise max-w-3xl text-bone-50" data-delay="0.08">
+      Judged by people<br />who notice everything.
+    </h2>
+  </div>
+
+  <div
+    data-marquee
+    data-marquee-speed="64"
+    class="relative overflow-hidden"
+  >
+    <div data-marquee-track class="flex w-max gap-5 px-5 will-change-transform sm:px-8">
+      {
+        testimonials.map((t) => (
+          <figure class="flex w-[min(86vw,30rem)] shrink-0 flex-col justify-between border border-ink-800 bg-ink-950 p-8 lg:p-10">
+            <div>
+              <svg
+                width="30"
+                height="24"
+                viewBox="0 0 30 24"
+                fill="none"
+                class="mb-7 text-gold-600"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12.5 0v9.6C12.5 17.9 7.2 23.2 0 24v-4.8c4.1-.8 6.7-3.5 6.7-7.2H0V0h12.5zm17.5 0v9.6c0 8.3-5.3 13.6-12.5 14.4v-4.8c4.1-.8 6.7-3.5 6.7-7.2h-6.7V0H30z"
+                  fill="currentColor"
+                />
+              </svg>
+              <blockquote class="text-lg leading-relaxed text-bone-200 lg:text-xl">
+                {t.quote}
+              </blockquote>
+            </div>
+
+            <figcaption class="mt-8 flex items-center gap-3 border-t border-ink-800 pt-6">
+              <span
+                class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold-500 font-display text-sm text-ink-950"
+                style="font-variation-settings:'wdth' 100,'wght' 700"
+                aria-hidden="true"
+              >
+                {t.name.charAt(0)}
+              </span>
+              <span>
+                <span
+                  class="block font-display text-sm uppercase tracking-[0.1em] text-bone-50"
+                  style="font-variation-settings:'wdth' 100,'wght' 650"
+                >
+                  {t.name}
+                </span>
+                <span class="block text-xs text-bone-500">{t.detail}</span>
+              </span>
+            </figcaption>
+          </figure>
+        ))
+      }
+    </div>
+
+    <div class="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-ink-900 to-transparent sm:w-32"></div>
+    <div class="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-ink-900 to-transparent sm:w-32"></div>
+  </div>
+</section>

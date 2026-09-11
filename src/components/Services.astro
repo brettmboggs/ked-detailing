@@ -1,0 +1,272 @@
+---
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { business, services } from '../data/site';
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', {
+  eager: true,
+});
+const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
+
+const numeral = (level: string) => level.replace('Level ', '');
+---
+
+<section id="services" class="relative overflow-hidden bg-ink-950 py-24 lg:py-36">
+  <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
+    <div class="mb-14 flex flex-col gap-6 lg:mb-16 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <div class="rise mb-6 flex items-center gap-4">
+          <span class="h-px w-10 bg-gold-500"></span>
+          <p class="eyebrow">The packages</p>
+        </div>
+        <h2 class="display-lg rise text-bone-50" data-delay="0.08">
+          Four levels.<br /><span class="text-gold-500">One standard.</span>
+        </h2>
+      </div>
+      <p class="rise max-w-sm text-bone-400" data-delay="0.16">
+        Every package is fully mobile and finished by hand. Not sure which one fits? Book the
+        Tune-Up and we'll tell you straight.
+      </p>
+    </div>
+
+    <div data-service-list class="relative">
+      <!-- Desktop-only preview that tracks the pointer across the list. -->
+      <div
+        data-service-preview
+        aria-hidden="true"
+        class="pointer-events-none absolute left-0 top-0 z-20 hidden h-[19rem] w-[14rem] opacity-0 lg:block"
+      >
+        {
+          services.map((s, i) => (
+            <div
+              data-preview-item={i}
+              class="absolute inset-0 overflow-hidden opacity-0"
+            >
+              <Image
+                src={photoFor(s.photo)}
+                alt=""
+                widths={[280, 560]}
+                sizes="224px"
+                class="h-full w-full object-cover"
+              />
+            </div>
+          ))
+        }
+      </div>
+
+      {
+        services.map((s, i) => (
+          <div
+            data-service
+            data-index={i}
+            data-open={i === 0 ? 'true' : 'false'}
+            class="group border-t border-ink-800 last:border-b"
+          >
+            <h3>
+              <button
+                data-service-toggle
+                type="button"
+                aria-expanded={i === 0 ? 'true' : 'false'}
+                aria-controls={`service-panel-${i}`}
+                class="relative flex w-full items-center gap-5 py-7 text-left lg:gap-10 lg:py-9"
+              >
+                {/* Gold wash that wipes in from the left on hover */}
+                <span
+                  aria-hidden="true"
+                  class="absolute inset-y-0 -inset-x-4 -z-10 origin-left scale-x-0 bg-gold-500/[0.05] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100"
+                />
+
+                <span
+                  class="w-10 shrink-0 font-display text-xl text-bone-500 transition-colors duration-500 group-hover:text-gold-500 lg:w-24 lg:text-3xl"
+                  style="font-variation-settings:'wdth' 70,'wght' 800"
+                >
+                  {numeral(s.level)}
+                </span>
+
+                <span class="min-w-0 flex-1">
+                  <span
+                    class="block font-display uppercase leading-[0.95] text-bone-50 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-2"
+                    style="font-variation-settings:'wdth' 76,'wght' 800; font-size: clamp(1.75rem, 5.2vw, 4.25rem); letter-spacing:-0.02em"
+                  >
+                    {s.name}
+                  </span>
+                  <span class="mt-2 block text-xs text-bone-500 lg:hidden">
+                    {s.price ?? 'By quote'} · {s.duration}
+                  </span>
+                </span>
+
+                <span class="hidden shrink-0 text-right lg:block">
+                  <span
+                    class="block font-display text-2xl text-bone-50"
+                    style="font-variation-settings:'wdth' 92,'wght' 700"
+                  >
+                    {s.price ?? 'Quote'}
+                  </span>
+                  <span class="mt-1 block text-[0.7rem] uppercase tracking-[0.14em] text-bone-500">
+                    {s.duration}
+                  </span>
+                </span>
+
+                <span
+                  data-service-icon
+                  class="grid h-9 w-9 shrink-0 place-items-center border border-ink-700 text-gold-500 transition-colors duration-500 group-hover:border-gold-600"
+                  aria-hidden="true"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M6 0v12M0 6h12" stroke="currentColor" stroke-width="1.5" />
+                  </svg>
+                </span>
+              </button>
+            </h3>
+
+            <div data-service-panel id={`service-panel-${i}`} class="overflow-hidden">
+              <div class="grid gap-8 pb-10 lg:grid-cols-12 lg:gap-12 lg:pb-12 lg:pl-34">
+                <div class="lg:col-span-5">
+                  <p class="text-base leading-relaxed text-bone-200 lg:text-lg">{s.summary}</p>
+                  <p class="mt-5 border-l-2 border-gold-600 pl-4 text-sm italic leading-relaxed text-bone-400">
+                    {s.closer}
+                  </p>
+                  <a
+                    href={business.bookingUrl}
+                    target="_blank"
+                    rel="noopener"
+                    class="btn-gold mt-7 !px-6 !py-3.5 !text-[0.72rem]"
+                  >
+                    Book {s.name}
+                  </a>
+                </div>
+
+                <ul class="space-y-2.5 lg:col-span-4">
+                  {s.includes.map((line) => (
+                    <li class="flex gap-3 text-sm text-bone-400">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        class="mt-1 shrink-0 text-gold-600"
+                        aria-hidden="true"
+                      >
+                        <path d="M2 7.5L5.5 11L12 3.5" stroke="currentColor" stroke-width="1.75" />
+                      </svg>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Mobile and tablet get the photo inline, since there is no pointer to track. */}
+                <figure class="overflow-hidden lg:hidden">
+                  <Image
+                    src={photoFor(s.photo)}
+                    alt={`${s.level} — ${s.name}`}
+                    widths={[600, 1000]}
+                    sizes="92vw"
+                    loading="lazy"
+                    class="aspect-[4/3] w-full object-cover"
+                  />
+                </figure>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Line up the expanded panel with the service name, past the numeral column. */
+  @media (min-width: 1024px) {
+    .lg\:pl-34 {
+      padding-left: 8.5rem;
+    }
+  }
+</style>
+
+<script>
+  import gsap from 'gsap';
+
+  const items = Array.from(document.querySelectorAll<HTMLElement>('[data-service]'));
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- expand / collapse ---- */
+
+  const setOpen = (item: HTMLElement, open: boolean, animate = true) => {
+    const panel = item.querySelector<HTMLElement>('[data-service-panel]');
+    const btn = item.querySelector<HTMLButtonElement>('[data-service-toggle]');
+    const icon = item.querySelector<HTMLElement>('[data-service-icon] svg');
+    if (!panel) return;
+
+    item.dataset.open = String(open);
+    btn?.setAttribute('aria-expanded', String(open));
+
+    const dur = animate && !reduced ? 0.55 : 0;
+    gsap.to(panel, { height: open ? 'auto' : 0, duration: dur, ease: 'expo.out' });
+    if (icon) gsap.to(icon, { rotate: open ? 135 : 0, duration: dur, ease: 'expo.out' });
+  };
+
+  items.forEach((item) => {
+    const open = item.dataset.open === 'true';
+    setOpen(item, open, false);
+
+    item.querySelector<HTMLButtonElement>('[data-service-toggle]')?.addEventListener('click', () => {
+      const isOpen = item.dataset.open === 'true';
+      items.forEach((other) => other !== item && setOpen(other, false));
+      setOpen(item, !isOpen);
+    });
+  });
+
+  /* ---- pointer-tracked preview (desktop only) ---- */
+
+  const list = document.querySelector<HTMLElement>('[data-service-list]');
+  const preview = document.querySelector<HTMLElement>('[data-service-preview]');
+  const fine = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
+
+  if (list && preview && fine.matches && !reduced) {
+    const panes = Array.from(preview.querySelectorAll<HTMLElement>('[data-preview-item]'));
+    const toX = gsap.quickTo(preview, 'x', { duration: 0.55, ease: 'power3' });
+    const toY = gsap.quickTo(preview, 'y', { duration: 0.55, ease: 'power3' });
+    const toR = gsap.quickTo(preview, 'rotate', { duration: 0.7, ease: 'power3' });
+
+    let active = -1;
+    let lastX = 0;
+
+    list.addEventListener('pointermove', (e) => {
+      const rect = list.getBoundingClientRect();
+      toX(e.clientX - rect.left + 40);
+      toY(e.clientY - rect.top - 150);
+      // Tilt the card in the direction of travel.
+      toR(gsap.utils.clamp(-9, 9, (e.clientX - lastX) * 0.7));
+      lastX = e.clientX;
+    });
+
+    // Drive every pane on each change. Fading only the previously active one
+    // let panes pile up at full opacity, and the last in DOM order won.
+    const showOnly = (index: number) => {
+      panes.forEach((pane, i) => {
+        if (i === index) return;
+        gsap.to(pane, { opacity: 0, duration: 0.3, overwrite: true });
+      });
+    };
+
+    items.forEach((item, i) => {
+      item.addEventListener('pointerenter', () => {
+        if (active === i) return;
+        active = i;
+        showOnly(i);
+        gsap.to(preview, { opacity: 1, duration: 0.3, overwrite: true });
+        gsap.fromTo(
+          panes[i],
+          { opacity: 0, scale: 1.08 },
+          { opacity: 1, scale: 1, duration: 0.5, ease: 'expo.out', overwrite: true },
+        );
+      });
+    });
+
+    list.addEventListener('pointerleave', () => {
+      gsap.to(preview, { opacity: 0, duration: 0.35, overwrite: true });
+      showOnly(-1);
+      active = -1;
+    });
+  }
+</script>

@@ -1,0 +1,36 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import Marquee from '../components/Marquee.astro';
+import Intro from '../components/Intro.astro';
+import BandKnockout from '../components/BandKnockout.astro';
+import Services from '../components/Services.astro';
+import Gallery from '../components/Gallery.astro';
+import Testimonials from '../components/Testimonials.astro';
+import Faq from '../components/Faq.astro';
+import Cta from '../components/Cta.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base
+  title="Knock Em' Down Detailing | Mobile Auto Detailing in St. Louis"
+  description="Mobile car detailing in St. Louis designed to protect, enhance, and revive your vehicle's shine. Paint correction, interior restoration, and paint protection at your home or office."
+>
+  <Header />
+
+  <main id="main">
+    <Hero />
+    <!-- Angled gold stripe cutting between the hero and the story. -->
+    <Marquee angle={-2.2} variant="gold" speed={40} />
+    <Intro />
+    <BandKnockout />
+    <Services />
+    <Gallery />
+    <Testimonials />
+    <Faq />
+    <Cta />
+  </main>
+
+  <Footer />
+</Base>

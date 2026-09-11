@@ -1,0 +1,65 @@
+---
+import { marque } from '../data/site';
+
+interface Props {
+  dir?: 'left' | 'right';
+  speed?: number;
+  /** Tilt in degrees. Non-zero turns the strip into a diagonal stripe. */
+  angle?: number;
+  variant?: 'dark' | 'gold';
+}
+const { dir = 'left', speed = 46, angle = 0, variant = 'dark' } = Astro.props;
+
+const gold = variant === 'gold';
+const tilted = angle !== 0;
+---
+
+{/* Outer box clips the oversized rotated stripe so it never widens the page. */}
+<div class:list={['relative', tilted && 'overflow-hidden py-8 lg:py-12']}>
+  <div
+    class:list={[tilted && 'w-[114%] -ml-[7%]']}
+    style={tilted ? `transform: rotate(${angle}deg)` : undefined}
+  >
+    <div
+      data-marquee
+      data-marquee-dir={dir}
+      data-marquee-speed={speed}
+      class:list={[
+        'relative overflow-hidden py-4 lg:py-5',
+        gold ? 'bg-gold-500' : 'edge-light border-y border-ink-800 bg-ink-900',
+      ]}
+      aria-hidden="true"
+    >
+      <div
+        data-marquee-track
+        class="flex w-max items-center gap-8 whitespace-nowrap will-change-transform lg:gap-10"
+      >
+        {
+          marque.map((word) => (
+            <span class="flex items-center gap-8 lg:gap-10">
+              <span
+                class:list={[
+                  'font-display text-base uppercase tracking-[0.14em] lg:text-xl',
+                  gold ? 'text-ink-950' : 'text-bone-400',
+                ]}
+                style="font-variation-settings:'wdth' 84,'wght' 700"
+              >
+                {word}
+              </span>
+              <span class:list={['h-1.5 w-1.5 rotate-45', gold ? 'bg-ink-950/55' : 'bg-gold-600']} />
+            </span>
+          ))
+        }
+      </div>
+
+      {
+        !gold && (
+          <>
+            <div class="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-ink-900 to-transparent" />
+            <div class="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-ink-900 to-transparent" />
+          </>
+        )
+      }
+    </div>
+  </div>
+</div>
