@@ -40,7 +40,7 @@ const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
 
     <div
       data-stagger
-      class="grid auto-rows-[minmax(0,1fr)] grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      class="grid grid-cols-2 gap-3 sm:gap-4 lg:auto-rows-[minmax(0,1fr)] lg:grid-cols-4"
     >
       {
         gallery.map((item, i) => (
@@ -48,9 +48,9 @@ const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
             data-stagger-item
             class:list={[
               'group relative translate-y-8 overflow-hidden bg-ink-850 opacity-0',
-              item.span === 'tall' && 'row-span-2 aspect-[3/4] lg:aspect-auto',
-              item.span === 'wide' && 'col-span-2 aspect-[4/3] lg:aspect-[16/9]',
-              !item.span && 'aspect-square',
+              'aspect-square',
+              item.span === 'tall' && 'lg:row-span-2 lg:aspect-auto',
+              item.span === 'wide' && 'lg:col-span-2 lg:aspect-[16/9]',
             ]}
           >
             <Image

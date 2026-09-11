@@ -84,6 +84,8 @@ export const business = {
 
 export const hero = {
   eyebrow: 'Mobile auto & marine detailing · St. Louis',
+  /** The long label wraps badly on a phone. */
+  eyebrowShort: 'Auto & marine · St. Louis',
   headline: ['Obsessed', 'With the', 'Details.'],
   sub: 'We bring the water, the power and the products to your driveway. You keep your Saturday.',
   /** Shown under the package list. */
@@ -290,7 +292,7 @@ export const faqs: Faq[] = [
 /** Vehicles actually worked on, drawn from the photo library and public reviews. */
 export const marque: string[] = [
   'Porsche',
-  'Maserati',
+  'Panamera Turbo',
   'Rivian R1S',
   'Air-Cooled 911',
   'G-Wagon',

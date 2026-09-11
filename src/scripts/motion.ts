@@ -221,8 +221,12 @@ function initReveals() {
   });
 
   // Word-by-word brightening on the intro paragraph.
+  //
+  // Only above sm. On a phone the paragraph runs ten lines in a short viewport,
+  // so a scrubbed reveal leaves most of it sitting at 15% opacity for most of
+  // the scroll — it reads as broken text rather than as an effect.
   const intro = document.querySelector<HTMLElement>('[data-words]');
-  if (intro) {
+  if (intro && window.matchMedia('(min-width: 640px)').matches) {
     const words = intro.textContent?.trim().split(/\s+/) ?? [];
     intro.innerHTML = words
       .map((w) => `<span class="inline-block opacity-15">${w}</span>`)
@@ -239,6 +243,9 @@ function initReveals() {
       },
     });
   }
+  // No fallback branch: the paragraph ships at full opacity, so skipping the
+  // split simply leaves it readable. Adding .rise here would set it back to
+  // opacity 0 after the reveal pass had already collected its targets.
 
   // Parallax on tagged media.
   gsap.utils.toArray<HTMLElement>('[data-parallax]').forEach((el) => {

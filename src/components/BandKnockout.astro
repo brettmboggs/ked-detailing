@@ -185,7 +185,10 @@ const BASELINES = [146, 300];
   }
 
   async function init() {
+    // The topple needs room to read. Under 768px the letters are small enough
+    // that a scattered pile looks like a glitch, so the lockup stays standing.
     if (!section || !svg || !mask || reduced) return;
+    if (!window.matchMedia('(min-width: 768px)').matches) return;
 
     // getStartPositionOfChar only reports the real layout once the face is in.
     try {

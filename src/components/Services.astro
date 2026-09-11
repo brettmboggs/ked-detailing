@@ -55,10 +55,10 @@ const numeral = (level: string) => level.replace('Level ', '');
                 type="button"
                 aria-expanded={i === 0 ? 'true' : 'false'}
                 aria-controls={`service-panel-${i}`}
-                class="relative flex w-full items-center gap-5 py-6 text-left lg:gap-10 lg:py-7"
+                class="relative flex w-full items-center gap-3 py-6 text-left sm:gap-5 lg:gap-10 lg:py-7"
               >
                 <span
-                  class="w-9 shrink-0 font-display text-xl text-bone-600 transition-colors duration-500 group-data-[open=true]:text-gold-500 lg:w-20 lg:text-3xl"
+                  class="w-7 shrink-0 font-display text-xl text-bone-600 transition-colors duration-500 group-data-[open=true]:text-gold-500 sm:w-9 lg:w-20 lg:text-3xl"
                   style="font-variation-settings:'wdth' 70,'wght' 800"
                 >
                   {numeral(s.level)}
@@ -101,7 +101,7 @@ const numeral = (level: string) => level.replace('Level ', '');
             </h3>
 
             <div data-service-panel id={`service-panel-${i}`} class="overflow-hidden">
-              <div class="grid gap-8 pb-10 lg:grid-cols-12 lg:gap-10 lg:pb-12 lg:pl-30">
+              <div class="grid gap-8 pb-10 pl-10 sm:pl-14 lg:grid-cols-12 lg:gap-10 lg:pb-12 lg:pl-30">
                 <div data-panel-col class="lg:col-span-4">
                   <p class="text-base leading-relaxed text-bone-200 lg:text-lg">{s.summary}</p>
                   <p class="mt-5 border-l-2 border-gold-600 pl-4 text-sm italic leading-relaxed text-bone-400">
