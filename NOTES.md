@@ -227,6 +227,21 @@ it never competes with the live site, and remove it at cutover.
 
 ---
 
+## House rules for this site
+
+- **Name a vehicle confidently or not at all.** Brett's rule, and a fair one —
+  misnaming a car reads as amateur to the audience this site is aimed at. A
+  Ferrari 296 was captioned as a Corvette in the first pass. Current captions
+  name only what is legible in the frame: the Panamera Turbo from its badge, the
+  Escalade-V from its fender badge and red calipers, the F12 from its shape and
+  shield. The red 911 is described as "air-cooled" without a generation, and the
+  G-Class without an AMG trim, because neither is readable in those shots.
+- **Recent Work is a sample, not a feed.** It links out to Instagram in two
+  places, because that is where current work actually lands. If those photos
+  ever go stale, the link is doing the real job.
+- **One photo, one place.** No image appears in more than one section, and the
+  four service tiers each show a different vehicle.
+
 ## Gotchas worth remembering
 
 - **`set:html` is a directive, not a tag.** Writing `<set:html value={...} />`

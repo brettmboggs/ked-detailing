@@ -153,7 +153,7 @@ export const services: Service[] = [
       'UV and contaminant shielding',
     ],
     closer: 'Built for enthusiasts, collectors and long-term protection.',
-    photo: 'panamera-front.jpg',
+    photo: 'porsche-964-red.jpg',
   },
   {
     level: 'Level IV',
@@ -170,7 +170,7 @@ export const services: Service[] = [
       'Six-month paint protectant',
     ],
     closer: 'For drivers who want depth and reflection back, not just clean.',
-    photo: 'headlight-macro.jpg',
+    photo: 'escalade-v.jpg',
   },
 ];
 
@@ -292,11 +292,11 @@ export const marque: string[] = [
   'Porsche',
   'Maserati',
   'Rivian R1S',
-  'Air-Cooled 964',
+  'Air-Cooled 911',
   'G-Wagon',
   'Ferrari F12',
   'Monte Carlo',
-  'Escalade V',
+  'Escalade-V',
   'Boats & Trailers',
   'Daily Drivers',
 ];
@@ -332,27 +332,32 @@ export const gallery: GalleryItem[] = [
     src: 'foam-panamera.jpg',
     alt: 'White Porsche Panamera buried under thick foam during a contact wash',
   },
-  { src: 'gwagon-dusk.jpg', alt: 'Blacked-out Mercedes G63 finished and parked at dusk' },
+  { src: 'gwagon-dusk.jpg', alt: 'Blacked-out Mercedes-Benz G-Class finished and parked at dusk' },
   {
     src: 'wheel-cloth.jpg',
     alt: 'Hand cleaning a wheel face with a red microfiber cloth',
     span: 'tall',
   },
   { src: 'panamera-rear.jpg', alt: 'Rear three-quarter of a finished white Porsche Panamera' },
-  { src: 'interior-amg-door.jpg', alt: 'Red quilted AMG door panel after a full interior detail' },
+  { src: 'interior-amg-door.jpg', alt: 'Red quilted leather door panel after a full interior detail' },
   { src: 'ked-hoodie.jpg', alt: 'Knock Em Down embroidered logo on a crew hoodie' },
   {
     src: 'exhaust-tips.jpg',
     alt: 'Foam running over the polished quad exhaust tips of a performance car',
     span: 'tall',
   },
-  { src: 'porsche-964-red.jpg', alt: 'Air-cooled Porsche 911 964 on BBS wheels after detailing' },
-  { src: 'ferrari-f12.jpg', alt: 'Ferrari F12 and Corvette detailed on a dealership lot' },
+  { src: 'rivian-r1s.jpg', alt: 'Blue Rivian R1S after a paint correction, shot in the driveway' },
+  { src: 'ferrari-f12.jpg', alt: 'A white Ferrari F12 and a blue Ferrari parked at a dealership' },
   {
     src: 'van-equipment.jpg',
     alt: 'The mobile rig loaded out with equipment, doors open on location',
   },
   { src: 'brake-caliper.jpg', alt: 'Macro detail of a red brake caliper behind a clean wheel' },
+  {
+    src: 'headlight-macro.jpg',
+    alt: 'Close-up of a polished headlight throwing rainbow reflections',
+    span: 'wide',
+  },
 ];
 
 /** Clip used for the type-masked band — a separate shot from the hero. */
