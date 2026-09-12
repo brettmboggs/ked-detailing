@@ -10,9 +10,10 @@ import { withBase } from '../lib/url';
  * `textLength` pins each line to the viewBox width, so the lockup fills the band
  * identically whether or not the webfont has landed.
  *
- * On scroll the letters topple like pins — see the script at the foot of the
- * file. The two <text> lines below are the readable, no-JS state; the script
- * replaces them with per-letter copies only once it can measure them exactly.
+ * The lockup does not animate. It carried a scroll-driven topple that split the
+ * lines into per-letter copies and knocked them over; the footage moving inside
+ * the letters is the effect, and the topple competed with it. The script below
+ * now only attaches the clip.
  */
 
 const LINES = ['KNOCK EM', 'DOWN'];
@@ -39,19 +40,17 @@ const BASELINES = [146, 300];
 
       <!-- The panel: opaque everywhere except the letters. -->
       <svg
-        data-knockout
         viewBox="0 0 1000 560"
         class="relative block w-full"
         role="presentation"
         aria-hidden="true"
       >
         <defs>
-          <mask id="ked-knockout" data-knockout-mask>
+          <mask id="ked-knockout">
             <rect x="-20" y="-20" width="1040" height="600" fill="white" />
             {
               LINES.map((line, i) => (
                 <text
-                  data-knockout-line={i}
                   x="0"
                   y={BASELINES[i]}
                   textLength="1000"
@@ -96,20 +95,11 @@ const BASELINES = [146, 300];
 </section>
 
 <script>
-  import gsap from 'gsap';
-  import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-  const SVG_NS = 'http://www.w3.org/2000/svg';
-  const section = document.querySelector<HTMLElement>('#band-heading')?.closest('section');
-  const svg = document.querySelector<SVGSVGElement>('[data-knockout]');
-  const mask = document.querySelector<SVGElement>('[data-knockout-mask]');
+  // Clip only. The lockup is static — see the note at the head of the file.
   const video = document.querySelector<HTMLVideoElement>('[data-band-video]');
 
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* -------------------------------------------------- video ---------------- */
-
   if (video) {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const conn = (navigator as any).connection;
     const thrifty = Boolean(conn?.saveData) || /2g/.test(conn?.effectiveType ?? '');
 
@@ -129,131 +119,4 @@ const BASELINES = [146, 300];
       io.observe(video);
     }
   }
-
-  /* ----------------------------------------------- the collapse ------------ */
-
-  const BASELINES = [146, 300];
-
-  type Glyph = { el: SVGTextElement; x: number; line: number; advance: number };
-
-  /**
-   * Rebuild each line as one <text> per character, positioned from the laid-out
-   * original. Measuring the original matters because `lengthAdjust` stretches
-   * the glyphs to fill the band — a naively re-typeset letter would be the
-   * wrong width. Each copy carries its own textLength equal to the advance it
-   * occupied in the stretched line, which reproduces it exactly.
-   */
-  function explode(): Glyph[] {
-    if (!mask) return [];
-    const glyphs: Glyph[] = [];
-    const lines = Array.from(mask.querySelectorAll<SVGTextElement>('[data-knockout-line]'));
-
-    lines.forEach((line, lineIndex) => {
-      const text = line.textContent ?? '';
-      const total = line.getNumberOfChars();
-
-      for (let i = 0; i < total; i++) {
-        const ch = text[i];
-        if (!ch || ch === ' ') continue;
-
-        const start = line.getStartPositionOfChar(i);
-        const advance =
-          i < total - 1
-            ? line.getStartPositionOfChar(i + 1).x - start.x
-            : line.getEndPositionOfChar(i).x - start.x;
-
-        const glyph = document.createElementNS(SVG_NS, 'text') as SVGTextElement;
-        glyph.setAttribute('x', String(start.x));
-        glyph.setAttribute('y', String(start.y));
-        glyph.setAttribute('textLength', String(Math.max(advance, 1)));
-        glyph.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-        glyph.setAttribute('fill', 'black');
-        glyph.setAttribute('font-family', 'Archivo, system-ui, sans-serif');
-        glyph.setAttribute('font-size', '168');
-        glyph.setAttribute('font-weight', '900');
-        glyph.style.fontVariationSettings = "'wdth' 70,'wght' 900";
-        glyph.textContent = ch;
-        mask.appendChild(glyph);
-
-        glyphs.push({ el: glyph, x: start.x, line: lineIndex, advance });
-      }
-
-      line.setAttribute('visibility', 'hidden');
-    });
-
-    return glyphs;
-  }
-
-  async function init() {
-    // The topple needs room to read. Under 768px the letters are small enough
-    // that a scattered pile looks like a glitch, so the lockup stays standing.
-    if (!section || !svg || !mask || reduced) return;
-    if (!window.matchMedia('(min-width: 768px)').matches) return;
-
-    // getStartPositionOfChar only reports the real layout once the face is in.
-    try {
-      await (document as any).fonts?.ready;
-    } catch {
-      /* older browsers just measure with the fallback face */
-    }
-
-    let glyphs: Glyph[] = [];
-    try {
-      glyphs = explode();
-    } catch {
-      return; // leave the readable two-line version in place
-    }
-    if (!glyphs.length) return;
-
-    gsap.registerPlugin(ScrollTrigger);
-
-    // No pin. Pinning has to stop the page to hold the section, so it always
-    // ends in a hitch when it releases — and any dead time in the timeline
-    // becomes scrolling where nothing moves. The collapse is instead driven by
-    // the band's own travel through the viewport, so it stays continuous with
-    // the rest of the page. The window is chosen so it finishes while the band
-    // is still well in view rather than on the way out.
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: section,
-        start: 'top 75%',
-        end: 'center 35%',
-        scrub: 1.2,
-        invalidateOnRefresh: true,
-      },
-    });
-
-    // Struck from the left: each letter tips onto its baseline corner and the
-    // impact carries along the line, then drops to the line below. Every letter
-    // falls the same way, because a strike has a direction.
-    //
-    // Three things keep it physical rather than mechanical: a short rock back
-    // before each letter goes (anticipation), gravity easing so the fall
-    // accelerates into the floor instead of gliding, and windows tight enough
-    // that each letter is already going before its neighbour lands.
-    const ordered = [...glyphs].sort((a, b) => a.line - b.line || a.x - b.x);
-
-    ordered.forEach((g, i) => {
-      const origin = `${g.x} ${BASELINES[g.line]}`;
-      const at = i * 0.055;
-      // Vary the resting angle a little so the pile is not a repeating pattern.
-      const rest = 86 + ((i * 29) % 9);
-
-      tl.to(g.el, { rotation: -5, svgOrigin: origin, ease: 'power2.out', duration: 0.14 }, at);
-      tl.to(
-        g.el,
-        {
-          rotation: rest,
-          // A shove along the strike direction as it goes over.
-          x: 6 + ((i * 7) % 6),
-          svgOrigin: origin,
-          ease: 'power2.in',
-          duration: 0.66,
-        },
-        at + 0.14,
-      );
-    });
-  }
-
-  init();
 </script>
