@@ -148,8 +148,9 @@ Full running order, split by who can act, is in **GOING-LIVE.md**.
 1. The Cloudflare Pages project and zone exist, so the nameserver change has
    something to point at (see Hosting). The zone is what produces the two
    nameservers Jacob pastes, so it has to come first.
-2. The staging `noindex` needs no handling. `Base.astro` derives it from
-   `BASE_URL`, so the production build has never carried it.
+2. Remove `KED_NOINDEX` from the Cloudflare Pages project and redeploy.
+   `Base.astro` honours it as well as `BASE_URL`, so leaving it set ships
+   `noindex, nofollow` on the live domain.
 3. Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console after
    the switch, and keep an eye on Coverage for a fortnight.
 4. Export the Squarespace newsletter list before cancelling. **There is no

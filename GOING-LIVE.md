@@ -22,10 +22,13 @@ thing Jacob has to do, and it is two values on one screen.
   **Do not add Netlify's `!` force suffix** — Cloudflare accepts only
   301/302/303/307/308 and would drop every line as invalid, silently breaking the
   only thing carrying the old site's search ranking.
-- No manual `noindex` step. `Base.astro` derives it from `BASE_URL`, so the
-  production build has never carried it, and `src/pages/launch.astro` renders as
-  a pointer home if it ships live.
 - `.nvmrc` pins Node 22, which Cloudflare's build image reads.
+- **`noindex` is not automatic.** `Base.astro` sets it from `BASE_URL` *or*
+  `KED_NOINDEX`, and the staging Pages project sets the latter because a
+  `pages.dev` build serves from the root and cannot give itself away through
+  `BASE_URL`. That variable has to be removed by hand at cutover — see step 4.
+  `src/pages/launch.astro` still guards itself and renders as a pointer home if
+  it ships live.
 
 ## Step 1 — Brett: the Cloudflare zone
 
@@ -45,19 +48,27 @@ Jacob needs, and nothing can be asked of him until they exist.
 
 ## Step 2 — Brett: the Pages project
 
-1. **Workers & Pages** → **Create** → **Pages** → **Connect to Git** →
-   `brettmboggs/ked-detailing`, branch `main`.
-2. Framework preset **Astro**, build command `npm run build`, output directory
-   `dist`. If the build picks the wrong Node, add `NODE_VERSION` = `22` as a
-   build environment variable.
-3. Deploy, then open the `*.pages.dev` URL and check the site.
-4. **Custom domains** → add both `kedservice.com` and `www.kedservice.com`.
-5. Add one **Redirect Rule** sending the apex to `https://www.kedservice.com`,
-   301, preserving the path. Every canonical tag in the build points at `www`
-   (`site` in `astro.config.mjs`), so this makes the served URL agree with what
-   the pages claim. Both hosts will answer without it; they just both answer.
+**This already exists.** A Pages project is building this repo and serving the
+staging copy on a `pages.dev` subdomain, which is what `KED_NOINDEX` was added
+for. So pushes to `main` are already deploying, and merging is what puts a change
+in front of it.
 
-Both custom domains read "pending" until step 3. Expected.
+If it needs rebuilding from scratch: **Workers & Pages** → **Create** → **Pages**
+→ **Connect to Git** → `brettmboggs/ked-detailing`, branch `main`. Framework
+preset **Astro**, build command `npm run build`, output directory `dist`. Add
+`NODE_VERSION` = `22` if the build picks the wrong one.
+
+Otherwise just confirm the latest deploy is green and the `*.pages.dev` URL
+shows the current site.
+
+Then, either way, two things still to add on that project:
+
+1. **Custom domains** → add both `kedservice.com` and `www.kedservice.com`.
+   Both read "pending" until step 3. Expected.
+2. A **Redirect Rule** sending the apex to `https://www.kedservice.com`, 301,
+   preserving the path. Every canonical tag in the build points at `www` (`site`
+   in `astro.config.mjs`), so this makes the served URL agree with what the pages
+   claim. Both will answer without it; they just both answer.
 
 ## Step 3 — Jacob: the nameservers
 
@@ -70,6 +81,10 @@ domain owner alone.
 
 ## Step 4 — Brett, once Cloudflare says Active
 
+- **Remove `KED_NOINDEX` from the Pages project and redeploy.** Do this first.
+  Leave it set and the live site ships `noindex, nofollow`, which tells Google to
+  drop every page — a worse outcome than never launching, and a quiet one.
+  Confirm by viewing source on the live domain: no robots meta tag.
 - Confirm the apex, `www` and HTTPS all resolve. Certificates are automatic.
 - Spot-check the redirects: `/home`, `/cart`, one `/blog/tag/*`, and all three
   blog post slugs. They should be real 301s.
