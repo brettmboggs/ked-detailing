@@ -145,9 +145,9 @@ real photographs from the shoot.
 
 Full running order, split by who can act, is in **GOING-LIVE.md**.
 
-1. The Netlify site exists and builds, so the DNS change has something to point
-   at (see Hosting). Then the domain moves — Brett if his manager access reaches
-   DNS records, otherwise Jacob.
+1. The Cloudflare Pages project and zone exist, so the nameserver change has
+   something to point at (see Hosting). The zone is what produces the two
+   nameservers Jacob pastes, so it has to come first.
 2. The staging `noindex` needs no handling. `Base.astro` derives it from
    `BASE_URL`, so the production build has never carried it.
 3. Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console after
@@ -278,28 +278,32 @@ in this repo.
 
 ## Hosting
 
-**Netlify**, building from GitHub. Free. `netlify.toml` commits the build
-settings, so the dashboard needs nothing typed into it. See GOING-LIVE.md for
-the cutover.
+**Cloudflare Pages**, building from GitHub. Free. See GOING-LIVE.md for the
+cutover.
 
-This overrides the earlier Cloudflare Pages recommendation, on one fact that
-decides it: Pages serves an **apex** domain only when the domain is a zone on
-its own Cloudflare account, and Squarespace does not flatten CNAMEs at the apex.
-Cloudflare therefore means moving nameservers off Squarespace. Netlify serves
-the apex from a plain A record, so the cutover is two records in the panel
-Squarespace already provides — the smallest reversible change, and one a domain
-*manager* may be able to make without the owner present, since Squarespace
-grants managers DNS-record access explicitly.
+Netlify was tried and reverted. It serves an apex domain from a plain A record,
+which would have kept DNS at Squarespace, and that looked like the smaller ask —
+right up until it was confirmed that Brett's access returns Access Denied on the
+domain either way. With Jacob making the change regardless, pasting two
+nameservers on one screen beats deleting a group of Squarespace defaults and then
+adding two records. Cloudflare also ends the recurring bills rather than moving
+them, which is the actual goal: Pages is free, Email Routing is free, and
+Cloudflare Registrar renews a domain at cost.
 
-- **Site** — Netlify from GitHub. `public/_redirects` is already its native
-  format, and the rules are forced (`301!`) so they beat the meta-refresh stubs
-  Astro emits at the same paths.
-- **Email** — still the Cloudflare answer. Email Routing forwards
-  `hello@kedservice.com` into his Gmail for free, and Gmail "send as" replies
-  from it. It needs the nameserver move, so it is a deliberate second step once
-  the site is settled rather than a launch blocker. An MX-based forwarder works
-  without moving nameservers if that stays unattractive.
-- **Forms** — a Netlify function if a contact form is ever added. Today every
+Pages serves an apex domain only when the domain is a zone on the account, so
+this does mean nameservers move off Squarespace. That is the one thing Jacob has
+to do.
+
+- **Site** — Cloudflare Pages from GitHub. Astro is auto-detected; `.nvmrc`
+  pins Node 22. `public/_redirects` is read natively.
+- **Redirects** — Cloudflare follows a `_redirects` rule even when a static
+  asset matches the same path, so the meta-refresh stubs Astro emits at those
+  paths are harmless. It rejects Netlify's `!` force suffix, which would drop
+  every rule as invalid. Plain `301` only.
+- **Email** — Email Routing forwards `hello@kedservice.com` into his Gmail for
+  free, and Gmail "send as" replies from it. Free once the nameservers are here,
+  so it stops being a second migration.
+- **Forms** — a Pages Function if a contact form is ever added. Today every
   call to action goes to Housecall Pro or the phone.
 
 ### Booking

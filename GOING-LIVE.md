@@ -4,168 +4,124 @@ Everything between "the build is finished" and "kedservice.com serves it".
 Jacob's half is written to be pasted into a message unchanged — see
 [Jacob's steps](#jacobs-steps).
 
-## Why Netlify and not Cloudflare Pages
+**Host: Cloudflare Pages.** The goal is to end the recurring bills, not move
+them. Pages is free, Email Routing is free, and Cloudflare Registrar renews a
+domain at cost if the registration follows later. Netlify was tried and reverted;
+NOTES.md records why.
 
-NOTES.md recommends Cloudflare Pages. That recommendation predates the
-constraint that actually decides this.
-
-Cloudflare Pages will only serve an **apex** domain when the domain is a zone on
-the Cloudflare account that owns the project, and Squarespace does not flatten
-CNAMEs at the apex. So Cloudflare means moving nameservers off Squarespace —
-handing over all DNS, disabling DNSSEC on the way, and taking a change that only
-the domain owner is likely to be offered.
-
-Netlify serves the apex from a plain **A record**. That reduces the cutover to
-editing two records in the panel Squarespace already provides, which is:
-
-- the smallest, most reversible change available;
-- something a domain **manager** may be able to do without the owner, since
-  Squarespace grants managers DNS-record access explicitly;
-- the same two values whoever ends up pasting them.
-
-Cloudflare is still the better long-term home if branded email is ever wanted —
-Email Routing forwards `hello@kedservice.com` into Gmail for free. That needs the
-nameserver move, so it is a deliberate second step once the site is settled, not
-a launch blocker. Nothing here forecloses it.
+Cloudflare Pages serves an apex domain only when the domain is a zone on the
+Cloudflare account, so the nameservers move off Squarespace. That is the one
+thing Jacob has to do, and it is two values on one screen.
 
 ## Already done in this repo
 
 - `npm run verify` passes clean — type check and build, 8 pages.
-- `netlify.toml` commits the build settings, so connecting the repo needs no
-  configuration typed into the dashboard.
-- `public/_redirects` rules are now **forced** (`301!`). Astro emits a
-  meta-refresh stub at each of those paths as a fallback for hosts that ignore
-  the file, and on Netlify a real file at a path beats an unforced redirect rule.
-  Without the `!` every one of the old Squarespace URLs would have served the
-  stub instead of a genuine 301, on the only paths carrying the old site's
-  search ranking.
-- The staging `noindex` needs no manual removal. `Base.astro` derives it from
-  `BASE_URL`, so the production build has never carried it. `src/pages/launch.astro`
-  guards itself the same way and renders as a pointer home if it ships live.
+- `public/_redirects` carries the 301 map and Cloudflare reads it natively.
+  Cloudflare follows a rule even when a static asset matches the same path, so
+  the meta-refresh stubs `astro.config.mjs` emits at those paths never shadow it.
+  **Do not add Netlify's `!` force suffix** — Cloudflare accepts only
+  301/302/303/307/308 and would drop every line as invalid, silently breaking the
+  only thing carrying the old site's search ranking.
+- No manual `noindex` step. `Base.astro` derives it from `BASE_URL`, so the
+  production build has never carried it, and `src/pages/launch.astro` renders as
+  a pointer home if it ships live.
+- `.nvmrc` pins Node 22, which Cloudflare's build image reads.
 
----
+## Step 1 — Brett: the Cloudflare zone
 
-## Step 1 — Brett, at a browser
+Do this before the Pages project. The zone is what produces the two nameservers
+Jacob needs, and nothing can be asked of him until they exist.
 
-Ten minutes. Works on a phone if it has to; GitHub sign-in and the domain screen
-are both usable on mobile.
+1. **dash.cloudflare.com** → sign up, free.
+2. **Add a domain** → `kedservice.com` → **Free** plan.
+3. Cloudflare scans the existing DNS and shows what it found. **Read that list
+   before continuing.** Anything for Google Search Console or Housecall Pro
+   verification has to survive the move; the scan is best-effort, so add by hand
+   anything missing. There has never been an MX record on this domain, so mail
+   cannot break.
+4. Cloudflare then shows **two nameservers**, of the form
+   `something.ns.cloudflare.com`. Those are the values for Jacob. Copy them
+   somewhere you can paste from.
 
-1. **netlify.com** → sign up with GitHub.
-2. **Add new site** → **Import an existing project** → **GitHub** →
-   `brettmboggs/ked-detailing` → branch `main`.
-   Build command, publish directory and Node 22 are read from `netlify.toml`.
-   Nothing to fill in.
-3. Let it build, then open the `*.netlify.app` URL and check the site.
-4. **Site configuration** → **Change site name** → set it to exactly
-   **`knockemdown`**.
+## Step 2 — Brett: the Pages project
 
-   > This matters. `knockemdown.netlify.app` is the value already written into
-   > Jacob's instructions. If the name is taken, pick another and correct the
-   > CNAME value on his page before sending it.
+1. **Workers & Pages** → **Create** → **Pages** → **Connect to Git** →
+   `brettmboggs/ked-detailing`, branch `main`.
+2. Framework preset **Astro**, build command `npm run build`, output directory
+   `dist`. If the build picks the wrong Node, add `NODE_VERSION` = `22` as a
+   build environment variable.
+3. Deploy, then open the `*.pages.dev` URL and check the site.
+4. **Custom domains** → add both `kedservice.com` and `www.kedservice.com`.
+5. Add one **Redirect Rule** sending the apex to `https://www.kedservice.com`,
+   301, preserving the path. Every canonical tag in the build points at `www`
+   (`site` in `astro.config.mjs`), so this makes the served URL agree with what
+   the pages claim. Both hosts will answer without it; they just both answer.
 
-5. **Domain management** → **Add a domain** → `www.kedservice.com`. Accept the
-   prompt to add the apex `kedservice.com` too.
-6. Set **`www.kedservice.com` as the primary domain**. Netlify then 301s the apex
-   to `www`, which matches `site` in `astro.config.mjs` and the canonical tags.
-   Both will read "awaiting external DNS" until step 2 — expected.
+Both custom domains read "pending" until step 3. Expected.
 
-## Step 2 — the DNS change
+## Step 3 — Jacob: the nameservers
 
-| Type | Host | Value |
-| --- | --- | --- |
-| A | `@` | `75.2.60.5` |
-| CNAME | `www` | `knockemdown.netlify.app` |
+He pastes the two values from step 1 into Squarespace. His instructions are
+below, and the published page sent to him carries the same thing formatted.
 
-`75.2.60.5` is Netlify's load balancer, the documented apex target for external
-DNS.
+Brett cannot do this. `account.squarespace.com/domains/managed/kedservice.com`
+returns **Access Denied** on his login, confirmed twice. Squarespace grants the
+domain owner alone.
 
-**Check whether you can do this yourself before asking Jacob.** Squarespace
-grants domain managers DNS-record access, and being blocked from a *transfer*
-does not imply being blocked from records. Open
-`account.squarespace.com` → Domains → kedservice.com → DNS. If the records are
-editable, the whole cutover is yours and Jacob is not needed. Thirty seconds to
-find out, and it removes the only person on the critical path.
+## Step 4 — Brett, once Cloudflare says Active
 
-Either way the sequence is the same, and the first part is the trip hazard:
-**Squarespace refuses new records while its own defaults are present.** Delete
-the group labelled *Squarespace Defaults* (red trash can per row) first, then add
-the two above. Leave every other record alone — any Google, Housecall Pro or
-verification TXT record has to survive.
-
-## Step 3 — Brett, after it propagates
-
-- Confirm `kedservice.com`, `www.kedservice.com` and HTTPS all resolve. Netlify
-  issues the certificate after DNS points at it, so expect a few minutes where
-  the browser warns.
+- Confirm the apex, `www` and HTTPS all resolve. Certificates are automatic.
 - Spot-check the redirects: `/home`, `/cart`, one `/blog/tag/*`, and all three
-  blog post slugs. They should be real 301s now, not meta refreshes.
-- Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console, then
+  blog post slugs. They should be real 301s.
+- Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console and
   watch Coverage for a fortnight.
+- **Email Routing** → add `hello@kedservice.com` forwarding to the Gmail, then
+  set Gmail "send as" so replies come from the branded address. Free, five
+  minutes, and it is only free because the nameservers are already here.
 - Delete `src/pages/launch.astro` once Jacob has read it.
 
 ---
 
 ## Jacob's steps
 
-> Copy from here down. The published version of this, formatted and with copy
-> buttons, is the page sent to him.
+> Copy from here down. Fill in the two nameservers from step 1 first.
 
 ### Why it has to be him
 
-`kedservice.com` is registered on his Squarespace account, and Squarespace only
-lets the account holder change where the address points. Until that changes, the
+`kedservice.com` is registered on his Squarespace account, and Squarespace lets
+only the account holder change where the address points. Until it changes, the
 address keeps serving the old site.
 
 Three things worth saying up front, because they are what he will ask:
 
 - **No gap.** The new site is live and tested before he touches anything.
-- **It is reversible.** Two text entries; putting the old ones back undoes it.
+- **It is reversible.** Two text boxes; putting the old values back undoes it.
 - **Email is untouched.** He uses Gmail, and the domain has never carried mail.
 
-### 1. Find the DNS screen
+### The change
 
 1. Go to `account.squarespace.com` and log in.
 2. Click **Domains**.
 3. Click **kedservice.com**.
-4. Click **DNS**.
-
-### 2. Delete the Squarespace defaults
-
-There is a group headed **Squarespace Defaults**. Those point the address at the
-old site, and Squarespace will not accept new records while they are there.
-Click the red trash can beside each row in that group. Usually four or five
-lines.
-
-**Leave everything else alone.** Anything mentioning Google, Housecall Pro, or
-carrying a long random string, stays. Screenshot and ask before deleting
-anything uncertain.
-
-### 3. Add two records
-
-Click **Add record** twice.
+4. Click **DNS**, then **Domain Nameservers**.
+5. Click **Use custom nameservers**.
+6. Re-enter the password. It asks for the 2FA code too, if that is switched on.
+7. It warns about DNSSEC. Click **Continue** — it has to come off for this to
+   work, and Cloudflare sets its own up afterwards.
+8. Paste the first value into **Nameserver 1** and the second into
+   **Nameserver 2**.
+9. Click **Save**, and say when it is done.
 
 ```
-Type   A
-Host   @
-Data   75.2.60.5
+Nameserver 1   ________.ns.cloudflare.com
+Nameserver 2   ________.ns.cloudflare.com
 ```
 
-```
-Type   CNAME
-Host   www
-Data   knockemdown.netlify.app
-```
+### Then wait
 
-Leave TTL and Priority at whatever they already say. If the Host box rejects
-`@`, leave it empty instead. Save, and say when both are in.
+Usually under an hour, occasionally up to 48. Nothing to do.
 
-### 4. Wait
-
-Usually under an hour, occasionally up to 48. For a few minutes after it
-switches the browser may warn the site is not secure — that is the certificate
-being issued.
-
-### 5. Only then, cancel Squarespace
+### Only then, cancel Squarespace
 
 Wait for confirmation the new site is live.
 
@@ -178,9 +134,10 @@ anyone can register it afterwards.
 Cancel the *website* plan only. Say so beforehand, so the newsletter list can be
 exported if anyone ever signed up — it goes with the account.
 
-### 6. Editing merch and blog posts himself
+### Editing merch and blog posts himself
 
-Blocks nothing.
+Blocks nothing, and only works once Pages is connected, because the tool saves by
+committing to the repo.
 
 1. Free account at `github.com` — username, email, password.
 2. Send the username over.
@@ -190,7 +147,7 @@ Blocks nothing.
 Two lists, *Merch* and *Notes*. Fill in a form, save, and the site rebuilds
 itself. Every entry has a hide switch for staging privately.
 
-### 7. Ten minutes worth more than the website
+### Ten minutes worth more than the website
 
 Separate from the site and more urgent. At `business.google.com`:
 
@@ -207,14 +164,8 @@ contributing almost nothing, so the profile is upside rather than maintenance.
 
 ## Later, optional
 
-**Branded email.** Needs the nameserver move to Cloudflare described at the top,
-after which Email Routing forwards `hello@kedservice.com` into the existing Gmail
-for free and Gmail "send as" replies from it. Nothing to migrate, because there
-is no mail on the domain today. An MX-based forwarder would work without moving
-nameservers if that stays unattractive.
-
-**Move the registration.** Cloudflare Registrar renews at cost, around $10/year
-against Squarespace's $20, and puts domain and DNS in one place. Needs Jacob to
-unlock the domain and hand over an auth code, and takes 5–7 days. Not during the
-cutover — a registrar transfer and a DNS change at once makes any failure harder
-to read.
+**Move the registration to Cloudflare.** Renews at cost, around $10/year against
+Squarespace's $20, and puts domain and DNS in one account. Needs Jacob to unlock
+the domain and hand over an auth code, and takes 5–7 days. Not during the
+cutover — a registrar transfer and a nameserver change at once makes any failure
+harder to read. Do it once the site is settled.
