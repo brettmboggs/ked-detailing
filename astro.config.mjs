@@ -15,8 +15,9 @@ export default defineConfig({
   base,
   integrations: [sitemap()],
 
-  // Mirrors public/_redirects. Cloudflare serves real 301s from that file;
-  // these are the static fallback for any host that ignores it.
+  // Mirrors public/_redirects, from which Cloudflare serves the real 301s.
+  // These are the meta-refresh fallback for any host that ignores that file.
+  // Cloudflare prefers the redirect over a matching asset, so the two coexist.
   redirects: {
     '/blog/category/Info': '/blog',
     '/blog/tag/auto+detailing': '/blog',

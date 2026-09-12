@@ -1,5 +1,11 @@
 # 301s for every URL the Squarespace site exposed, so nothing 404s
 # after the cutover. Generated from the old sitemap — see NOTES.md.
+#
+# Cloudflare Pages follows these regardless of whether a static asset matches
+# the same path, so the meta-refresh stubs astro.config.mjs emits at these very
+# paths never get in the way. Do not add Netlify's "!" force suffix: Cloudflare
+# accepts only 301/302/303/307/308 and would drop every line as invalid,
+# silently breaking the one thing carrying the old site's search ranking.
 
 /blog/category/Info  /blog  301
 /blog/tag/auto+detailing  /blog  301

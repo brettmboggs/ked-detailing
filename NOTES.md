@@ -143,9 +143,14 @@ real photographs from the shoot.
 
 ### Before flipping the domain
 
-1. Jacob points the domain (see Blockers). Nothing else is waiting on anyone.
-2. Add `<meta name="robots" content="noindex">` in `Base.astro` while it sits on
-   the staging subdomain, and take it out at cutover.
+Full running order, split by who can act, is in **GOING-LIVE.md**.
+
+1. The Cloudflare Pages project and zone exist, so the nameserver change has
+   something to point at (see Hosting). The zone is what produces the two
+   nameservers Jacob pastes, so it has to come first.
+2. Remove `KED_NOINDEX` from the Cloudflare Pages project and redeploy.
+   `Base.astro` honours it as well as `BASE_URL`, so leaving it set ships
+   `noindex, nofollow` on the live domain.
 3. Submit `https://www.kedservice.com/sitemap-index.xml` in Search Console after
    the switch, and keep an eye on Coverage for a fortnight.
 4. Export the Squarespace newsletter list before cancelling. **There is no
@@ -274,17 +279,33 @@ in this repo.
 
 ## Hosting
 
-All three realistic hosts deploy **from a Git repo**, so that is not the
-tradeoff. Recommended: **Cloudflare Pages**, the only free path that also solves
-branded email.
+**Cloudflare Pages**, building from GitHub. Free. See GOING-LIVE.md for the
+cutover.
 
-- **Site** — Cloudflare Pages building from GitHub. Free.
-- **Email** — Cloudflare Email Routing forwards `hello@kedservice.com` into his
-  Gmail for free, and Gmail "send as" lets him reply from the branded address.
-  Needs nameservers on Cloudflare, which does not require transferring the
-  registrar.
-- **Forms** — a Pages Function if a contact form is ever added. Today every call
-  to action goes to Housecall Pro or the phone.
+Netlify was tried and reverted. It serves an apex domain from a plain A record,
+which would have kept DNS at Squarespace, and that looked like the smaller ask —
+right up until it was confirmed that Brett's access returns Access Denied on the
+domain either way. With Jacob making the change regardless, pasting two
+nameservers on one screen beats deleting a group of Squarespace defaults and then
+adding two records. Cloudflare also ends the recurring bills rather than moving
+them, which is the actual goal: Pages is free, Email Routing is free, and
+Cloudflare Registrar renews a domain at cost.
+
+Pages serves an apex domain only when the domain is a zone on the account, so
+this does mean nameservers move off Squarespace. That is the one thing Jacob has
+to do.
+
+- **Site** — Cloudflare Pages from GitHub. Astro is auto-detected; `.nvmrc`
+  pins Node 22. `public/_redirects` is read natively.
+- **Redirects** — Cloudflare follows a `_redirects` rule even when a static
+  asset matches the same path, so the meta-refresh stubs Astro emits at those
+  paths are harmless. It rejects Netlify's `!` force suffix, which would drop
+  every rule as invalid. Plain `301` only.
+- **Email** — Email Routing forwards `hello@kedservice.com` into his Gmail for
+  free, and Gmail "send as" replies from it. Free once the nameservers are here,
+  so it stops being a second migration.
+- **Forms** — a Pages Function if a contact form is ever added. Today every
+  call to action goes to Housecall Pro or the phone.
 
 ### Booking
 
@@ -304,9 +325,9 @@ like part of the site, in order of effort:
 A fully custom booking flow would need the Housecall Pro API, which sits on
 their higher tiers. Not worth it unless he outgrows the widget.
 
-**Staging:** `ked.brettboggs.dev` via a CNAME at Namecheap. Add
-`<meta name="robots" content="noindex">` to `Base.astro` while it lives there so
-it never competes with the live site, and remove it at cutover.
+**Staging:** `ked.brettboggs.dev` via a CNAME at Namecheap. The `noindex` needs
+no manual handling either way — `Base.astro` derives it from `BASE_URL`, so the
+staging build carries it and the production build never has.
 
 ---
 
