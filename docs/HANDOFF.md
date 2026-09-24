@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0009 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0010 applied |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -94,6 +94,15 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   /quote shows the link after booking, and `POST /jobs/:id/confirmation`
   gives Jacob a text to send with it. `MANAGE_URL` also switches to
   kedservice.com at cutover.
+- **Cutover importer:** `packages/import`. It reads Housecall Pro's
+  customer and job CSVs and QuickBooks' Journal report (Excel saved as CSV),
+  shows what it understood, and only writes with `--go`. Upcoming HCP jobs
+  land on the calendar. Past ones come in as `history`, which never asks for
+  payment or mileage. QuickBooks accounts are matched to ours through a
+  `<file>.map.json` it writes with guesses. Everything is keyed to its
+  source, so re-running is safe. Written against the files' likely shape:
+  **check the preview on Jacob's real exports first.** It needs `KED_TOKEN`:
+  set the Worker's `ADMIN_TOKEN` secret for the day, and delete it after.
 - **Photos:** receipts and before/after job photos, stored in **KV**, not R2.
   R2 requires a credit card on the account, and Brett won't put his own card
   on Jacob's business. The storage interface prefers R2 if it's ever bound.
@@ -104,13 +113,19 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (63). The API tests
+  scheduling (11), books (18) and API (66), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
   (`POST /books/accounts`) so other suites' data can't interfere.
 - **Type checks:** `npm run check -w @ked/api` for the API, and
   `npx astro check` or `npm run verify` for the site.
+- **Free-plan query cap:** Cloudflare's D1 docs say a free-plan request can
+  make 50 database queries, and every statement in a `batch` counts. It
+  wasn't possible to confirm this in production (deploying a probe Worker
+  was blocked). The importers stay under it. **The bank import makes several
+  queries per line**, so a long statement may fail in production. Test with
+  a real month's QFX early, and if it fails, file lines in chunks.
 - **npm bug:** installing `@cloudflare/vitest-pool-workers` crashes npm's
   resolver (`reading 'edgesOut'`). That's why the API tests are node:test
   against `wrangler dev`. Don't add vitest back.
@@ -188,15 +203,23 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
    Teller's institution list). Plaid probably does, but is paid and custom
    quoted, and is optional. The default is Jacob downloading a QFX weekly or
    monthly and sharing it to the app.
-7. **His data:** Housecall Pro customer export and QuickBooks general ledger,
-   to import at cutover.
+7. **His data:** Housecall Pro's customer and job exports (Customers or
+   Jobs → Actions → Export) and QuickBooks' Journal report, all dates. Then:
+   ```sh
+   cd packages/import
+   npm run import -- customers ~/hcp-customers.csv     # look first
+   npm run import -- jobs ~/hcp-jobs.csv
+   npm run import -- quickbooks ~/journal.csv          # writes journal.csv.map.json
+   # fix any unmapped accounts in the .map.json, then repeat each with --go
+   ```
+   Import QuickBooks **before** the first bank statement here, so the bank
+   lines match QuickBooks' entries instead of doubling them.
 
 ## What to build next (none of it needs Jacob)
 
 1. **Wire the website into the navigation** behind one switch (`quoteLive` in
    `src/data/site.ts`): header "Get a quote", "from $X" on the packages, the
    CTA. It stays off until cutover.
-2. **Housecall Pro and QuickBooks importers** for the cutover.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.

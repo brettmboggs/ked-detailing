@@ -6,8 +6,12 @@
  * negatives, and US or ISO dates.
  */
 
-/** RFC 4180-ish: quoted fields, doubled quotes, commas and newlines inside quotes. */
-export function parseCsv(text: string): string[][] {
+/**
+ * RFC 4180-ish: quoted fields, doubled quotes, commas and newlines inside
+ * quotes. Blank rows are dropped unless `keepBlank`, which keeps row numbers
+ * lined up with the spreadsheet for error messages.
+ */
+export function parseCsv(text: string, { keepBlank = false } = {}): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
@@ -38,7 +42,7 @@ export function parseCsv(text: string): string[][] {
     row.push(field);
     rows.push(row);
   }
-  return rows.filter((r) => r.some((f) => f.trim() !== ''));
+  return keepBlank ? rows : rows.filter((r) => r.some((f) => f.trim() !== ''));
 }
 
 export function toCsv(rows: (string | number | null | undefined)[][]): string {

@@ -22,6 +22,8 @@ interface JobRow {
   config_version: number;
   final_price: number | null;
   manage_token: string;
+  imported_from: string | null;
+  history: number;
   cancelled_by: string | null;
   cancel_reason: string | null;
   start_at: string;
@@ -57,6 +59,10 @@ function toJob(r: JobRow) {
     /** 'customer' if they cancelled through their link. */
     cancelledBy: r.cancelled_by,
     cancelReason: r.cancel_reason,
+    /** 'hcp:<job number>' for jobs brought over from Housecall Pro. Their `service` is 'imported'. */
+    importedFrom: r.imported_from,
+    /** Past work imported for history: never asks for payment or mileage. */
+    history: r.history === 1,
     start: r.start_at,
     end: r.end_at,
     date: r.local_date,

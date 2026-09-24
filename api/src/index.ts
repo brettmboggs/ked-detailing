@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { requireOwner, signInWithApple, type Owner } from './auth.ts';
 import { deleteRule, importBank, listBankLines, listRules, resolveBankLine } from './bank.ts';
+import { importCustomers, importEntries, importJobs } from './imports.ts';
 import { booksInbox } from './inbox.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
 import {
@@ -280,6 +281,15 @@ app.post('/inventory/:id/movements', requireOwner, async (c) =>
 app.get('/jobs/:id/usage', requireOwner, async (c) => c.json(await jobUsage(c.env.DB, c.req.param('id'))));
 app.put('/jobs/:id/usage', requireOwner, async (c) =>
   c.json(await saveJobUsage(c.env.DB, c.req.param('id'), await json(c.req.raw), who(c.get('owner')))),
+);
+
+/* ------------------------------------------------------------ cutover */
+
+// Fed in small chunks by tools/import. Re-running is safe: repeats are skipped.
+app.post('/import/customers', requireOwner, async (c) => c.json(await importCustomers(c.env.DB, await json(c.req.raw))));
+app.post('/import/jobs', requireOwner, async (c) => c.json(await importJobs(c.env.DB, await json(c.req.raw))));
+app.post('/import/entries', requireOwner, async (c) =>
+  c.json(await importEntries(c.env.DB, await json(c.req.raw), who(c.get('owner')))),
 );
 
 /* -------------------------------------------------------------- books */

@@ -276,9 +276,15 @@ There are no passwords and no sign-up screen.
 `customer { id, name, phone, email }`, `vehicle`, `address`, `zip`, `notes`,
 `input` (the `QuoteInput`), `quote` (`{ service, lines, total, range, hours,
 inspection, notes }`), `configVersion`, `finalPrice`, `manageToken`,
-`cancelledBy` (`customer` or `owner`), `cancelReason`, `start`, `end`, `date`
+`cancelledBy` (`customer` or `owner`), `cancelReason`, `importedFrom`
+(`hcp:<job number>` for jobs brought over from Housecall Pro), `history`
+(past imported work), `start`, `end`, `date`
 (the local day), `createdAt`, `updatedAt`. Show a customer's cancel reason on
 the job.
+
+**Imported jobs** have `service: 'imported'` and `input: {}`: there's no
+`QuoteInput`, so show `quote.lines[0].label` as the service and don't offer
+to re-price them.
 
 **Invoice shape**: `id`, `number` (1001 up), `jobId`, `customer { id, name,
 phone, email }`, `status` (`draft` → `sent` → `paid`, or `void`), `lines`,

@@ -1,0 +1,20 @@
+{
+  "name": "@ked/import",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cutover importer: reads Housecall Pro and QuickBooks exports and loads them through the API.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --no-warnings --test 'src/**/*.test.ts'",
+    "import": "node --experimental-strip-types --no-warnings src/cli.ts"
+  },
+  "dependencies": {
+    "@ked/books": "0.1.0",
+    "@ked/scheduling": "0.1.0"
+  }
+}

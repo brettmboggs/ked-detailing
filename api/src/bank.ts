@@ -208,7 +208,7 @@ async function jobSuggestion(db: D1Database, line: BankLineRow): Promise<Suggest
   const job = await db
     .prepare(
       `SELECT j.id, j.local_date, c.name FROM jobs j JOIN customers c ON c.id = j.customer_id
-       WHERE j.status != 'cancelled' AND j.local_date BETWEEN ? AND ?
+       WHERE j.status != 'cancelled' AND j.history = 0 AND j.local_date BETWEEN ? AND ?
          AND COALESCE(j.final_price, json_extract(j.quote, '$.total')) = ?
          AND NOT EXISTS (SELECT 1 FROM entries e WHERE e.job_id = j.id AND e.kind = 'income' AND e.voided_by IS NULL)
        ORDER BY abs(julianday(j.local_date) - julianday(?)) LIMIT 1`,

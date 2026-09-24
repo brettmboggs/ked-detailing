@@ -37,7 +37,7 @@ export async function booksInbox(db: D1Database) {
     db
       .prepare(
         `SELECT j.id AS jobId, j.local_date AS date, j.address, c.name AS customer FROM jobs j JOIN customers c ON c.id = j.customer_id
-         WHERE j.status = 'done' AND j.local_date >= ? AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.job_id = j.id)
+         WHERE j.status = 'done' AND j.history = 0 AND j.local_date >= ? AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.job_id = j.id)
          ORDER BY j.local_date DESC LIMIT 20`,
       )
       .bind(daysAgo(14)),
@@ -47,7 +47,7 @@ export async function booksInbox(db: D1Database) {
         `SELECT j.id AS jobId, j.local_date AS date, c.name AS customer,
                 COALESCE(j.final_price, json_extract(j.quote, '$.total')) AS amount
          FROM jobs j JOIN customers c ON c.id = j.customer_id
-         WHERE j.status = 'done' AND j.local_date >= ? AND j.local_date <= ?
+         WHERE j.status = 'done' AND j.history = 0 AND j.local_date >= ? AND j.local_date <= ?
            AND NOT EXISTS (SELECT 1 FROM entries e WHERE e.job_id = j.id AND e.kind = 'income' AND e.voided_by IS NULL)
          ORDER BY j.local_date LIMIT 20`,
       )
