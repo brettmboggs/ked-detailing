@@ -5,7 +5,7 @@ The brief for Jacob's iPhone app, which lives in its own repo. Point that repo's
 truth for **what** the app does and **how it talks to everything else**. If the
 app and this doc disagree, fix one of them in the same change.
 
-Last updated: 2026-09-24 (booking calendar and books added).
+Last updated: 2026-09-24 (the Money tab is now Books; Today leads with what needs him).
 
 ---
 
@@ -226,6 +226,7 @@ There are no passwords and no sign-up screen.
 | `POST /v1/books/income` | owner | `{ date, amount, depositToId, jobId?, categoryId?, method?, payee?, memo? }`. With a `jobId`, the category defaults to Detailing or Marine detailing. **This is "Mark paid" on a job** until Stripe lands |
 | `POST /v1/books/transfers` | owner | `{ date, amount, fromId, toId, memo? }`: between his accounts, paying the card, Stripe payouts, owner draws (`toId: 'owner-draws'`) and contributions |
 | `GET /v1/books/entries?from=&to=&accountId=&jobId=` | owner | `{ entries }`, newest first, each with `lines`, `payee`, `voidedBy` and `reverses` |
+| `GET /v1/books/entries/:id` | owner | One entry, the same shape as in the list. For opening an entry that isn't in a loaded list, e.g. an auto-filed line from an older statement |
 | `POST /v1/books/entries/:id/void` | owner | `{ date? }`. Entries are **never edited or deleted**: this posts the exact reversal. To edit, void the entry and record it again. Also frees any bank line matched to it |
 | `POST /v1/books/bank-imports` | owner | `{ accountId, file, filename?, invert? }`. `file` is the text of a QFX, OFX, QBO or CSV (`csv` is still accepted as the field name). → `{ rows, added, duplicates, matched, filed, suggested, waiting, problems }`. In order: rows already in the books are **matched**; rows from a merchant Jacob has filed before are **filed** automatically by his rules; the rest get a **suggestion** where one can be made; `waiting` counts what's left for him |
 | `GET /v1/books/bank-lines?status=unmatched&accountId=&auto=true` | owner | `{ lines }`. Each line has `merchant`, a `suggestion` (`{ action, …, source: 'starter' \| 'job', label }` or null) and `auto` (true if a rule filed it). Show the suggestion's `label` ("Looks like Fuel and vehicle costs", "Payment for Dana's job on 2033-05-01") with a one-tap accept |
@@ -327,7 +328,7 @@ connection token.
 
 ## Screens (v1)
 
-A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. New leads show on Today as a count, with the list one tap away.
+A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. Today is the home screen: today's jobs with one big next-step button each, then a **Needs you** list (new leads, finished jobs not yet paid, things for the books, products running low), each a tap from being dealt with, and a look at tomorrow.
 
 - **Today**: today's jobs in order. Each shows the customer, vehicle, address and
   quoted range. Tap an address for directions in Apple Maps (a `Linking` URL,
@@ -335,6 +336,11 @@ A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. N
 - **Job**: the details, notes, before/after photos (`expo-image-picker` with the
   camera) and the price. **Get paid** runs Tap to Pay, or sends an invoice link.
   Marking a job done asks what product was used, pre-filled from the package.
+  The next step (Start job / Mark done) is one big button at the top. Once
+  it's started, a short **Finish up** checklist follows: get paid (they paid
+  me, or text them a bill), what you used, log the drive. Each ticks itself
+  off from the books, the job's usage and the mileage log. Jobs he hasn't
+  started can be cancelled, with a confirm.
 - **Schedule**: a week view from `GET /v1/jobs` and `GET /v1/time-off`. Jobs
   the customer booked online (`source: 'web'`) are marked so he knows which ones
   still need a confirmation text. Add a job from a lead, a customer or scratch,
@@ -351,8 +357,7 @@ A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. N
 - **More → Pricing**: edit every number in the `PricingConfig`. `validateConfig`
   runs on save and shows its messages. Show a preview quote live while he edits,
   so he can see what a change does before saving.
-- **Money** (its own tab; Leads can move into Today as a count with a list
-  behind it):
+- **Books** (its own tab; Leads live in Today as a count with a list behind it):
   - *Overview*: this month's income, expenses and profit; what's in each money
     account; and "N bank lines to sort", which opens the waiting list.
   - *Add expense*: amount, category (with the hint under each name), paid from,
@@ -374,7 +379,7 @@ A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. N
   - *Weekly check-in*: a local notification every Sunday evening (no server
     push needed), "3 things for the books", when `/books/inbox` `total` > 0.
     It opens one screen that walks through the waiting lines, missing receipts,
-    drives to log and unpaid jobs, in that order. The Money tab badge is
+    drives to log and unpaid jobs, in that order. The Books tab badge is
     `total`.
   - *Auto-filed*: a quiet list of what his rules filed this week
     (`autoFiled`). Tapping one lets him void it and re-file it.
@@ -465,7 +470,7 @@ Copy: short and plain, in Jacob's voice. "Get paid", not "Process payment".
    using the vendored engine. This is the first thing to show Jacob.
 2. Today, Schedule, Leads, Customers and Booking settings against the live API.
    All of these endpoints exist now.
-3. Money: the screens above, against the live books API. This replaces
+3. Books: the screens above, against the live books API. This replaces
    QuickBooks.
 4. Stripe: invoices and pay links first, then Tap to Pay. Payments post into
    the books automatically.
