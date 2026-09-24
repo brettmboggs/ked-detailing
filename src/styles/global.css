@@ -1,4 +1,6 @@
-@import 'tailwindcss';
+/* Scan only the site's own source for classes. The API, packages and docs
+   live in this repo too, and words in them would otherwise leak into the CSS. */
+@import 'tailwindcss' source('..');
 
 @theme {
   /* Obsidian base — deep automotive black with a cool cast */
