@@ -5,7 +5,7 @@ The brief for Jacob's iPhone app, which lives in its own repo. Point that repo's
 truth for **what** the app does and **how it talks to everything else**. If the
 app and this doc disagree, fix one of them in the same change.
 
-Last updated: 2026-09-24.
+Last updated: 2026-09-24 (booking calendar added).
 
 ---
 
@@ -27,8 +27,9 @@ He called it an "AI estimator". It is not AI. Quotes come from a tunable formula
 
 ```
 ked-detailing  (this repo, github.com/brettmboggs/ked-detailing)
-├── packages/pricing   quote formula, shared: TypeScript, zero dependencies
-├── api/               Cloudflare Worker + D1: the one backend   ← partly built
+├── packages/pricing     quote formula, shared: TypeScript, zero dependencies
+├── packages/scheduling  booking rules + open-slot maths, shared, zero dependencies
+├── api/                 Cloudflare Worker + D1: the one backend   ← partly built
 └── src/               the website (Astro), incl. /quote
 
 ked-app  (the mobile repo)
@@ -44,54 +45,60 @@ ked-app  (the mobile repo)
   The only running costs should be Stripe's per-payment fee and, optionally,
   about 1¢ per reminder text.
 
-## The pricing engine
+## The shared packages
 
-### Getting it into the app
+### Getting them into the app
 
-`@ked/pricing` isn't published to a registry. The app **vendors** it, pinned to
-a commit of this repo, with a sync script. Never edit the vendored files. Change
-them here and re-sync.
+`@ked/pricing` and `@ked/scheduling` aren't published to a registry. The app
+**vendors** them, pinned to a commit of this repo, with one sync script. Never
+edit the vendored files. Change them here and re-sync.
 
-Add `scripts/sync-pricing.mjs` to the app repo:
+Add `scripts/sync-shared.mjs` to the app repo. If you already added the older
+`sync-pricing.mjs`, this replaces it.
 
 ```js
-// Vendors packages/pricing/src from ked-detailing at a pinned ref.
-// Usage: node scripts/sync-pricing.mjs [ref]   (default: main)
+// Vendors packages/{pricing,scheduling}/src from ked-detailing at a pinned ref.
+// Usage: node scripts/sync-shared.mjs [ref]   (default: main)
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 const REPO = 'brettmboggs/ked-detailing';
+const PACKAGES = ['pricing', 'scheduling'];
 const ref = process.argv[2] ?? 'main';
-const out = new URL('../src/vendor/pricing/', import.meta.url);
 
 const sha = (await (await fetch(`https://api.github.com/repos/${REPO}/commits/${ref}`)).json()).sha;
 if (!sha) throw new Error(`Could not resolve ${ref}`);
-const listing = await (
-  await fetch(`https://api.github.com/repos/${REPO}/contents/packages/pricing/src?ref=${sha}`)
-).json();
 
-await rm(out, { recursive: true, force: true });
-await mkdir(out, { recursive: true });
-for (const f of listing.filter((f) => f.type === 'file' && !f.name.endsWith('.test.ts'))) {
-  const body = await (await fetch(f.download_url)).text();
-  await writeFile(
-    new URL(f.name, out),
-    `// VENDORED from ${REPO}@${sha.slice(0, 7)} — do not edit. Run \`npm run sync:pricing\`.\n${body}`,
-  );
+for (const pkg of PACKAGES) {
+  const out = new URL(`../src/vendor/${pkg}/`, import.meta.url);
+  const listing = await (
+    await fetch(`https://api.github.com/repos/${REPO}/contents/packages/${pkg}/src?ref=${sha}`)
+  ).json();
+  if (!Array.isArray(listing)) throw new Error(`No packages/${pkg} at ${sha}`);
+
+  await rm(out, { recursive: true, force: true });
+  await mkdir(out, { recursive: true });
+  for (const f of listing.filter((f) => f.type === 'file' && !f.name.endsWith('.test.ts'))) {
+    const body = await (await fetch(f.download_url)).text();
+    await writeFile(
+      new URL(f.name, out),
+      `// VENDORED from ${REPO}@${sha.slice(0, 7)} — do not edit. Run \`npm run sync:shared\`.\n${body}`,
+    );
+  }
+  await writeFile(new URL('SOURCE', out), `${REPO}@${sha}\n`);
 }
-await writeFile(new URL('SOURCE', out), `${REPO}@${sha}\n`);
-console.log(`pricing synced from ${sha.slice(0, 7)}`);
+console.log(`${PACKAGES.join(' + ')} synced from ${sha.slice(0, 7)}`);
 ```
 
-Then add `"sync:pricing": "node scripts/sync-pricing.mjs"` to its package.json,
-commit `src/vendor/pricing/`, and import from `@/vendor/pricing` (or add a path
-alias). The source uses `.ts` import specifiers, so the app's `tsconfig` needs
-`"allowImportingTsExtensions": true` (with `noEmit`, which Expo already sets).
-Metro resolves them as-is.
+Then add `"sync:shared": "node scripts/sync-shared.mjs"` to its package.json,
+commit `src/vendor/`, and import from `@/vendor/pricing` and
+`@/vendor/scheduling` (or add path aliases). The source uses `.ts` import
+specifiers, so the app's `tsconfig` needs `"allowImportingTsExtensions": true`
+(with `noEmit`, which Expo already sets). Metro resolves them as-is.
 
-Re-sync whenever `packages/pricing` changes here. The API reports the config
+Re-sync whenever either package changes here. The API reports the pricing
 version it holds, so a stale vendored engine shows up quickly.
 
-### What it exposes
+### Pricing: what it exposes
 
 | Export | Use in the app |
 | --- | --- |
@@ -108,11 +115,23 @@ condition charges, extras and a travel fee by ZIP, then the minimum job, shown a
 a range rounded to $5. Some cases are flagged for Jacob to see in person. All
 money is **integer cents**.
 
+### Scheduling: what it exposes
+
+| Export | Use in the app |
+| --- | --- |
+| `BookingRules` | Jacob's booking settings: on/off, time zone, hours per weekday (Sunday first, `null` = closed), slot step, buffer between jobs, jobs per day, notice, how far ahead. |
+| `validateRules(rules)` | Run before saving the booking-rules editor. Show its messages as they are. |
+| `defaultRules` | Fallback only. |
+| `jobMinutes(quote.hours, rules)` | How long a job holds the calendar: the high end of the quote, rounded up to the slot step. Show it on the job and when adding one. |
+| `openSlots` / `slotProblem` | Only needed to preview availability offline. The API is the authority. |
+| `zonedToUtc` / `localDate` / `addDays` / `weekday` | Time-zone-safe date maths using only Intl, which works on Hermes. Always show times in `rules.timezone` (America/Chicago), never in the phone's zone. |
+
 ## Backend API (contract v0)
 
 > **Status:** the Worker lives in `api/` in this repo (Hono, D1 database `ked`).
-> **Built and tested:** auth, pricing and leads. Everything else in the table is
-> still to come. For endpoints that don't exist yet, the app uses a typed client
+> **Built and tested:** auth, pricing, leads, **online booking, jobs, customers,
+> time off and booking rules**. Still to come: photos, invoices, Stripe and
+> inventory. For endpoints that don't exist yet, the app uses a typed client
 > with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
 > unset. When an endpoint lands, only the client's transport changes.
 >
@@ -149,10 +168,19 @@ There are no passwords and no sign-up screen.
 | `POST /v1/leads` | – | Website quote submissions: contact, vehicle, `QuoteInput`, quote snapshot |
 | `GET /v1/leads?status=` | owner | New quote requests |
 | `PATCH /v1/leads/:id` | owner | `status`: `new` → `contacted` → `booked` / `lost` |
-| `GET/POST/PATCH /v1/customers[/:id]` | owner | Name, phone, email, address, notes |
-| `GET/POST/PATCH /v1/customers/:id/vehicles` | owner | Year, make, model, class, colour, notes |
-| `GET /v1/jobs?from=&to=` | owner | Schedule |
-| `POST/PATCH /v1/jobs[/:id]` | owner | Customer, vehicle, `QuoteInput`, quoted range, final price, start/end, address, status (`scheduled` → `in_progress` → `done` / `cancelled`), notes |
+| `POST /v1/availability` | – | `{ input: QuoteInput }` → `{ bookable, reason?, timezone, minutes, quote, days: [{ date, slots: [ISO] }] }`. `reason` is customer-facing text when it can't be booked online |
+| `POST /v1/bookings` | – | Website booking: `{ input, start, name, phone, address, email?, zip?, vehicle?, notes? }` → `201 { id, start, end, quote }`. `409 slot_taken` means someone else got it, so refetch availability |
+| `GET/PUT /v1/settings/booking` | owner | `{ rules: BookingRules, updatedAt }`. PUT runs `validateRules` (`422` with `details`) |
+| `GET /v1/jobs?from=&to=` | owner | `{ jobs }` overlapping the range (ISO). Defaults to yesterday through two weeks out. Each job embeds `customer: { id, name, phone, email }` |
+| `GET /v1/jobs/:id` | owner | One job |
+| `POST /v1/jobs` | owner | Jacob adds a job: `{ customerId \| customer: { name, phone?, email?, address? }, input, start, address?, zip?, vehicle?, notes?, minutes? }` → `201 { job, warnings: string[] }`. He can book anything. Clashes (overlap, day limit, closed day, outside hours) come back as warnings to show him, not errors |
+| `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents) |
+| `GET /v1/customers?q=` | owner | `{ customers }`. Search by name, phone digits or email. Empty `q` lists the newest |
+| `GET /v1/customers/:id` | owner | The customer plus `jobs`, newest first |
+| `PATCH /v1/customers/:id` | owner | `name`, `phone`, `email`, `address`, `notes` |
+| `GET /v1/time-off` | owner | `{ timeOff: [{ id, start, end, reason }] }`, recent and upcoming |
+| `POST /v1/time-off` | owner | `{ start, end, reason? }`. Blocks online booking in that span |
+| `DELETE /v1/time-off/:id` | owner | `204` |
 | `POST /v1/jobs/:id/photos` | owner | Before/after photos, returns an upload URL (R2) |
 | `POST /v1/jobs/:id/invoice` | owner | Create or send an invoice. Emails a pay link |
 | `POST /v1/terminal/connection-token` | owner | Stripe Terminal token for Tap to Pay |
@@ -160,6 +188,23 @@ There are no passwords and no sign-up screen.
 | `GET/POST/PATCH /v1/inventory[/:id]` | owner | Items: name, barcode, unit, on hand, reorder at, reorder URL, cost |
 | `GET /v1/inventory/barcode/:code` | owner | Look an item up by scanned code. `404` means not known yet |
 | `POST /v1/inventory/:id/movements` | owner | `{ delta, reason: 'restock' \| 'used' \| 'adjust', jobId? }` |
+
+**Job shape** (what `GET /v1/jobs` returns per job): `id`, `status`, `source`
+(`web` = customer booked online, `app` = Jacob added it), `service`,
+`customer { id, name, phone, email }`, `vehicle`, `address`, `zip`, `notes`,
+`input` (the `QuoteInput`), `quote` (`{ service, lines, total, range, hours,
+inspection, notes }`), `configVersion`, `finalPrice`, `start`, `end`, `date`
+(the local day), `createdAt`, `updatedAt`.
+
+**How online booking works.** The website posts the customer's answers to
+`/availability`. The server prices them, sizes the job with `jobMinutes`, and
+lists open starts under Jacob's `BookingRules`. Jobs, their buffer either side
+and time off all block time, and the daily job limit applies. Inspection-only
+work and jobs longer than a working day can't be booked online: they go to
+Jacob as leads. `/bookings` checks the slot again and inserts it with one
+conditional statement, so two customers can never get the same time. A
+returning customer is matched by phone (last 10 digits), then email, and the
+job attaches to their existing record.
 
 Stripe secret keys only ever live in the Worker. The app only holds a Terminal
 connection token.
@@ -174,8 +219,11 @@ A tab bar with five tabs: **Today · Schedule · Leads · Inventory · More**.
 - **Job**: the details, notes, before/after photos (`expo-image-picker` with the
   camera) and the price. **Get paid** runs Tap to Pay, or sends an invoice link.
   Marking a job done asks what product was used, pre-filled from the package.
-- **Schedule**: a week view. Add a job from a lead, a customer or scratch, and
-  block time off.
+- **Schedule**: a week view from `GET /v1/jobs` and `GET /v1/time-off`. Jobs
+  the customer booked online (`source: 'web'`) are marked so he knows which ones
+  still need a confirmation text. Add a job from a lead, a customer or scratch,
+  and show any `warnings` it returns. Block time off with a start, an end and a
+  reason. Drag or edit to reschedule (`PATCH` with a new `start`).
 - **Leads**: quotes from the website, newest first. Call, text or book with one tap.
 - **Customers**: search, history, vehicles, total spend.
 - **Quote**: the same formula as the website, for pricing a job in the
@@ -187,6 +235,10 @@ A tab bar with five tabs: **Today · Schedule · Leads · Inventory · More**.
 - **More → Pricing**: edit every number in the `PricingConfig`. `validateConfig`
   runs on save and shows its messages. Show a preview quote live while he edits,
   so he can see what a change does before saving.
+- **More → Booking**: online booking on/off, hours for each day (or closed),
+  jobs per day, time between jobs, notice needed, how far ahead. Validate with
+  `validateRules` before saving to `PUT /v1/settings/booking`. Label everything
+  in his words: "Time between jobs", not "bufferMinutes".
 - **More → Settings**: sign out, app version, pricing version.
 
 Out of scope for v1: multiple staff, payroll, recurring maintenance plans,
@@ -250,9 +302,10 @@ Copy: short and plain, in Jacob's voice. "Get paid", not "Process payment".
 
 ## Milestones
 
-1. App shell, Sign in with Apple against the mock, and the Pricing editor plus
-   Quote screen using the vendored engine. This is the first thing to show Jacob.
-2. The real API from this repo: customers, jobs, schedule, leads.
+1. App shell, Sign in with Apple, and the Pricing editor plus Quote screen
+   using the vendored engine. This is the first thing to show Jacob.
+2. Today, Schedule, Leads, Customers and Booking settings against the live API.
+   All of these endpoints exist now.
 3. Stripe: invoices and pay links first, then Tap to Pay.
 4. Inventory and scanning, then product use per job.
 5. Import Housecall Pro's customer/job export, cut over, and cancel it.
@@ -268,8 +321,9 @@ The app spec, API contract and design rules live in the website repo:
 https://github.com/brettmboggs/ked-detailing/blob/main/docs/mobile-app.md
 (locally: ../ked-detailing/docs/mobile-app.md). Read it before starting work.
 
-- Pricing: never reimplement. `src/vendor/pricing` is vendored from
-  ked-detailing/packages/pricing. Don't edit it. Run `npm run sync:pricing`.
+- Pricing and scheduling: never reimplement. `src/vendor/pricing` and
+  `src/vendor/scheduling` are vendored from ked-detailing/packages. Don't edit
+  them. Run `npm run sync:shared`.
 - The backend is the Worker in ked-detailing/api. If the app needs an endpoint
   that isn't in the spec, change the spec there first.
 ```

@@ -16,7 +16,8 @@
   "dependencies": {
     "@ked/pricing": "0.1.0",
     "hono": "^4.13.9",
-    "jose": "^6.2.12"
+    "jose": "^6.2.12",
+    "@ked/scheduling": "0.1.0"
   },
   "devDependencies": {
     "wrangler": "^4.138.0"

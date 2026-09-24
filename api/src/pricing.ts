@@ -1,4 +1,4 @@
-import { defaultConfig, validateConfig, type PricingConfig } from '@ked/pricing';
+import { defaultConfig, quote, QuoteError, validateConfig, type PricingConfig, type QuoteInput } from '@ked/pricing';
 import { ApiError, now } from './lib.ts';
 
 export interface StoredPricing {
@@ -40,4 +40,62 @@ export async function savePricing(db: D1Database, body: unknown, by: string): Pr
     .bind(version, JSON.stringify(saved), updatedAt, by)
     .run();
   return { config: saved, version, updatedAt };
+}
+
+/** What gets stored with a lead or job: the quote without the full service object. */
+export interface QuoteSummary {
+  service: string;
+  lines: { label: string; amount: number }[];
+  total: number;
+  range: [number, number] | null;
+  hours: [number, number];
+  inspection: boolean;
+  notes: string[];
+}
+
+/**
+ * Price a customer's answers with the live config. Anything the browser says
+ * the price is gets ignored; only the answers are read.
+ */
+export async function priceRequest(db: D1Database, raw: unknown, zip: string | undefined) {
+  const input = readQuoteInput(raw, zip);
+  const { config, version } = await currentPricing(db);
+  let priced;
+  try {
+    priced = quote(config, input);
+  } catch (err) {
+    if (err instanceof QuoteError) throw new ApiError(422, 'invalid_quote', err.message);
+    throw err;
+  }
+  const summary: QuoteSummary = {
+    service: priced.service.id,
+    lines: priced.lines,
+    total: priced.total,
+    range: priced.range,
+    hours: priced.hours,
+    inspection: priced.inspection,
+    notes: priced.notes,
+  };
+  return { input, summary, version };
+}
+
+/** Only the fields the formula reads, with the right types, so nothing else is stored. */
+function readQuoteInput(raw: unknown, zip: string | undefined): QuoteInput {
+  if (!raw || typeof raw !== 'object') throw new ApiError(422, 'invalid_quote', 'Missing the quote answers.');
+  const r = raw as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' ? v.slice(0, 50) : undefined);
+  const conditions: Record<string, string> = {};
+  if (r.conditions && typeof r.conditions === 'object') {
+    for (const [k, v] of Object.entries(r.conditions).slice(0, 30)) {
+      if (typeof v === 'string') conditions[k.slice(0, 50)] = v.slice(0, 50);
+    }
+  }
+  return {
+    service: str(r.service) ?? '',
+    vehicleClass: str(r.vehicleClass),
+    boatFeet: typeof r.boatFeet === 'number' ? r.boatFeet : undefined,
+    conditions,
+    addOns: Array.isArray(r.addOns) ? r.addOns.filter((a): a is string => typeof a === 'string').slice(0, 30) : [],
+    zip: zip ?? str(r.zip),
+  };
 }

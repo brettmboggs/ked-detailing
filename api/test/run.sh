@@ -23,5 +23,5 @@ done
 [ -n "$ready" ] || { echo 'Worker did not start:'; tail -40 "$STATE/worker.log"; exit 1; }
 
 API="http://localhost:$PORT" ADMIN_TOKEN=test-admin \
-  node --experimental-strip-types --no-warnings --test 'test/**/*.test.ts' \
+  node --experimental-strip-types --no-warnings --test --test-concurrency=1 'test/**/*.test.ts' \
   || { echo '--- worker log ---'; tail -40 "$STATE/worker.log"; exit 1; }
