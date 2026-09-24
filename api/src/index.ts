@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { requireOwner, signInWithApple, type Owner } from './auth.ts';
-import { importBank, listBankLines, resolveBankLine } from './bank.ts';
+import { deleteRule, importBank, listBankLines, listRules, resolveBankLine } from './bank.ts';
+import { booksInbox } from './inbox.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
 import {
   addAccount,
@@ -188,10 +189,20 @@ app.post('/books/entries/:id/void', requireOwner, async (c) =>
   c.json(await voidEntry(c.env.DB, c.req.param('id'), await json(c.req.raw).catch(() => ({})), who(c.get('owner'))), 201),
 );
 
-app.post('/books/bank-imports', requireOwner, async (c) => c.json(await importBank(c.env.DB, await json(c.req.raw)), 201));
-app.get('/books/bank-lines', requireOwner, async (c) =>
-  c.json({ lines: await listBankLines(c.env.DB, { status: c.req.query('status'), accountId: c.req.query('accountId') }) }),
+app.post('/books/bank-imports', requireOwner, async (c) =>
+  c.json(await importBank(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201),
 );
+app.get('/books/bank-lines', requireOwner, async (c) =>
+  c.json({
+    lines: await listBankLines(c.env.DB, { status: c.req.query('status'), accountId: c.req.query('accountId'), auto: c.req.query('auto') }),
+  }),
+);
+app.get('/books/rules', requireOwner, async (c) => c.json({ rules: await listRules(c.env.DB) }));
+app.delete('/books/rules/:id', requireOwner, async (c) => {
+  await deleteRule(c.env.DB, c.req.param('id'));
+  return c.body(null, 204);
+});
+app.get('/books/inbox', requireOwner, async (c) => c.json(await booksInbox(c.env.DB)));
 app.post('/books/bank-lines/:id', requireOwner, async (c) =>
   c.json(await resolveBankLine(c.env.DB, c.req.param('id'), await json(c.req.raw), who(c.get('owner')))),
 );

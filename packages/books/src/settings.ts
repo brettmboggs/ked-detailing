@@ -15,13 +15,26 @@ export interface BooksSettings {
    * Check the current IRS threshold before filing.
    */
   contractor1099Threshold: number;
+  /** Expenses at or over this, in cents, prompt "snap the receipt?". */
+  receiptPromptOver: number;
 }
 
 export const defaultBooksSettings: BooksSettings = {
   mileageRates: { '2025': 70 },
   salesTax: { enabled: false, rate: 0 },
   contractor1099Threshold: 60000,
+  receiptPromptOver: 7500,
 };
+
+/** Stored settings from before a field existed get the default for it. */
+export function withBooksDefaults(stored: Partial<BooksSettings>): BooksSettings {
+  return {
+    ...defaultBooksSettings,
+    ...stored,
+    salesTax: { ...defaultBooksSettings.salesTax, ...stored.salesTax },
+    mileageRates: { ...(stored.mileageRates ?? defaultBooksSettings.mileageRates) },
+  };
+}
 
 export function validateBooksSettings(s: BooksSettings): string[] {
   const errors: string[] = [];
@@ -36,6 +49,9 @@ export function validateBooksSettings(s: BooksSettings): string[] {
   else if (!(s.salesTax.rate >= 0 && s.salesTax.rate < 25)) errors.push('The sales tax rate must be a percent between 0 and 25.');
   if (!(Number.isInteger(s.contractor1099Threshold) && s.contractor1099Threshold >= 0)) {
     errors.push('The 1099 threshold must be whole cents.');
+  }
+  if (!(Number.isInteger(s.receiptPromptOver) && s.receiptPromptOver >= 0)) {
+    errors.push('The receipt reminder amount must be whole cents.');
   }
   return errors;
 }

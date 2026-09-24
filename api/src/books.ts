@@ -7,6 +7,7 @@ import {
   reverseLines,
   transferLines,
   validateBooksSettings,
+  withBooksDefaults,
   type Account,
   type AccountType,
   type BooksSettings,
@@ -402,11 +403,12 @@ export async function currentBooksSettings(db: D1Database): Promise<{ settings: 
     .prepare("SELECT value, updated_at FROM settings WHERE key = 'books'")
     .first<{ value: string; updated_at: string }>();
   if (!row) return { settings: defaultBooksSettings, updatedAt: null };
-  return { settings: JSON.parse(row.value) as BooksSettings, updatedAt: row.updated_at };
+  return { settings: withBooksDefaults(JSON.parse(row.value) as Partial<BooksSettings>), updatedAt: row.updated_at };
 }
 
 export async function saveBooksSettings(db: D1Database, body: unknown, by: string) {
-  const s = body as BooksSettings;
+  // An older app build may not send newer fields; fill them from defaults.
+  const s = body && typeof body === 'object' ? withBooksDefaults(body as Partial<BooksSettings>) : (body as BooksSettings);
   let errors: string[];
   try {
     errors = validateBooksSettings(s);
@@ -418,6 +420,7 @@ export async function saveBooksSettings(db: D1Database, body: unknown, by: strin
     mileageRates: Object.fromEntries(Object.entries(s.mileageRates).map(([y, r]) => [y, r])),
     salesTax: { enabled: s.salesTax.enabled, rate: s.salesTax.rate },
     contractor1099Threshold: s.contractor1099Threshold,
+    receiptPromptOver: s.receiptPromptOver,
   };
   const at = now();
   await db

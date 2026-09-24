@@ -57,6 +57,8 @@ export interface BankRow {
   description: string;
   /** Signed cents, from the account's point of view: + money in, − money out. */
   amount: number;
+  /** The bank's own transaction ID, when the file has one (OFX FITID). */
+  bankId?: string;
 }
 
 export interface BankCsvResult {
@@ -186,6 +188,8 @@ export function readBankCsv(text: string, options: { invert?: boolean } = {}): B
 export function fingerprints(accountId: string, rows: BankRow[]): string[] {
   const seen = new Map<string, number>();
   return rows.map((r) => {
+    // The bank's own ID is permanent; prefer it when the file has one.
+    if (r.bankId) return `${accountId}|id|${r.bankId}`;
     const base = `${accountId}|${r.date}|${r.amount}|${r.description.toLowerCase()}`;
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);

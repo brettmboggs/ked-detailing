@@ -138,7 +138,8 @@ went to ("Business checking"). Never show him the word "debit".
 | `Account`, `defaultAccounts` | The chart. `type` is asset / liability / equity / income / expense. `moneyAccount: true` means it can pay, receive and take bank imports (checking, cash, Stripe, credit card). Income and expense accounts carry `scheduleC`, the tax-form line. Use `hint` as the subtitle when he picks a category. |
 | `SCHEDULE_C_LINES` | Labels for those lines, for the tax-summary report. |
 | `expenseLines` / `incomeLines` / `transferLines` | Only for previewing an entry before saving. The API builds the real one. |
-| `readBankCsv(text, { invert })` | Preview a statement file before uploading: show the row count and any `problems`. `invert` is for cards that list purchases as positive numbers. |
+| `readBankFile(text, { invert })` | Preview a statement before uploading: show the row count and any `problems`. Reads OFX, QFX and QBO (what Commerce Bank calls Money, Quicken and QuickBooks downloads) and CSV. **Steer Jacob to QFX**: every line carries the bank's own ID, so nothing can ever import twice. `invert` only applies to CSVs from cards that list purchases as positive numbers. |
+| `merchantKey(description)` | The merchant name the books learn by ("POS DEBIT AUTOZONE #4412 HIGH RIDGE MO" becomes "AUTOZONE"). Show it as the line's title, with the full description under it. |
 | `BooksSettings`, `validateBooksSettings` | Mileage rate per year, sales tax (off by default), and the 1099 threshold. |
 
 All money is **integer cents**. For amounts in books entries and reports, `+`
@@ -150,11 +151,16 @@ means money in and `−` means money out, from the account's point of view.
 > **Built and tested:** auth, pricing, leads, online booking, jobs, customers,
 > time off, booking rules, and **the books**: accounts, expenses, income,
 > transfers, voids, payees, bank CSV import with auto-matching, mileage,
-> reports and CSV exports, and **photos** (receipts and before/after job shots).
+> reports and CSV exports, **the smart layer** (QFX/OFX/QBO import, rules
+> learned from how Jacob files, starter suggestions for common merchants,
+> deposits matched to unpaid jobs, "That was personal", the inbox), and
+> **photos** (receipts and before/after job shots).
 > Photos go live once R2 is switched on for the Cloudflare account. Until then
 > they return `503 photos_off`, so show "Photo storage isn't on yet" rather
-> than failing silently. Still to come: bank connection, invoices, Stripe and
-> inventory. For endpoints that don't exist yet, the app uses a typed client
+> than failing silently. Still to come: invoices, Stripe and inventory. A live
+> bank feed (Plaid) is optional; Teller doesn't support Commerce Bank. It
+> would feed the same import path, so nothing in the app changes except
+> gaining a "Connect bank" button. For endpoints that don't exist yet, the app uses a typed client
 > with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
 > unset. When an endpoint lands, only the client's transport changes.
 >
@@ -213,9 +219,12 @@ There are no passwords and no sign-up screen.
 | `POST /v1/books/transfers` | owner | `{ date, amount, fromId, toId, memo? }`: between his accounts, paying the card, Stripe payouts, owner draws (`toId: 'owner-draws'`) and contributions |
 | `GET /v1/books/entries?from=&to=&accountId=&jobId=` | owner | `{ entries }`, newest first, each with `lines`, `payee`, `voidedBy` and `reverses` |
 | `POST /v1/books/entries/:id/void` | owner | `{ date? }`. Entries are **never edited or deleted**: this posts the exact reversal. To edit, void the entry and record it again. Also frees any bank line matched to it |
-| `POST /v1/books/bank-imports` | owner | `{ accountId, csv, filename?, invert? }` → `{ rows, added, duplicates, matched, waiting, problems }`. Re-importing overlapping statements adds nothing twice. Rows matching an existing entry (same amount, within 5 days) are matched automatically |
-| `GET /v1/books/bank-lines?status=unmatched&accountId=` | owner | `{ lines }`: what's waiting for Jacob |
-| `POST /v1/books/bank-lines/:id` | owner | Deal with one line: `{ action: 'categorize', categoryId, payee?, memo?, jobId? }` (it becomes an expense or income on that date) · `{ action: 'transfer', otherAccountId }` · `{ action: 'match', entryId }` · `{ action: 'ignore' }` / `{ action: 'unignore' }` |
+| `POST /v1/books/bank-imports` | owner | `{ accountId, file, filename?, invert? }`. `file` is the text of a QFX, OFX, QBO or CSV (`csv` is still accepted as the field name). → `{ rows, added, duplicates, matched, filed, suggested, waiting, problems }`. In order: rows already in the books are **matched**; rows from a merchant Jacob has filed before are **filed** automatically by his rules; the rest get a **suggestion** where one can be made; `waiting` counts what's left for him |
+| `GET /v1/books/bank-lines?status=unmatched&accountId=&auto=true` | owner | `{ lines }`. Each line has `merchant`, a `suggestion` (`{ action, …, source: 'starter' \| 'job', label }` or null) and `auto` (true if a rule filed it). Show the suggestion's `label` ("Looks like Fuel and vehicle costs", "Payment for Dana's job on 2033-05-01") with a one-tap accept |
+| `POST /v1/books/bank-lines/:id` | owner | Deal with one line: `{ action: 'accept' }` takes the suggestion · `{ action: 'categorize', categoryId, payeeId? \| payee?, memo? }` · `{ action: 'transfer', otherAccountId }` · `{ action: 'personal' }` ("That was personal": money out becomes an owner draw, money in a contribution, never an expense) · `{ action: 'job', jobId }` (a customer's payment) · `{ action: 'match', entryId }` · `{ action: 'ignore' }` / `{ action: 'unignore' }`. Categorize, transfer and personal are **remembered for that merchant** unless `remember: false`. Waiting lines from the same merchant then file themselves immediately |
+| `GET /v1/books/rules` | owner | What the books have learned: `{ merchant, direction, action, categoryName, otherAccountName, payee, hits }` |
+| `DELETE /v1/books/rules/:id` | owner | Forget one. Entries it already filed stay; void them to undo |
+| `GET /v1/books/inbox` | owner | Everything that needs Jacob, in one call: `bankLines { waiting, withSuggestion }`, `autoFiled` (the last 7 days, to glance at), `receiptsMissing` (expenses at or over `receiptPromptOver` with no photo), `tripsToLog` (finished jobs with no drive logged), `unpaidJobs` (finished, no payment recorded), and `total` for the tab badge |
 | `GET /v1/books/trips?year=` / `POST` / `DELETE /:id` | owner | Mileage log: `{ date, miles, purpose, from?, to?, jobId? }`. `purpose` is required, because the IRS asks |
 | `GET /v1/books/reports/profit-loss?from=&to=` | owner | `{ income[], expenses[], totalIncome, costOfGoods, totalExpenses, net, scheduleC[] }`. Defaults to this calendar year |
 | `GET /v1/books/reports/balances?asOf=` | owner | What each money account holds (or, for the card, owes) |
@@ -292,16 +301,33 @@ A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. N
   - *Mark paid* on a finished job: amount (prefilled from the quote), how
     (cash / check / Zelle / card) and where it went. It posts `/books/income`
     with the `jobId`.
-  - *Bank*: pick a CSV (`expo-document-picker`), preview it with `readBankCsv`,
-    upload it, then work through the waiting lines. For each one: pick a
-    category, "Transfer to…", or ignore. Swipe actions fit well here.
+  - *Bank*: "Import from Commerce": pick the QFX from Files or the share sheet
+    (`expo-document-picker`, and register the app for `.qfx` / `.ofx` / `.qbo`
+    / `.csv` so the Commerce app can share straight into it). Preview it with
+    `readBankFile` and upload it. The result screen says what happened in
+    plain words: "34 new: 20 matched, 9 filed by your rules, 5 need you." Then
+    work through the waiting lines, one card per line: the suggestion
+    pre-selected (swipe right to accept), "That was personal", "Pick
+    category", "Transfer to…", "Ignore". Every choice teaches the books, so
+    say so the first time: "Next time AutoZone files itself."
+  - *Weekly check-in*: a local notification every Sunday evening (no server
+    push needed), "3 things for the books", when `/books/inbox` `total` > 0.
+    It opens one screen that walks through the waiting lines, missing receipts,
+    drives to log and unpaid jobs, in that order. The Money tab badge is
+    `total`.
+  - *Auto-filed*: a quiet list of what his rules filed this week
+    (`autoFiled`). Tapping one lets him void it and re-file it.
+  - *What the books have learned*: the rules list, under Books settings, with
+    swipe-to-forget.
   - *Mileage*: after a job is marked done, offer "Log the drive?" prefilled with
     the job's address and purpose. Plus manual entry.
   - *Reports*: profit and loss by month or year, a tax summary by Schedule C
     line, mileage, and contractors. Plus Export, which opens the share sheet
     with the CSVs.
   - *Books settings*: mileage rate per year ("the IRS rate for 2026", not
-    "centsPerMile"), sales tax (off), 1099 threshold.
+    "centsPerMile"), sales tax (off), 1099 threshold, and "Ask for a receipt
+    over $75" (`receiptPromptOver`). After any expense at or over that amount,
+    including one filed from the bank, prompt "Snap the receipt?".
   - To fix a mistake: "Void" on an entry, with a confirm dialog explaining that
     history is kept. There's no delete button anywhere in the books.
 - **More → Booking**: online booking on/off, hours for each day (or closed),
