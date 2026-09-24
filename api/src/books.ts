@@ -13,6 +13,7 @@ import {
   type Line,
 } from '@ked/books';
 import { ApiError, now, text, ulid } from './lib.ts';
+import { receiptId } from './photos.ts';
 
 /* ------------------------------------------------------------ helpers */
 
@@ -256,7 +257,7 @@ export async function createExpense(db: D1Database, body: Record<string, unknown
     memo: text(body.memo, 'Memo', 500),
     payeeId: await resolvePayee(db, body),
     jobId: await jobExists(db, body.jobId),
-    receiptKey: text(body.receiptKey, 'Receipt', 200),
+    receiptKey: await receiptId(db, body.receiptKey),
     lines,
     by,
   });

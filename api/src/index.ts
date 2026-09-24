@@ -23,6 +23,7 @@ import { getCustomer, listCustomers, updateCustomer } from './customers.ts';
 import { addTimeOff, createJob, customerJobs, getJob, listJobs, listTimeOff, removeTimeOff, updateJob } from './jobs.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
+import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import {
   addTrip,
@@ -129,6 +130,17 @@ app.delete('/time-off/:id', requireOwner, async (c) => {
   return c.body(null, 204);
 });
 
+/* ------------------------------------------------------------- photos */
+
+// Raw image body; ?kind=receipt|job&jobId=&stage=before|after&caption=
+app.post('/photos', requireOwner, async (c) => c.json(await uploadPhoto(c.env, c.req.raw, c.req.query()), 201));
+app.get('/photos/:id', requireOwner, async (c) => photoResponse(c.env, c.req.param('id')));
+app.delete('/photos/:id', requireOwner, async (c) => {
+  await deletePhoto(c.env, c.req.param('id'));
+  return c.body(null, 204);
+});
+app.get('/jobs/:id/photos', requireOwner, async (c) => c.json({ photos: await jobPhotos(c.env.DB, c.req.param('id')) }));
+
 /* -------------------------------------------------------------- books */
 
 const who = (o: Owner) => o.email ?? o.subject;
@@ -166,6 +178,10 @@ app.get('/books/entries', requireOwner, async (c) =>
     }),
   }),
 );
+app.post('/books/entries/:id/receipt', requireOwner, async (c) => {
+  await attachReceipt(c.env.DB, c.req.param('id'), await json(c.req.raw));
+  return c.json(await getEntry(c.env.DB, c.req.param('id')));
+});
 app.get('/books/entries/:id', requireOwner, async (c) => c.json(await getEntry(c.env.DB, c.req.param('id'))));
 // Entries are never deleted: voiding posts the exact reversal.
 app.post('/books/entries/:id/void', requireOwner, async (c) =>

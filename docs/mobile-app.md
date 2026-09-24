@@ -150,8 +150,11 @@ means money in and `−` means money out, from the account's point of view.
 > **Built and tested:** auth, pricing, leads, online booking, jobs, customers,
 > time off, booking rules, and **the books**: accounts, expenses, income,
 > transfers, voids, payees, bank CSV import with auto-matching, mileage,
-> reports and CSV exports. Still to come: receipt and job photos (R2),
-> invoices, Stripe and inventory. For endpoints that don't exist yet, the app uses a typed client
+> reports and CSV exports, and **photos** (receipts and before/after job shots).
+> Photos go live once R2 is switched on for the Cloudflare account. Until then
+> they return `503 photos_off`, so show "Photo storage isn't on yet" rather
+> than failing silently. Still to come: bank connection, invoices, Stripe and
+> inventory. For endpoints that don't exist yet, the app uses a typed client
 > with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
 > unset. When an endpoint lands, only the client's transport changes.
 >
@@ -220,7 +223,11 @@ There are no passwords and no sign-up screen.
 | `GET /v1/books/reports/contractors?year=` | owner | Totals per contractor, with `needs1099` |
 | `GET /v1/books/export/{ledger,profit-loss,mileage,contractors}` | owner | CSV downloads (`from`/`to` or `year`). Offer these through the share sheet, for his accountant |
 | `GET/PUT /v1/settings/books` | owner | `BooksSettings`. PUT validates |
-| `POST /v1/jobs/:id/photos` | owner | Before/after photos, returns an upload URL (R2) |
+| `POST /v1/photos?kind=receipt` or `?kind=job&jobId=&stage=before\|after&caption=` | owner | The **raw image bytes** as the body (not multipart), up to 10 MB. JPEG, PNG, WebP or HEIC, checked by content. → `{ id, kind, stage, jobId, contentType, bytes, caption, url }`. Downscale to about 2000 px before uploading |
+| `GET /v1/photos/:id` | owner | The image. Send the Authorization header (`expo-image` accepts `headers`) |
+| `GET /v1/jobs/:id/photos` | owner | `{ photos }` for a job, oldest first |
+| `DELETE /v1/photos/:id` | owner | `204`. A receipt attached to a books entry returns `409` and is kept |
+| `POST /v1/books/entries/:id/receipt` | owner | `{ photoId }`: attach a receipt after the fact. Expenses also take `receiptKey: photoId` when created |
 | `POST /v1/jobs/:id/invoice` | owner | Create or send an invoice. Emails a pay link |
 | `POST /v1/terminal/connection-token` | owner | Stripe Terminal token for Tap to Pay |
 | `POST /v1/jobs/:id/payment-intent` | owner | Create a PaymentIntent for the job's final amount |
@@ -279,8 +286,9 @@ A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. N
   - *Overview*: this month's income, expenses and profit; what's in each money
     account; and "N bank lines to sort", which opens the waiting list.
   - *Add expense*: amount, category (with the hint under each name), paid from,
-    who it was paid to (type-ahead on payees), and an optional job. Receipt photo
-    capture can be built now and uploaded once the photo endpoint lands.
+    who it was paid to (type-ahead on payees), and an optional job. Snap the receipt
+    first, upload it to `/v1/photos?kind=receipt`, and pass its `id` as
+    `receiptKey`.
   - *Mark paid* on a finished job: amount (prefilled from the quote), how
     (cash / check / Zelle / card) and where it went. It posts `/books/income`
     with the `jobId`.

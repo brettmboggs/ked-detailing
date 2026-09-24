@@ -14,6 +14,9 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Receipt and job photos. R2 has to be switched on in the dashboard once
+  // before this bucket can exist; see docs/mobile-app.md.
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "ked-photos" }],
   "vars": {
     // Browsers allowed to call the public endpoints. The app is native and
     // doesn't need CORS.
