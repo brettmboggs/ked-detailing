@@ -11,7 +11,6 @@ the full switch-over.
 - [ ] Workers & Pages → `ked-detailing` → Custom domains: add `kedservice.com`
       and `www.kedservice.com` (they'll say "pending" until Jacob's step), and
       the apex → www redirect rule (GOING-LIVE.md, step 2).
-- [ ] Cloudflare → R2 → Enable (card on file, free under 10 GB). Photos need it.
 
 ---
 
@@ -118,6 +117,9 @@ is unaffected (he uses Gmail and the domain has never had mail).
 - [ ] **OK to show his 8 Google reviews with the customers' names** on the site?
 - [ ] Squarespace: **export newsletter subscribers**, if any, before it's ever cancelled.
 - [ ] Next boat job: **take photos**. Marine work has none on the site yet.
+- [ ] Optional, later: if photos ever outgrow the free storage (years away),
+      he adds **his own card** to Cloudflare R2. It's free under 10 GB. Nothing
+      needed now.
 - [ ] Optional: a GitHub account so he can post merch and blog entries himself;
       Instagram switched to **Professional** (20 min together later to connect
       the feed).

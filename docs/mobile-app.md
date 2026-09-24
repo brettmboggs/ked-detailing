@@ -42,7 +42,7 @@ ked-app  (the mobile repo)
 - **One pricing formula.** It lives in `packages/pricing`. The app must never
   reimplement or "tweak" it locally. A quote in the app has to match the website
   to the cent.
-- **Hosting cost target is $0.** Cloudflare free tier (Workers, D1, R2 for photos).
+- **Hosting cost target is $0.** Cloudflare free tier (Workers, D1, KV for photos).
   The only running costs should be Stripe's per-payment fee and, optionally,
   about 1¢ per reminder text.
 
@@ -155,9 +155,10 @@ means money in and `−` means money out, from the account's point of view.
 > learned from how Jacob files, starter suggestions for common merchants,
 > deposits matched to unpaid jobs, "That was personal", the inbox), and
 > **photos** (receipts and before/after job shots).
-> Photos go live once R2 is switched on for the Cloudflare account. Until then
-> they return `503 photos_off`, so show "Photo storage isn't on yet" rather
-> than failing silently. Still to come: invoices, Stripe and inventory. A live
+> Photos are stored in Cloudflare KV (free plan: 1 GB, 1,000 uploads a day),
+> so **downscale to about 1600 px and JPEG quality 0.7 before uploading**, which
+> keeps each photo around 200 KB. If storage is ever missing, calls return `503
+> photos_off`, so show "Photo storage isn't on" rather than failing silently. Still to come: invoices, Stripe and inventory. A live
 > bank feed (Plaid) is optional; Teller doesn't support Commerce Bank. It
 > would feed the same import path, so nothing in the app changes except
 > gaining a "Connect bank" button. For endpoints that don't exist yet, the app uses a typed client
@@ -232,7 +233,7 @@ There are no passwords and no sign-up screen.
 | `GET /v1/books/reports/contractors?year=` | owner | Totals per contractor, with `needs1099` |
 | `GET /v1/books/export/{ledger,profit-loss,mileage,contractors}` | owner | CSV downloads (`from`/`to` or `year`). Offer these through the share sheet, for his accountant |
 | `GET/PUT /v1/settings/books` | owner | `BooksSettings`. PUT validates |
-| `POST /v1/photos?kind=receipt` or `?kind=job&jobId=&stage=before\|after&caption=` | owner | The **raw image bytes** as the body (not multipart), up to 10 MB. JPEG, PNG, WebP or HEIC, checked by content. → `{ id, kind, stage, jobId, contentType, bytes, caption, url }`. Downscale to about 2000 px before uploading |
+| `POST /v1/photos?kind=receipt` or `?kind=job&jobId=&stage=before\|after&caption=` | owner | The **raw image bytes** as the body (not multipart), up to 10 MB. JPEG, PNG, WebP or HEIC, checked by content. → `{ id, kind, stage, jobId, contentType, bytes, caption, url }`. Downscale to about 1600 px, JPEG 0.7, before uploading (`expo-image-manipulator`) |
 | `GET /v1/photos/:id` | owner | The image. Send the Authorization header (`expo-image` accepts `headers`) |
 | `GET /v1/jobs/:id/photos` | owner | `{ photos }` for a job, oldest first |
 | `DELETE /v1/photos/:id` | owner | `204`. A receipt attached to a books entry returns `409` and is kept |

@@ -14,10 +14,35 @@ function sniff(head: Uint8Array): { type: string; ext: string } | null {
   return null;
 }
 
-function bucket(env: Bindings): R2Bucket {
-  // Undefined until R2 is switched on for the account and the bucket exists.
-  if (!env.PHOTOS) throw new ApiError(503, 'photos_off', "Photo storage isn't switched on yet.");
-  return env.PHOTOS;
+/**
+ * Where the image bytes live. R2 when the account has it, else KV, which is on
+ * the free plan. Reads look in both, so photos uploaded to KV stay readable
+ * after a move to R2.
+ */
+interface Store {
+  put(key: string, body: Uint8Array, contentType: string): Promise<void>;
+  get(key: string): Promise<ReadableStream | null>;
+  delete(key: string): Promise<void>;
+}
+
+function store(env: Bindings): Store {
+  const r2 = env.PHOTOS;
+  const kv = env.PHOTO_KV as KVNamespace | undefined;
+  if (!r2 && !kv) throw new ApiError(503, 'photos_off', "Photo storage isn't switched on yet.");
+  return {
+    async put(key, body, contentType) {
+      if (r2) await r2.put(key, body, { httpMetadata: { contentType } });
+      else await kv!.put(key, body, { metadata: { contentType } });
+    },
+    async get(key) {
+      const fromR2 = r2 ? await r2.get(key) : null;
+      if (fromR2) return fromR2.body;
+      return kv ? kv.get(key, 'stream') : null;
+    },
+    async delete(key) {
+      await Promise.all([r2?.delete(key), kv?.delete(key)]);
+    },
+  };
 }
 
 interface PhotoRow {
@@ -76,7 +101,7 @@ export async function uploadPhoto(env: Bindings, req: Request, q: Record<string,
   const id = ulid();
   const at = now();
   const key = kind === 'job' ? `jobs/${jobId}/${id}.${format.ext}` : `receipts/${at.slice(0, 7)}/${id}.${format.ext}`;
-  await bucket(env).put(key, body, { httpMetadata: { contentType: format.type } });
+  await store(env).put(key, body, format.type);
   try {
     await env.DB.prepare(
       'INSERT INTO photos (id, object_key, kind, stage, job_id, content_type, bytes, caption, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -85,7 +110,7 @@ export async function uploadPhoto(env: Bindings, req: Request, q: Record<string,
       .run();
   } catch (err) {
     // Don't leave an orphaned object behind if the index write fails.
-    await bucket(env).delete(key);
+    await store(env).delete(key);
     throw err;
   }
   return toPhoto((await env.DB.prepare('SELECT * FROM photos WHERE id = ?').bind(id).first<PhotoRow>())!);
@@ -100,9 +125,9 @@ async function getRow(db: D1Database, id: string) {
 /** The image itself, owner-only. Cached privately on the device for a day. */
 export async function photoResponse(env: Bindings, id: string) {
   const row = await getRow(env.DB, id);
-  const obj = await bucket(env).get(row.object_key);
-  if (!obj) throw new ApiError(404, 'not_found', 'That photo is missing from storage.');
-  return new Response(obj.body, {
+  const body = await store(env).get(row.object_key);
+  if (!body) throw new ApiError(404, 'not_found', 'That photo is missing from storage.');
+  return new Response(body, {
     headers: {
       'Content-Type': row.content_type,
       'Content-Length': String(row.bytes),
@@ -126,7 +151,7 @@ export async function deletePhoto(env: Bindings, id: string) {
   const attached = await env.DB.prepare('SELECT 1 FROM entries WHERE receipt_key = ?').bind(id).first();
   if (attached) throw new ApiError(409, 'receipt_in_books', "That receipt is attached to an entry in the books, so it's kept.");
   await env.DB.prepare('DELETE FROM photos WHERE id = ?').bind(id).run();
-  await bucket(env).delete(row.object_key);
+  await store(env).delete(row.object_key);
 }
 
 /** A receipt photo id, checked before it's attached to an entry. */

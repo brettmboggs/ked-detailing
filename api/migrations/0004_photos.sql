@@ -1,5 +1,6 @@
 -- Photos: receipts for the books, before/after shots for jobs. The image
--- bytes live in R2 (bucket ked-photos); this is the index.
+-- bytes live in KV (PHOTO_KV), or R2 if the account ever enables it; this is
+-- the index.
 CREATE TABLE photos (
   id           TEXT PRIMARY KEY, -- ULID
   object_key   TEXT NOT NULL UNIQUE,

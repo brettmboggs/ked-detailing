@@ -14,9 +14,12 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Receipt and job photos. R2 has to be switched on in the dashboard once
-  // before this bucket can exist; see docs/mobile-app.md.
-  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "ked-photos" }],
+  // Receipt and job photos. KV, because it's on the free plan with no card:
+  // 1 GB and 1,000 uploads a day. Room for years of photos at app upload
+  // sizes. To move to R2 later, once Jacob adds his own card to the account:
+  // create the bucket, add { "binding": "PHOTOS", "bucket_name": "ked-photos" }
+  // under r2_buckets, and new uploads go there. Old ones are still read from KV.
+  "kv_namespaces": [{ "binding": "PHOTO_KV", "id": "ffcb3a9165a243488fafa424ec08fd39" }],
   "vars": {
     // Browsers allowed to call the public endpoints. The app is native and
     // doesn't need CORS.

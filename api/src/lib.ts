@@ -6,6 +6,8 @@ export type Bindings = Env & {
   ADMIN_TOKEN?: string;
   /** Cloudflare Pages deploy hook. Rebuilds the site so /quote shows new prices. */
   PAGES_DEPLOY_HOOK?: string;
+  /** R2 for photos, if the account ever enables it. KV (PHOTO_KV) otherwise. */
+  PHOTOS?: R2Bucket;
 };
 
 /** Thrown anywhere; rendered as the contract's error body by `onError`. */
