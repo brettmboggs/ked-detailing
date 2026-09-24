@@ -2,12 +2,38 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { requireOwner, signInWithApple, type Owner } from './auth.ts';
+import { importBank, listBankLines, resolveBankLine } from './bank.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
+import {
+  addAccount,
+  createExpense,
+  createIncome,
+  createTransfer,
+  currentBooksSettings,
+  getEntry,
+  listAccounts,
+  listEntries,
+  listPayees,
+  saveBooksSettings,
+  savePayee,
+  updateAccount,
+  voidEntry,
+} from './books.ts';
 import { getCustomer, listCustomers, updateCustomer } from './customers.ts';
 import { addTimeOff, createJob, customerJobs, getJob, listJobs, listTimeOff, removeTimeOff, updateJob } from './jobs.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
 import { currentPricing, savePricing } from './pricing.ts';
+import {
+  addTrip,
+  balancesReport,
+  contractorsReport,
+  exportCsv,
+  listTrips,
+  mileageReport,
+  profitLossReport,
+  removeTrip,
+} from './reports.ts';
 
 /**
  * The contract lives in docs/mobile-app.md. Change it there first, then here.
@@ -102,6 +128,83 @@ app.delete('/time-off/:id', requireOwner, async (c) => {
   await removeTimeOff(c.env.DB, c.req.param('id'));
   return c.body(null, 204);
 });
+
+/* -------------------------------------------------------------- books */
+
+const who = (o: Owner) => o.email ?? o.subject;
+
+app.get('/books/accounts', requireOwner, async (c) =>
+  c.json({ accounts: await listAccounts(c.env.DB, c.req.query('archived') === 'true') }),
+);
+app.post('/books/accounts', requireOwner, async (c) => c.json(await addAccount(c.env.DB, await json(c.req.raw)), 201));
+app.patch('/books/accounts/:id', requireOwner, async (c) =>
+  c.json(await updateAccount(c.env.DB, c.req.param('id'), await json(c.req.raw))),
+);
+
+app.get('/books/payees', requireOwner, async (c) => c.json({ payees: await listPayees(c.env.DB, c.req.query('q')) }));
+app.post('/books/payees', requireOwner, async (c) => c.json(await savePayee(c.env.DB, null, await json(c.req.raw)), 201));
+app.patch('/books/payees/:id', requireOwner, async (c) =>
+  c.json(await savePayee(c.env.DB, c.req.param('id'), await json(c.req.raw))),
+);
+
+app.post('/books/expenses', requireOwner, async (c) =>
+  c.json(await createExpense(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201),
+);
+app.post('/books/income', requireOwner, async (c) =>
+  c.json(await createIncome(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201),
+);
+app.post('/books/transfers', requireOwner, async (c) =>
+  c.json(await createTransfer(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201),
+);
+app.get('/books/entries', requireOwner, async (c) =>
+  c.json({
+    entries: await listEntries(c.env.DB, {
+      from: c.req.query('from'),
+      to: c.req.query('to'),
+      accountId: c.req.query('accountId'),
+      jobId: c.req.query('jobId'),
+    }),
+  }),
+);
+app.get('/books/entries/:id', requireOwner, async (c) => c.json(await getEntry(c.env.DB, c.req.param('id'))));
+// Entries are never deleted: voiding posts the exact reversal.
+app.post('/books/entries/:id/void', requireOwner, async (c) =>
+  c.json(await voidEntry(c.env.DB, c.req.param('id'), await json(c.req.raw).catch(() => ({})), who(c.get('owner'))), 201),
+);
+
+app.post('/books/bank-imports', requireOwner, async (c) => c.json(await importBank(c.env.DB, await json(c.req.raw)), 201));
+app.get('/books/bank-lines', requireOwner, async (c) =>
+  c.json({ lines: await listBankLines(c.env.DB, { status: c.req.query('status'), accountId: c.req.query('accountId') }) }),
+);
+app.post('/books/bank-lines/:id', requireOwner, async (c) =>
+  c.json(await resolveBankLine(c.env.DB, c.req.param('id'), await json(c.req.raw), who(c.get('owner')))),
+);
+
+app.get('/books/trips', requireOwner, async (c) => c.json({ trips: await listTrips(c.env.DB, c.req.query('year')) }));
+app.post('/books/trips', requireOwner, async (c) => c.json(await addTrip(c.env.DB, await json(c.req.raw)), 201));
+app.delete('/books/trips/:id', requireOwner, async (c) => {
+  await removeTrip(c.env.DB, c.req.param('id'));
+  return c.body(null, 204);
+});
+
+app.get('/books/reports/profit-loss', requireOwner, async (c) =>
+  c.json(await profitLossReport(c.env.DB, c.req.query('from'), c.req.query('to'))),
+);
+app.get('/books/reports/balances', requireOwner, async (c) => c.json(await balancesReport(c.env.DB, c.req.query('asOf'))));
+app.get('/books/reports/contractors', requireOwner, async (c) => c.json(await contractorsReport(c.env.DB, c.req.query('year'))));
+app.get('/books/reports/mileage', requireOwner, async (c) => c.json(await mileageReport(c.env.DB, c.req.query('year'))));
+app.get('/books/export/:report', requireOwner, async (c) => {
+  const { filename, csv } = await exportCsv(c.env.DB, c.req.param('report'), c.req.query());
+  return c.body(csv, 200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+  });
+});
+
+app.get('/settings/books', requireOwner, async (c) => c.json(await currentBooksSettings(c.env.DB)));
+app.put('/settings/books', requireOwner, async (c) =>
+  c.json(await saveBooksSettings(c.env.DB, await json(c.req.raw), who(c.get('owner')))),
+);
 
 /* ------------------------------------------------------------- errors */
 

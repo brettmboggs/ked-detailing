@@ -5,14 +5,14 @@ The brief for Jacob's iPhone app, which lives in its own repo. Point that repo's
 truth for **what** the app does and **how it talks to everything else**. If the
 app and this doc disagree, fix one of them in the same change.
 
-Last updated: 2026-09-24 (booking calendar added).
+Last updated: 2026-09-24 (booking calendar and books added).
 
 ---
 
 ## Why it exists
 
-Jacob (Knock Em' Down Auto & Marine Detailing) runs his business on Housecall Pro.
-The goal is to **replace Housecall Pro entirely**, not sit beside it. When this
+Jacob (Knock Em' Down Auto & Marine Detailing) runs his business on Housecall Pro
+and QuickBooks. The goal is to **replace both entirely**, not sit beside them. When this
 app plus the website cover everything he uses there, he exports his data and
 cancels it.
 
@@ -29,6 +29,7 @@ He called it an "AI estimator". It is not AI. Quotes come from a tunable formula
 ked-detailing  (this repo, github.com/brettmboggs/ked-detailing)
 ├── packages/pricing     quote formula, shared: TypeScript, zero dependencies
 ├── packages/scheduling  booking rules + open-slot maths, shared, zero dependencies
+├── packages/books       bookkeeping: accounts, balanced entries, bank CSVs, reports
 ├── api/                 Cloudflare Worker + D1: the one backend   ← partly built
 └── src/               the website (Astro), incl. /quote
 
@@ -49,7 +50,7 @@ ked-app  (the mobile repo)
 
 ### Getting them into the app
 
-`@ked/pricing` and `@ked/scheduling` aren't published to a registry. The app
+`@ked/pricing`, `@ked/scheduling` and `@ked/books` aren't published to a registry. The app
 **vendors** them, pinned to a commit of this repo, with one sync script. Never
 edit the vendored files. Change them here and re-sync.
 
@@ -57,12 +58,12 @@ Add `scripts/sync-shared.mjs` to the app repo. If you already added the older
 `sync-pricing.mjs`, this replaces it.
 
 ```js
-// Vendors packages/{pricing,scheduling}/src from ked-detailing at a pinned ref.
+// Vendors packages/{pricing,scheduling,books}/src from ked-detailing at a pinned ref.
 // Usage: node scripts/sync-shared.mjs [ref]   (default: main)
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 const REPO = 'brettmboggs/ked-detailing';
-const PACKAGES = ['pricing', 'scheduling'];
+const PACKAGES = ['pricing', 'scheduling', 'books'];
 const ref = process.argv[2] ?? 'main';
 
 const sha = (await (await fetch(`https://api.github.com/repos/${REPO}/commits/${ref}`)).json()).sha;
@@ -90,8 +91,8 @@ console.log(`${PACKAGES.join(' + ')} synced from ${sha.slice(0, 7)}`);
 ```
 
 Then add `"sync:shared": "node scripts/sync-shared.mjs"` to its package.json,
-commit `src/vendor/`, and import from `@/vendor/pricing` and
-`@/vendor/scheduling` (or add path aliases). The source uses `.ts` import
+commit `src/vendor/`, and import from `@/vendor/pricing`, `@/vendor/scheduling`
+and `@/vendor/books` (or add path aliases). The source uses `.ts` import
 specifiers, so the app's `tsconfig` needs `"allowImportingTsExtensions": true`
 (with `noEmit`, which Expo already sets). Metro resolves them as-is.
 
@@ -126,12 +127,31 @@ money is **integer cents**.
 | `openSlots` / `slotProblem` | Only needed to preview availability offline. The API is the authority. |
 | `zonedToUtc` / `localDate` / `addDays` / `weekday` | Time-zone-safe date maths using only Intl, which works on Hermes. Always show times in `rules.timezone` (America/Chicago), never in the phone's zone. |
 
+### Books: what it exposes
+
+The books are real double-entry underneath, but **Jacob never sees debits or
+credits**. He picks a category ("Supplies") and where the money came from or
+went to ("Business checking"). Never show him the word "debit".
+
+| Export | Use in the app |
+| --- | --- |
+| `Account`, `defaultAccounts` | The chart. `type` is asset / liability / equity / income / expense. `moneyAccount: true` means it can pay, receive and take bank imports (checking, cash, Stripe, credit card). Income and expense accounts carry `scheduleC`, the tax-form line. Use `hint` as the subtitle when he picks a category. |
+| `SCHEDULE_C_LINES` | Labels for those lines, for the tax-summary report. |
+| `expenseLines` / `incomeLines` / `transferLines` | Only for previewing an entry before saving. The API builds the real one. |
+| `readBankCsv(text, { invert })` | Preview a statement file before uploading: show the row count and any `problems`. `invert` is for cards that list purchases as positive numbers. |
+| `BooksSettings`, `validateBooksSettings` | Mileage rate per year, sales tax (off by default), and the 1099 threshold. |
+
+All money is **integer cents**. For amounts in books entries and reports, `+`
+means money in and `−` means money out, from the account's point of view.
+
 ## Backend API (contract v0)
 
 > **Status:** the Worker lives in `api/` in this repo (Hono, D1 database `ked`).
-> **Built and tested:** auth, pricing, leads, **online booking, jobs, customers,
-> time off and booking rules**. Still to come: photos, invoices, Stripe and
-> inventory. For endpoints that don't exist yet, the app uses a typed client
+> **Built and tested:** auth, pricing, leads, online booking, jobs, customers,
+> time off, booking rules, and **the books**: accounts, expenses, income,
+> transfers, voids, payees, bank CSV import with auto-matching, mileage,
+> reports and CSV exports. Still to come: receipt and job photos (R2),
+> invoices, Stripe and inventory. For endpoints that don't exist yet, the app uses a typed client
 > with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
 > unset. When an endpoint lands, only the client's transport changes.
 >
@@ -181,6 +201,25 @@ There are no passwords and no sign-up screen.
 | `GET /v1/time-off` | owner | `{ timeOff: [{ id, start, end, reason }] }`, recent and upcoming |
 | `POST /v1/time-off` | owner | `{ start, end, reason? }`. Blocks online booking in that span |
 | `DELETE /v1/time-off/:id` | owner | `204` |
+| `GET /v1/books/accounts[?archived=true]` | owner | `{ accounts }`: the chart, in display order |
+| `POST /v1/books/accounts` | owner | `{ name, type, moneyAccount?, scheduleC?, hint? }`, e.g. a second bank account or a new category |
+| `PATCH /v1/books/accounts/:id` | owner | `name`, `hint`, `scheduleC`, `archived`. The type never changes |
+| `GET /v1/books/payees?q=` / `POST` / `PATCH /:id` | owner | Vendors and contractors: `{ name, kind: 'vendor' \| 'contractor', taxFormOnFile, email?, phone?, notes? }`. **Never store tax IDs.** `taxFormOnFile` only records that he has a W-9 |
+| `POST /v1/books/expenses` | owner | `{ date: 'YYYY-MM-DD', amount, categoryId, paidFromId, payeeId? \| payee?: { name, kind? }, jobId?, memo?, receiptKey? }`. A payee given by name reuses a match (ignoring case) or creates one |
+| `POST /v1/books/income` | owner | `{ date, amount, depositToId, jobId?, categoryId?, method?, payee?, memo? }`. With a `jobId`, the category defaults to Detailing or Marine detailing. **This is "Mark paid" on a job** until Stripe lands |
+| `POST /v1/books/transfers` | owner | `{ date, amount, fromId, toId, memo? }`: between his accounts, paying the card, Stripe payouts, owner draws (`toId: 'owner-draws'`) and contributions |
+| `GET /v1/books/entries?from=&to=&accountId=&jobId=` | owner | `{ entries }`, newest first, each with `lines`, `payee`, `voidedBy` and `reverses` |
+| `POST /v1/books/entries/:id/void` | owner | `{ date? }`. Entries are **never edited or deleted**: this posts the exact reversal. To edit, void the entry and record it again. Also frees any bank line matched to it |
+| `POST /v1/books/bank-imports` | owner | `{ accountId, csv, filename?, invert? }` → `{ rows, added, duplicates, matched, waiting, problems }`. Re-importing overlapping statements adds nothing twice. Rows matching an existing entry (same amount, within 5 days) are matched automatically |
+| `GET /v1/books/bank-lines?status=unmatched&accountId=` | owner | `{ lines }`: what's waiting for Jacob |
+| `POST /v1/books/bank-lines/:id` | owner | Deal with one line: `{ action: 'categorize', categoryId, payee?, memo?, jobId? }` (it becomes an expense or income on that date) · `{ action: 'transfer', otherAccountId }` · `{ action: 'match', entryId }` · `{ action: 'ignore' }` / `{ action: 'unignore' }` |
+| `GET /v1/books/trips?year=` / `POST` / `DELETE /:id` | owner | Mileage log: `{ date, miles, purpose, from?, to?, jobId? }`. `purpose` is required, because the IRS asks |
+| `GET /v1/books/reports/profit-loss?from=&to=` | owner | `{ income[], expenses[], totalIncome, costOfGoods, totalExpenses, net, scheduleC[] }`. Defaults to this calendar year |
+| `GET /v1/books/reports/balances?asOf=` | owner | What each money account holds (or, for the card, owes) |
+| `GET /v1/books/reports/mileage?year=` | owner | `{ miles, trips, centsPerMile, deduction }`. `deduction` is null until that year's rate is in settings |
+| `GET /v1/books/reports/contractors?year=` | owner | Totals per contractor, with `needs1099` |
+| `GET /v1/books/export/{ledger,profit-loss,mileage,contractors}` | owner | CSV downloads (`from`/`to` or `year`). Offer these through the share sheet, for his accountant |
+| `GET/PUT /v1/settings/books` | owner | `BooksSettings`. PUT validates |
 | `POST /v1/jobs/:id/photos` | owner | Before/after photos, returns an upload URL (R2) |
 | `POST /v1/jobs/:id/invoice` | owner | Create or send an invoice. Emails a pay link |
 | `POST /v1/terminal/connection-token` | owner | Stripe Terminal token for Tap to Pay |
@@ -211,7 +250,7 @@ connection token.
 
 ## Screens (v1)
 
-A tab bar with five tabs: **Today · Schedule · Leads · Inventory · More**.
+A tab bar with five tabs: **Today · Schedule · Money · Inventory · More**. New leads show on Today as a count, with the list one tap away.
 
 - **Today**: today's jobs in order. Each shows the customer, vehicle, address and
   quoted range. Tap an address for directions in Apple Maps (a `Linking` URL,
@@ -235,14 +274,39 @@ A tab bar with five tabs: **Today · Schedule · Leads · Inventory · More**.
 - **More → Pricing**: edit every number in the `PricingConfig`. `validateConfig`
   runs on save and shows its messages. Show a preview quote live while he edits,
   so he can see what a change does before saving.
+- **Money** (its own tab; Leads can move into Today as a count with a list
+  behind it):
+  - *Overview*: this month's income, expenses and profit; what's in each money
+    account; and "N bank lines to sort", which opens the waiting list.
+  - *Add expense*: amount, category (with the hint under each name), paid from,
+    who it was paid to (type-ahead on payees), and an optional job. Receipt photo
+    capture can be built now and uploaded once the photo endpoint lands.
+  - *Mark paid* on a finished job: amount (prefilled from the quote), how
+    (cash / check / Zelle / card) and where it went. It posts `/books/income`
+    with the `jobId`.
+  - *Bank*: pick a CSV (`expo-document-picker`), preview it with `readBankCsv`,
+    upload it, then work through the waiting lines. For each one: pick a
+    category, "Transfer to…", or ignore. Swipe actions fit well here.
+  - *Mileage*: after a job is marked done, offer "Log the drive?" prefilled with
+    the job's address and purpose. Plus manual entry.
+  - *Reports*: profit and loss by month or year, a tax summary by Schedule C
+    line, mileage, and contractors. Plus Export, which opens the share sheet
+    with the CSVs.
+  - *Books settings*: mileage rate per year ("the IRS rate for 2026", not
+    "centsPerMile"), sales tax (off), 1099 threshold.
+  - To fix a mistake: "Void" on an entry, with a confirm dialog explaining that
+    history is kept. There's no delete button anywhere in the books.
 - **More → Booking**: online booking on/off, hours for each day (or closed),
   jobs per day, time between jobs, notice needed, how far ahead. Validate with
   `validateRules` before saving to `PUT /v1/settings/booking`. Label everything
   in his words: "Time between jobs", not "bufferMinutes".
 - **More → Settings**: sign out, app version, pricing version.
 
-Out of scope for v1: multiple staff, payroll, recurring maintenance plans,
-marketing email, Android.
+Out of scope for v1: multiple staff, recurring maintenance plans, marketing
+email, Android. **Payroll is deliberately never built here.** When Jacob hires
+an employee, he connects a payroll service (Gusto or similar), and its totals
+get recorded in the books as expenses. Contractors are covered: payees with
+`kind: 'contractor'`, and the 1099 report.
 
 ## Build notes
 
@@ -306,9 +370,12 @@ Copy: short and plain, in Jacob's voice. "Get paid", not "Process payment".
    using the vendored engine. This is the first thing to show Jacob.
 2. Today, Schedule, Leads, Customers and Booking settings against the live API.
    All of these endpoints exist now.
-3. Stripe: invoices and pay links first, then Tap to Pay.
-4. Inventory and scanning, then product use per job.
-5. Import Housecall Pro's customer/job export, cut over, and cancel it.
+3. Money: the screens above, against the live books API. This replaces
+   QuickBooks.
+4. Stripe: invoices and pay links first, then Tap to Pay. Payments post into
+   the books automatically.
+5. Inventory and scanning, then product use per job.
+6. Import Housecall Pro's and QuickBooks' data, cut over, and cancel both.
 
 ---
 
@@ -321,9 +388,9 @@ The app spec, API contract and design rules live in the website repo:
 https://github.com/brettmboggs/ked-detailing/blob/main/docs/mobile-app.md
 (locally: ../ked-detailing/docs/mobile-app.md). Read it before starting work.
 
-- Pricing and scheduling: never reimplement. `src/vendor/pricing` and
-  `src/vendor/scheduling` are vendored from ked-detailing/packages. Don't edit
-  them. Run `npm run sync:shared`.
+- Pricing, scheduling and books: never reimplement. `src/vendor/pricing`,
+  `src/vendor/scheduling` and `src/vendor/books` are vendored from
+  ked-detailing/packages. Don't edit them. Run `npm run sync:shared`.
 - The backend is the Worker in ked-detailing/api. If the app needs an endpoint
   that isn't in the spec, change the spec there first.
 ```
