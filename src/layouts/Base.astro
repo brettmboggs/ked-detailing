@@ -10,6 +10,8 @@ interface Props {
   ogImage?: string;
   /** Emit FAQPage markup. Only true on the page that actually renders the FAQs. */
   includeFaq?: boolean;
+  /** Keep this one page out of search, e.g. while it shows placeholder prices. */
+  noindex?: boolean;
 }
 
 const {
@@ -17,6 +19,7 @@ const {
   description,
   ogImage = '/og.jpg',
   includeFaq = false,
+  noindex: pageNoindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
@@ -29,7 +32,7 @@ const isStaging = (import.meta.env.BASE_URL || '/') !== '/';
 // site. The sub-path build gives itself away through BASE_URL. The Cloudflare
 // Pages copy serves from the root of a pages.dev subdomain and cannot, so the
 // Pages project sets KED_NOINDEX instead. Remove it there at cutover.
-const noindex = isStaging || process.env.KED_NOINDEX === 'true';
+const noindex = pageNoindex || isStaging || process.env.KED_NOINDEX === 'true';
 const liveCanonical = isStaging
   ? new URL(Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/',
             'https://www.kedservice.com')

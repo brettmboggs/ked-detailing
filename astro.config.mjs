@@ -13,7 +13,9 @@ const site = process.env.KED_SITE || 'https://www.kedservice.com';
 export default defineConfig({
   site,
   base,
-  integrations: [sitemap()],
+  // /quote shows placeholder prices until Jacob's real numbers are in, so it
+  // stays out of the sitemap as well as noindexed.
+  integrations: [sitemap({ filter: (page) => !page.includes('/quote') })],
 
   // Mirrors public/_redirects, from which Cloudflare serves the real 301s.
   // These are the meta-refresh fallback for any host that ignores that file.

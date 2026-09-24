@@ -12,7 +12,8 @@
     "astro": "astro",
     "check": "astro check",
     "verify": "astro check && astro build",
-    "build:staging": "KED_BASE=/ked/ KED_SITE=https://brettboggs.dev astro build"
+    "build:staging": "KED_BASE=/ked/ KED_SITE=https://brettboggs.dev astro build",
+    "test": "npm test --workspaces --if-present"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -29,5 +30,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "typescript": "^6.0.3"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

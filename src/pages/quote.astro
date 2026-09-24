@@ -1,0 +1,446 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { business } from '../data/site';
+import { withBase } from '../lib/url';
+import {
+  defaultConfig as config,
+  formatHours,
+  formatMoney,
+  fromPrice,
+} from '@ked/pricing';
+
+/**
+ * Instant Quote. The formula lives in @ked/pricing and runs in the browser, so
+ * a quote costs nothing and works offline once loaded. The iPhone app uses the
+ * same package, so a quote here always matches what Jacob sees.
+ *
+ * The prices are placeholders until Jacob's real numbers are in: the page is
+ * noindexed, out of the sitemap and not in the nav, and says so on the page.
+ *
+ * Styled as a work order, not a component kit: ruled rows, square selectors and
+ * segmented controls. No chips, no card grids, no numbered steps.
+ */
+const PLACEHOLDER_PRICING = true;
+
+const vehicleServices = config.services.filter((s) => s.craft === 'vehicle');
+const boatServices = config.services.filter((s) => s.craft === 'boat');
+const defaultService = 'level-2';
+const defaultClass = 'sedan';
+
+const numeral = (level: string) => level.replace('Level ', '');
+
+/** A ruled row. The gold rule on the left marks the chosen one. */
+const row =
+  'group relative flex cursor-pointer items-center gap-4 border-b border-ink-800 py-4 pl-4 pr-1 transition-colors hover:bg-ink-900/60 ' +
+  'before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:origin-top before:scale-y-0 before:bg-gold-500 before:transition-transform before:duration-500 has-[:checked]:before:scale-y-100 ' +
+  'has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold-400';
+/** Square selector; filled when its row is chosen. */
+const box =
+  'grid size-4 shrink-0 place-items-center border border-ink-600 transition-colors group-has-[:checked]:border-gold-500';
+const boxFill = 'size-2 scale-0 bg-gold-500 transition-transform group-has-[:checked]:scale-100';
+const rowLabel = 'font-semibold text-bone-200 transition-colors group-has-[:checked]:text-bone-50';
+
+/** Joined square segments, like a switch on a spec sheet. */
+const segments = 'flex w-full border border-ink-700 sm:w-fit';
+const segment =
+  'flex flex-1 cursor-pointer items-center justify-center border-l border-ink-700 px-3 py-2.5 text-center text-sm leading-tight text-bone-400 transition-colors first:border-l-0 hover:text-bone-50 sm:flex-none sm:px-4 ' +
+  'has-[:checked]:bg-gold-500 has-[:checked]:font-semibold has-[:checked]:text-ink-950 ' +
+  'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold-400';
+
+const heading =
+  'mb-5 font-display uppercase text-bone-50';
+const headingStyle = "font-variation-settings:'wdth' 76,'wght' 800; font-size: clamp(1.35rem, 2.6vw, 1.9rem); letter-spacing:-0.01em";
+const input =
+  'w-full rounded-sm border border-ink-700 bg-ink-900 px-4 py-3 text-bone-50 placeholder:text-bone-600 focus:border-gold-500 focus:outline-none';
+---
+
+<Base
+  title="Instant Quote | Knock Em' Down Detailing"
+  description="Price your detail in under a minute. Pick your vehicle, package and condition and get an instant estimate for mobile detailing across St. Louis."
+  noindex={PLACEHOLDER_PRICING}
+>
+  <Header />
+
+  <main id="main" class="bg-ink-950 pb-32 lg:pb-24">
+    <section class="mx-auto max-w-[105rem] px-5 pt-32 pb-10 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p class="eyebrow">Instant quote</p>
+      </div>
+      <h1 class="display-lg max-w-3xl text-bone-50">
+        Price it in<br /><span class="text-gold-500">under a minute.</span>
+      </h1>
+      <p class="mt-6 max-w-xl text-lg leading-relaxed text-bone-200">
+        Tell us what you drive and what shape it's in. The estimate updates as you go. Jacob confirms
+        the final price when he sees the vehicle.
+      </p>
+      {
+        PLACEHOLDER_PRICING && (
+          <p class="mt-6 inline-block border-l-2 border-gold-500 pl-4 text-sm text-gold-400">
+            Preview: these are sample prices, not Jacob's real rates yet.
+          </p>
+        )
+      }
+    </section>
+
+    <div class="mx-auto grid max-w-[105rem] gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16">
+      <form data-quote class="flex flex-col gap-14" novalidate>
+        <fieldset>
+          <legend class={heading} style={headingStyle}>What are we detailing?</legend>
+          <div class={segments} role="radiogroup" aria-label="What are we detailing?">
+            <label class={segment}>
+              <input type="radio" name="craft" value="vehicle" checked class="sr-only" />
+              Car or truck
+            </label>
+            <label class={segment}>
+              <input type="radio" name="craft" value="boat" class="sr-only" />
+              Boat
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset data-craft="vehicle">
+          <legend class={heading} style={headingStyle}>Size</legend>
+          <div class="border-t border-ink-800">
+            {
+              config.vehicleClasses.map((c) => (
+                <label class={row}>
+                  <input
+                    type="radio"
+                    name="vehicleClass"
+                    value={c.id}
+                    checked={c.id === defaultClass}
+                    class="sr-only"
+                  />
+                  <span class={box}><span class={boxFill} /></span>
+                  <span class="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                    <span class={rowLabel}>{c.label}</span>
+                    <span class="text-sm text-bone-500">{c.examples}</span>
+                  </span>
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+
+        <fieldset data-craft="boat" hidden>
+          <legend class={heading} style={headingStyle}>Boat length</legend>
+          <label class="flex max-w-xs items-center gap-3">
+            <input
+              type="number"
+              name="boatFeet"
+              inputmode="numeric"
+              min="1"
+              max="100"
+              value="20"
+              class={input}
+              aria-describedby="boat-feet-hint"
+            />
+            <span class="text-bone-200">feet</span>
+          </label>
+          <p id="boat-feet-hint" class="mt-2 text-sm text-bone-500">Overall length, bow to stern.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend class={heading} style={headingStyle}>Package</legend>
+          <div class="border-t border-ink-800">
+            {
+              [...vehicleServices, ...boatServices].map((s) => {
+                const from = fromPrice(config, s.id);
+                return (
+                  <label class={row} data-craft={s.craft} hidden={s.craft !== 'vehicle'}>
+                    <input
+                      type="radio"
+                      name="service"
+                      value={s.id}
+                      checked={s.id === defaultService}
+                      class="sr-only"
+                    />
+                    <span class={box}><span class={boxFill} /></span>
+                    <span
+                      class="w-8 shrink-0 font-display text-lg text-bone-600 transition-colors group-has-[:checked]:text-gold-500"
+                      style="font-variation-settings:'wdth' 70,'wght' 800"
+                      aria-hidden="true"
+                    >
+                      {s.level ? numeral(s.level) : '+'}
+                    </span>
+                    <span class={`min-w-0 flex-1 ${rowLabel}`}>{s.name}</span>
+                    <span class="shrink-0 text-right text-sm tabular-nums text-bone-400">
+                      <span class="block text-bone-200">{from === null ? 'On inspection' : `from ${formatMoney(from)}`}</span>
+                      {s.craft === 'vehicle' && <span class="block text-xs text-bone-500">{formatHours(s.hours)}</span>}
+                    </span>
+                  </label>
+                );
+              })
+            }
+          </div>
+          <p class="mt-3 text-sm text-bone-500">
+            Not sure? <a href={withBase('/#services')} class="text-bone-200 underline decoration-ink-600 underline-offset-4 hover:text-gold-400">See what each level includes</a>.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend class={heading} style={headingStyle}>Condition</legend>
+          <p class="-mt-3 mb-5 text-sm text-bone-500">Honest answers get you an honest number.</p>
+          <div class="border-t border-ink-800">
+            {
+              config.conditions.map((c) => (
+                <div
+                  role="radiogroup"
+                  aria-label={c.question}
+                  data-condition={c.id}
+                  hidden={c.craft !== 'vehicle'}
+                  class="flex flex-col gap-3 border-b border-ink-800 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8"
+                >
+                  <p class="text-bone-200">{c.question}</p>
+                  <div class={segments}>
+                    {c.options.map((o, i) => (
+                      <label class={segment}>
+                        <input type="radio" name={`cond:${c.id}`} value={o.id} checked={i === 0} class="sr-only" />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </fieldset>
+
+        <fieldset data-extras>
+          <legend class={heading} style={headingStyle}>Extras</legend>
+          <div class="border-t border-ink-800" data-extras-list>
+            {
+              config.addOns.map((a) => (
+                <label class={row} data-addon={a.id} hidden={a.craft !== 'vehicle'}>
+                  <input type="checkbox" name="addOns" value={a.id} class="sr-only" />
+                  <span class={box}><span class={boxFill} /></span>
+                  <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span class={rowLabel}>{a.label}</span>
+                    <span class="text-sm text-bone-500">{a.description}</span>
+                  </span>
+                  <span class="shrink-0 text-sm tabular-nums text-bone-200">
+                    +{formatMoney(a.price)}{a.scalesWithSize && a.craft === 'boat' && '/ft'}
+                  </span>
+                </label>
+              ))
+            }
+          </div>
+          <p data-no-extras hidden class="text-sm text-bone-500">
+            Everything worth adding is already in this package.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend class={heading} style={headingStyle}>Where</legend>
+          <div class="grid gap-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+            <label class="flex flex-col gap-2 text-sm text-bone-200">
+              ZIP code
+              <input
+                type="text"
+                name="zip"
+                inputmode="numeric"
+                autocomplete="postal-code"
+                maxlength="5"
+                placeholder="63049"
+                class={input}
+              />
+            </label>
+            <label class="flex flex-col gap-2 text-sm text-bone-200">
+              <span>Year, make and model <span class="text-bone-500">(optional)</span></span>
+              <input
+                type="text"
+                name="vehicle"
+                autocomplete="off"
+                placeholder="2021 Chevy Tahoe"
+                class={input}
+              />
+            </label>
+          </div>
+        </fieldset>
+      </form>
+
+      <!-- Summary. Sticky beside the form on desktop, after it on phones. -->
+      <aside id="summary" class="lg:sticky lg:top-28 lg:self-start">
+        <div class="rounded-sm border border-ink-700 bg-ink-900 p-6 edge-light">
+          <p class="eyebrow mb-3">Your estimate</p>
+          <p data-range aria-live="polite" class="font-display text-bone-50" style="font-size:clamp(2.2rem,4vw,3rem);font-variation-settings:'wdth' 80,'wght' 800">
+            —
+          </p>
+          <p data-hours class="mt-1 text-sm text-bone-400"></p>
+
+          <ul data-lines class="mt-6 flex flex-col gap-2 border-t border-ink-800 pt-5 text-sm"></ul>
+          <ul data-notes class="mt-4 flex flex-col gap-1.5 text-sm text-gold-400"></ul>
+
+          <p class="mt-5 text-xs leading-relaxed text-bone-500">
+            An estimate, not a bill. Jacob confirms the final price when he sees the vehicle, and
+            nothing is charged until the work is agreed.
+          </p>
+
+          <div class="mt-6 flex flex-col gap-3">
+            <a data-sms href={business.phoneHref} class="btn-gold w-full">Text Jacob this quote</a>
+            <!-- Housecall Pro until our own booking replaces it. -->
+            <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-ghost w-full">Book online</a>
+            <a href={business.phoneHref} class="text-center text-sm text-bone-400 hover:text-gold-400">
+              Or call {business.phone}
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Phones: the running total stays in reach while scrolling the form. -->
+    <a
+      href="#summary"
+      data-mobile-bar
+      class="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-4 border-t border-ink-700 bg-ink-950/95 px-5 py-4 backdrop-blur-xl lg:hidden"
+    >
+      <span>
+        <span class="block text-xs uppercase tracking-[0.2em] text-bone-500">Estimate</span>
+        <span data-bar-range class="font-display text-xl text-bone-50" style="font-variation-settings:'wdth' 80,'wght' 800">—</span>
+      </span>
+      <span class="btn-gold !px-5 !py-3">Next steps</span>
+    </a>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import {
+    applicableAddOns,
+    applicableConditions,
+    defaultConfig as config,
+    formatHours,
+    formatMoney,
+    formatRange,
+    quote,
+    QuoteError,
+    type Craft,
+    type QuoteInput,
+  } from '@ked/pricing';
+
+  const PHONE = '+13142232988';
+
+  const form = document.querySelector<HTMLFormElement>('[data-quote]')!;
+  const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
+  const rangeEl = $<HTMLElement>('[data-range]');
+  const barRangeEl = $<HTMLElement>('[data-bar-range]');
+  const hoursEl = $<HTMLElement>('[data-hours]');
+  const linesEl = $<HTMLUListElement>('[data-lines]');
+  const notesEl = $<HTMLUListElement>('[data-notes]');
+  const smsEl = $<HTMLAnchorElement>('[data-sms]');
+
+  const radio = (name: string) =>
+    form.querySelector<HTMLInputElement>(`input[name="${CSS.escape(name)}"]:checked`)?.value;
+
+  /** Keep the chosen service on the chosen craft; fall back to its first one. */
+  function syncCraft(craft: Craft) {
+    for (const el of form.querySelectorAll<HTMLElement>('[data-craft]')) {
+      el.hidden = el.dataset.craft !== craft;
+    }
+    const current = config.services.find((s) => s.id === radio('service'));
+    if (current?.craft !== craft) {
+      const first = config.services.find((s) => s.craft === craft);
+      const input = form.querySelector<HTMLInputElement>(`input[name="service"][value="${first?.id}"]`);
+      if (input) input.checked = true;
+    }
+  }
+
+  /** Show only the questions and extras that change the price of this service. */
+  function syncService(serviceId: string) {
+    const service = config.services.find((s) => s.id === serviceId);
+    if (!service) return;
+    const conditions = new Set(applicableConditions(config, service).map((c) => c.id));
+    for (const el of form.querySelectorAll<HTMLElement>('[data-condition]')) {
+      el.hidden = !conditions.has(el.dataset.condition!);
+    }
+    const addOns = new Set(applicableAddOns(config, service).map((a) => a.id));
+    for (const el of form.querySelectorAll<HTMLElement>('[data-addon]')) {
+      el.hidden = !addOns.has(el.dataset.addon!);
+    }
+    $<HTMLElement>('[data-no-extras]').hidden = addOns.size > 0;
+    $<HTMLElement>('[data-extras-list]').hidden = addOns.size === 0;
+  }
+
+  function readInput(): QuoteInput {
+    const data = new FormData(form);
+    const conditions: Record<string, string> = {};
+    for (const [key, value] of data) {
+      if (key.startsWith('cond:')) conditions[key.slice(5)] = String(value);
+    }
+    const feet = Number(data.get('boatFeet'));
+    return {
+      service: radio('service') ?? '',
+      vehicleClass: radio('vehicleClass'),
+      boatFeet: Number.isFinite(feet) && feet > 0 ? feet : undefined,
+      conditions,
+      addOns: data.getAll('addOns').map(String),
+      zip: String(data.get('zip') ?? ''),
+    };
+  }
+
+  function li(text: string, amount?: string) {
+    const el = document.createElement('li');
+    el.className = 'flex justify-between gap-4';
+    const label = document.createElement('span');
+    label.textContent = text;
+    el.append(label);
+    if (amount) {
+      const value = document.createElement('span');
+      value.className = 'shrink-0 text-bone-200 tabular-nums';
+      value.textContent = amount;
+      el.append(value);
+    }
+    return el;
+  }
+
+  function render() {
+    const craft = (radio('craft') ?? 'vehicle') as Craft;
+    syncCraft(craft);
+    syncService(radio('service') ?? '');
+
+    const input = readInput();
+    let q;
+    try {
+      q = quote(config, input);
+    } catch (err) {
+      if (!(err instanceof QuoteError)) throw err;
+      rangeEl.textContent = barRangeEl.textContent = '—';
+      hoursEl.textContent = craft === 'boat' ? "Enter the boat's length to price it." : '';
+      linesEl.replaceChildren();
+      notesEl.replaceChildren();
+      return;
+    }
+
+    const price = q.range ? formatRange(q.range) : 'By inspection';
+    rangeEl.textContent = barRangeEl.textContent = price;
+    hoursEl.textContent = `About ${formatHours(q.hours)} of work`;
+    linesEl.replaceChildren(
+      ...q.lines.map((l) => li(l.label, q.range ? formatMoney(l.amount) : undefined)),
+    );
+    notesEl.replaceChildren(...q.notes.map((n) => li(n)));
+
+    // Everything Jacob needs to reply with a firm number, in one text.
+    const vehicle = String(new FormData(form).get('vehicle') ?? '').trim();
+    const body = [
+      'Hi Jacob, I priced a detail on your website:',
+      ...q.lines.map((l) => `• ${l.label}`),
+      vehicle && `Vehicle: ${vehicle}`,
+      input.zip && `ZIP: ${input.zip}`,
+      `Estimate: ${price}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    // `?&body=` is the form both iOS and Android Messages accept.
+    smsEl.href = `sms:${PHONE}?&body=${encodeURIComponent(body)}`;
+  }
+
+  form.addEventListener('input', render);
+  form.addEventListener('change', render);
+  // Back/forward cache can restore a filled form; price what is actually shown.
+  window.addEventListener('pageshow', render);
+  render();
+</script>
