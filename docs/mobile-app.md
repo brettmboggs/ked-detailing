@@ -328,7 +328,7 @@ connection token.
 
 ## Screens (v1)
 
-A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. Today is the home screen: today's jobs with one big next-step button each, then a **Needs you** list (new leads, finished jobs not yet paid, things for the books, products running low), each a tap from being dealt with, and a look at tomorrow.
+A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. Today is the home screen: today's jobs with one big next-step button each, then a **Needs you** list (online bookings in the next week not yet texted a confirmation, which the phone remembers since the server doesn't track it; new leads, finished jobs not yet paid, things for the books, products running low), each a tap from being dealt with, and a look at tomorrow.
 
 - **Today**: today's jobs in order. Each shows the customer, vehicle, address and
   quoted range. Tap an address for directions in Apple Maps (a `Linking` URL,
