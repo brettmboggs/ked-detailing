@@ -18,8 +18,7 @@
     // Browsers allowed to call the public endpoints. The app is native and
     // doesn't need CORS.
     "ALLOWED_ORIGINS": "https://www.kedservice.com,https://kedservice.com,https://ked-detailing.pages.dev,https://brettboggs.dev,http://localhost:4321",
-    // The iPhone app's bundle ID: Apple issues identity tokens for it.
-    // Placeholder until the app repo picks its real one.
+    // The iPhone app's bundle ID (ked-app/app.json): Apple issues identity tokens for it.
     "APPLE_AUDIENCE": "com.brettboggs.ked",
     // Who may sign in. Apple `sub` values and/or verified emails, comma-separated.
     // A refused sign-in returns its `sub`, so the first attempt tells you what to add.
