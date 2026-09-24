@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0007 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0008 applied |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -79,6 +79,14 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   low-stock list, each package's usual products, and product use per job
   (saved as differences, so it's safe to save twice). `productCost` on a job
   is the start of per-job profit.
+- **Alerts:** push to Jacob's phones through Expo (free, works now) on an
+  online booking, a quote request, and an invoice's first open. Every alert
+  is stored in `alerts` first, so a failed push still shows in the app.
+  Email is built in `src/notify.ts` but off: alerts to Jacob's own inbox
+  are free once the domain is on Cloudflare (setup steps are in
+  `wrangler.jsonc`). **Customer email needs Brett's call:** it needs the
+  Workers Paid plan, $5/month, which breaks the $0 goal. Until then,
+  customers get the on-page confirmation, and Jacob texts invoice links.
 - **Photos:** receipts and before/after job photos, stored in **KV**, not R2.
   R2 requires a credit card on the account, and Brett won't put his own card
   on Jacob's business. The storage interface prefers R2 if it's ever bound.
@@ -89,7 +97,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (53). The API tests
+  scheduling (11), books (18) and API (58). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
@@ -159,10 +167,9 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
    horizon, per-package durations (`PUT /v1/settings/booking`).
 3. **His Apple ID email:** add it to `OWNER_EMAILS` and deploy.
 4. **Domain switched:** remove `KED_NOINDEX` from Pages (GOING-LIVE.md step 4).
-   Then email becomes possible through Cloudflare Email Routing: booking
-   alerts to Jacob, confirmations to customers. **Until then, nothing tells
-   Jacob that someone booked.** This must be solved before `/quote` goes
-   public.
+   Then switch on email (steps in `api/wrangler.jsonc`) and change
+   `PAY_URL` to kedservice.com. Push alerts already tell Jacob about
+   bookings, as long as the app has notifications on.
 5. **Stripe:** once he adds Brett as a Developer, fill in Checkout behind the
    existing pay links (`startCheckout`, plus a webhook calling
    `recordInvoicePayment` with `depositToId: 'stripe'`, and `payOnline: true`),
@@ -178,15 +185,12 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 
 ## What to build next (none of it needs Jacob)
 
-1. **Booking and quote email:** designed to be ready the day the domain moves
-   (Email Workers `send_email` binding, verified destination address).
-   Invoices should email their pay link too, alongside the text.
-2. **Customer self-service:** a link in the confirmation to view, reschedule
+1. **Customer self-service:** a link in the confirmation to view, reschedule
    or cancel a booking.
-3. **Wire the website into the navigation** behind one switch (`quoteLive` in
+2. **Wire the website into the navigation** behind one switch (`quoteLive` in
    `src/data/site.ts`): header "Get a quote", "from $X" on the packages, the
    CTA. It stays off until cutover.
-4. **Housecall Pro and QuickBooks importers** for the cutover.
+3. **Housecall Pro and QuickBooks importers** for the cutover.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.

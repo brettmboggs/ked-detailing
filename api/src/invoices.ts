@@ -3,6 +3,7 @@ import { cents, createIncome, day } from './books.ts';
 import { currentRules } from './booking.ts';
 import { getJob } from './jobs.ts';
 import { ApiError, now, randomToken, text, ulid, type Bindings } from './lib.ts';
+import { mailCustomer } from './notify.ts';
 
 /**
  * Invoices. One live invoice per job; the lines start from the job's quote.
@@ -253,7 +254,15 @@ export async function sendInvoice(env: Bindings, id: string) {
   const message =
     `Hi ${firstName(sent.customer.name)}, thanks for choosing Knock Em' Down Detailing! ` +
     `Here's your invoice for ${dollars(sent.balance)}: ${sent.payUrl}`;
-  return { invoice: sent, message };
+  // Emailed as well when customer email is switched on; the text still goes.
+  const emailed = sent.customer.email
+    ? await mailCustomer(env, {
+        to: sent.customer.email,
+        subject: `Invoice ${sent.number} from Knock Em' Down Detailing`,
+        text: `${message}\n\nQuestions? Call or text (314) 223-2988.`,
+      })
+    : false;
+  return { invoice: sent, message, emailed };
 }
 
 /** Payments stay in the books; void those first so nothing is orphaned. */
@@ -304,10 +313,15 @@ async function byToken(env: Bindings, token: string) {
  */
 export async function publicInvoice(env: Bindings, token: string) {
   const r = await byToken(env, token);
-  if (!r.viewed_at) {
-    await env.DB.prepare('UPDATE invoices SET viewed_at = ? WHERE id = ? AND viewed_at IS NULL').bind(now(), r.id).run();
-  }
-  return {
+  // Only the first open counts, and only once even if two tabs race.
+  const firstOpen =
+    !r.viewed_at &&
+    (await env.DB.prepare('UPDATE invoices SET viewed_at = ? WHERE id = ? AND viewed_at IS NULL').bind(now(), r.id).run()).meta
+      .changes === 1;
+  const opened = firstOpen && r.shown !== 'void' && r.shown !== 'paid'
+    ? { id: r.id, number: r.number, customerName: r.customer_name, balance: Math.max(0, r.total - r.paid) }
+    : null;
+  const view = {
     number: r.number,
     status: r.shown === 'draft' ? 'sent' : r.shown, // the customer never sees "draft"
     customerName: firstName(r.customer_name),
@@ -324,6 +338,7 @@ export async function publicInvoice(env: Bindings, token: string) {
     /** True once Stripe is connected; the page then shows a Pay button. */
     payOnline: false,
   };
+  return { view, opened };
 }
 
 /** Where Stripe Checkout will start. Until Jacob's Stripe is connected, it's off. */

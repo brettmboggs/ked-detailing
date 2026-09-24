@@ -156,7 +156,8 @@ means money in and `−` means money out, from the account's point of view.
 > deposits matched to unpaid jobs, "That was personal", the inbox), and
 > **photos** (receipts and before/after job shots), and **invoices** (pay
 > links texted from his phone, paid status read from the books), and
-> **inventory** (barcodes, stock history, low-stock list, product use per job).
+> **inventory** (barcodes, stock history, low-stock list, product use per job),
+> and **alerts** (push to his phone on a booking, a quote request, or an invoice opened).
 > Photos are stored in Cloudflare KV (free plan: 1 GB, 1,000 uploads a day),
 > so **downscale to about 1600 px and JPEG quality 0.7 before uploading**, which
 > keeps each photo around 200 KB. If storage is ever missing, calls return `503
@@ -240,11 +241,14 @@ There are no passwords and no sign-up screen.
 | `GET /v1/jobs/:id/photos` | owner | `{ photos }` for a job, oldest first |
 | `DELETE /v1/photos/:id` | owner | `204`. A receipt attached to a books entry returns `409` and is kept |
 | `POST /v1/books/entries/:id/receipt` | owner | `{ photoId }`: attach a receipt after the fact. Expenses also take `receiptKey: photoId` when created |
+| `POST /v1/devices` | owner | `{ token }` from `expo-notifications` `getExpoPushTokenAsync()`. Call after every sign-in and app start; repeats are fine |
+| `DELETE /v1/devices` | owner | `{ token }` in the body. Call on sign-out → `204` |
+| `GET /v1/alerts` | owner | `{ alerts }`: the last 50, newest first, `{ id, type, refId, title, body, pushed, emailed, createdAt }`. Kept even when a push fails, so show them as a list behind a bell on Today |
 | `POST /v1/jobs/:id/invoice` | owner | The job's live invoice: `200` with the one it has, or `201` with a new one built from its quote (plus a `Discount`/`Adjustment` line if `finalPrice` differs). Optional `{ lines, dueDate, notes }` only apply when creating. `422 no_price` for an inspection job with no `finalPrice`, `409 job_cancelled` for a cancelled one |
 | `GET /v1/invoices?status=&jobId=&customerId=` | owner | `{ invoices }`, newest number first. `status`: `draft`, `sent`, `paid`, `void`, or `unpaid` (draft and sent) |
 | `GET /v1/invoices/:id` | owner | One invoice |
 | `PATCH /v1/invoices/:id` | owner | `lines` (`[{ label, amount }]`, cents, negative for a discount, total above zero), `dueDate` (`YYYY-MM-DD` or null for "on receipt"), `notes` (shown to the customer). Changing lines also sets the job's `finalPrice`. `409` once void |
-| `POST /v1/invoices/:id/send` | owner | Marks it sent → `{ invoice, message }`. **Open the SMS composer** (`expo-sms`) to the customer's phone with `message`, which includes the pay link. Email comes once the domain moves. `409` if paid or void |
+| `POST /v1/invoices/:id/send` | owner | Marks it sent → `{ invoice, message, emailed }`. **Open the SMS composer** (`expo-sms`) to the customer's phone with `message`, which includes the pay link. `emailed` is true when it was also emailed (customer email is off for now). `409` if paid or void |
 | `POST /v1/invoices/:id/payments` | owner | "Got paid": `{ depositToId, method?, date?, amount?, tip? }`. `amount` defaults to the balance. A tip posts as its own entry under Tips and doesn't count against the balance → `201 { invoice, entries }` |
 | `POST /v1/invoices/:id/void` | owner | `409 has_payments` while a payment stands: void it in the books first. Then `POST /jobs/:id/invoice` makes a fresh one with the next number |
 | `GET /v1/pay/:token` | – | The customer's copy, for the website's `/pay/?i=<token>` page. First name only; no address or phone |
@@ -285,6 +289,15 @@ invoice rather than updating it locally.
 **Item shape**: `id`, `name`, `barcode`, `unit`, `onHand` (can be a fraction,
 e.g. 0.25 gal), `reorderAt`, `reorderUrl`, `cost` (cents per unit), `notes`,
 `archived`, `low`, `updatedAt`.
+
+**Push alerts.** The server pushes through Expo's push service (free, no
+keys needed) when a customer books online (`type: 'booking'`, `id` = job), a
+website quote request comes in (`'lead'`, lead id), or a customer first opens
+an invoice (`'invoice_opened'`, invoice id). Each push carries `data: { type,
+id }`: open that screen on tap. Ask for notification permission right after
+sign-in, with a line on why ("So you hear the moment someone books"). This is
+how Jacob learns about online bookings, so it has to work before `/quote`
+goes public.
 
 **How online booking works.** The website posts the customer's answers to
 `/availability`. The server prices them, sizes the job with `jobMinutes`, and

@@ -47,6 +47,7 @@ import {
   updateItem,
 } from './inventory.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
+import { bookingMade, invoiceOpened, leadMade, listAlerts, registerDevice, removeDevice } from './notify.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
@@ -85,7 +86,15 @@ app.get('/pricing', async (c) => {
   return c.json(pricing);
 });
 
-app.post('/leads', async (c) => c.json(await createLead(c.env.DB, await json(c.req.raw)), 201));
+/** Alerts run after the response, so a slow push never holds up the customer. */
+const later = (c: { executionCtx: { waitUntil(p: Promise<unknown>): void } }, work: Promise<unknown>) =>
+  c.executionCtx.waitUntil(work.catch((err) => console.error('alert failed', err)));
+
+app.post('/leads', async (c) => {
+  const lead = await createLead(c.env.DB, await json(c.req.raw));
+  if (lead.quote) later(c, leadMade(c.env, lead.id)); // no quote means the honeypot caught it
+  return c.json(lead, 201);
+});
 
 // Open start times for a job, priced and sized from the customer's answers.
 app.post('/availability', async (c) => {
@@ -93,13 +102,19 @@ app.post('/availability', async (c) => {
   return c.json(await availability(c.env.DB, await json(c.req.raw)));
 });
 
-app.post('/bookings', async (c) => c.json(await createBooking(c.env.DB, await json(c.req.raw)), 201));
+app.post('/bookings', async (c) => {
+  const booking = await createBooking(c.env.DB, await json(c.req.raw));
+  if (booking.start) later(c, bookingMade(c.env, booking.id)); // no start means the honeypot caught it
+  return c.json(booking, 201);
+});
 
 // A customer's invoice, by the secret in their pay link. Never cached: it
 // changes the moment they pay.
 app.get('/pay/:token', async (c) => {
   c.header('Cache-Control', 'no-store');
-  return c.json(await publicInvoice(c.env, c.req.param('token')));
+  const { view, opened } = await publicInvoice(c.env, c.req.param('token'));
+  if (opened) later(c, invoiceOpened(c.env, opened));
+  return c.json(view);
 });
 app.post('/pay/:token/checkout', async (c) => c.json(await startCheckout(c.env, c.req.param('token'))));
 
@@ -175,6 +190,16 @@ app.delete('/photos/:id', requireOwner, async (c) => {
 app.get('/jobs/:id/photos', requireOwner, async (c) => c.json({ photos: await jobPhotos(c.env.DB, c.req.param('id')) }));
 
 const who = (o: Owner) => o.email ?? o.subject;
+
+/* ------------------------------------------------------------- alerts */
+
+app.post('/devices', requireOwner, async (c) => c.json(await registerDevice(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201));
+// The token has brackets in it, so it goes in the body rather than the path.
+app.delete('/devices', requireOwner, async (c) => {
+  await removeDevice(c.env.DB, String((await json(c.req.raw)).token ?? ''));
+  return c.body(null, 204);
+});
+app.get('/alerts', requireOwner, async (c) => c.json({ alerts: await listAlerts(c.env.DB) }));
 
 /* ----------------------------------------------------------- invoices */
 

@@ -8,6 +8,16 @@ export type Bindings = Env & {
   PAGES_DEPLOY_HOOK?: string;
   /** R2 for photos, if the account ever enables it. KV (PHOTO_KV) otherwise. */
   PHOTOS?: R2Bucket;
+  /** Cloudflare Email Service send binding. Absent until kedservice.com is on Cloudflare. */
+  EMAIL?: { send(message: { to: string; from: string; subject: string; text: string; html?: string }): Promise<unknown> };
+  /** "Knock Em' Down Detailing <jobs@kedservice.com>". Needs a verified sending domain. */
+  MAIL_FROM?: string;
+  /** Jacob's inbox for booking and lead alerts. Must be a verified destination (free). */
+  ALERT_EMAIL?: string;
+  /** "on" to email customers. Needs the Workers Paid plan. */
+  CUSTOMER_EMAIL?: string;
+  /** Tests point this away from Expo. */
+  EXPO_PUSH_URL?: string;
 };
 
 /** Thrown anywhere; rendered as the contract's error body by `onError`. */
