@@ -155,11 +155,12 @@ means money in and `−` means money out, from the account's point of view.
 > learned from how Jacob files, starter suggestions for common merchants,
 > deposits matched to unpaid jobs, "That was personal", the inbox), and
 > **photos** (receipts and before/after job shots), and **invoices** (pay
-> links texted from his phone, paid status read from the books).
+> links texted from his phone, paid status read from the books), and
+> **inventory** (barcodes, stock history, low-stock list, product use per job).
 > Photos are stored in Cloudflare KV (free plan: 1 GB, 1,000 uploads a day),
 > so **downscale to about 1600 px and JPEG quality 0.7 before uploading**, which
 > keeps each photo around 200 KB. If storage is ever missing, calls return `503
-> photos_off`, so show "Photo storage isn't on" rather than failing silently. Still to come: Stripe and inventory. A live
+> photos_off`, so show "Photo storage isn't on" rather than failing silently. Still to come: Stripe. A live
 > bank feed (Plaid) is optional; Teller doesn't support Commerce Bank. It
 > would feed the same import path, so nothing in the app changes except
 > gaining a "Connect bank" button. For endpoints that don't exist yet, the app uses a typed client
@@ -250,9 +251,17 @@ There are no passwords and no sign-up screen.
 | `POST /v1/pay/:token/checkout` | – | Starts Stripe Checkout. `503 payments_off` until Stripe is connected |
 | `POST /v1/terminal/connection-token` | owner | Stripe Terminal token for Tap to Pay |
 | `POST /v1/jobs/:id/payment-intent` | owner | Create a PaymentIntent for the job's final amount |
-| `GET/POST/PATCH /v1/inventory[/:id]` | owner | Items: name, barcode, unit, on hand, reorder at, reorder URL, cost |
-| `GET /v1/inventory/barcode/:code` | owner | Look an item up by scanned code. `404` means not known yet |
-| `POST /v1/inventory/:id/movements` | owner | `{ delta, reason: 'restock' \| 'used' \| 'adjust', jobId? }` |
+| `GET /v1/inventory?low=true&archived=true&q=` | owner | `{ items, lowCount }`. Low items first (furthest under first), then by name. `low=true` is the shopping list. `lowCount` is the tab badge |
+| `POST /v1/inventory` | owner | `{ name, unit?, barcode?, onHand?, reorderAt?, reorderUrl?, cost?, notes? }` → `201` item. `409 barcode_taken` names the item that has it |
+| `GET /v1/inventory/:id` | owner | One item |
+| `PATCH /v1/inventory/:id` | owner | Anything but the count: `name`, `unit`, `barcode`, `reorderAt`, `reorderUrl`, `cost`, `notes`, `archived`. Sending `onHand` is a `422` |
+| `GET /v1/inventory/barcode/:code` | owner | Look an item up by scanned code. `404` means not known yet: ask him to name it, then `POST /inventory` with the code. 12- and 13-digit forms of the same UPC both match |
+| `POST /v1/inventory/:id/movements` | owner | Change the count: `{ reason: 'restock' \| 'used' \| 'adjust', delta, jobId?, note?, unitCost? }`. The reason sets the sign, so always send a positive `delta` for + and − taps. After counting the shelf: `{ reason: 'adjust', count }`. A restock's `unitCost` becomes the item's cost → the item |
+| `GET /v1/inventory/:id/movements` | owner | `{ movements }`, newest first, each with the `onHand` it left |
+| `GET /v1/inventory/usage` | owner | `{ usage: { [serviceId]: [{ itemId, name, unit, amount }] } }`: each package's usual products |
+| `PUT /v1/inventory/usage/:serviceId` | owner | `{ items: [{ itemId, amount }] }` replaces that package's usual products. Edit this under More → Pricing, per package |
+| `GET /v1/jobs/:id/usage` | owner | `{ used, suggested, productCost }`. `suggested` is the package's usual list until something is recorded: pre-fill "What did you use?" with it |
+| `PUT /v1/jobs/:id/usage` | owner | `{ items: [{ itemId, amount }] }` sets what the job used. Only the differences move stock, so saving twice changes nothing and a removed item goes back on the shelf |
 
 **Job shape** (what `GET /v1/jobs` returns per job): `id`, `status`, `source`
 (`web` = customer booked online, `app` = Jacob added it), `service`,
@@ -272,6 +281,10 @@ so every way of recording a payment settles the invoice: "Got paid" above,
 `POST /books/income` with the `jobId`, a bank deposit filed to the job, and
 Stripe later. Voiding a payment reopens it. After any of those, refetch the
 invoice rather than updating it locally.
+
+**Item shape**: `id`, `name`, `barcode`, `unit`, `onHand` (can be a fraction,
+e.g. 0.25 gal), `reorderAt`, `reorderUrl`, `cost` (cents per unit), `notes`,
+`archived`, `low`, `updatedAt`.
 
 **How online booking works.** The website posts the customer's answers to
 `/availability`. The server prices them, sizes the job with `jobMinutes`, and

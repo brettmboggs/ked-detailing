@@ -33,6 +33,19 @@ import {
   updateInvoice,
   voidInvoice,
 } from './invoices.ts';
+import {
+  addMovement,
+  createItem,
+  getItem,
+  itemByBarcode,
+  jobUsage,
+  listItems,
+  listMovements,
+  listUsage,
+  saveJobUsage,
+  saveUsage,
+  updateItem,
+} from './inventory.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
@@ -189,6 +202,27 @@ app.post('/invoices/:id/payments', requireOwner, async (c) =>
   c.json(await recordInvoicePayment(c.env, c.req.param('id'), await json(c.req.raw), who(c.get('owner'))), 201),
 );
 app.post('/invoices/:id/void', requireOwner, async (c) => c.json(await voidInvoice(c.env, c.req.param('id'))));
+
+/* ---------------------------------------------------------- inventory */
+
+app.get('/inventory', requireOwner, async (c) => c.json(await listItems(c.env.DB, c.req.query())));
+app.post('/inventory', requireOwner, async (c) => c.json(await createItem(c.env.DB, await json(c.req.raw), who(c.get('owner'))), 201));
+// Before /:id, so these aren't read as item IDs.
+app.get('/inventory/barcode/:code', requireOwner, async (c) => c.json(await itemByBarcode(c.env.DB, c.req.param('code'))));
+app.get('/inventory/usage', requireOwner, async (c) => c.json(await listUsage(c.env.DB)));
+app.put('/inventory/usage/:service', requireOwner, async (c) =>
+  c.json(await saveUsage(c.env.DB, c.req.param('service'), await json(c.req.raw))),
+);
+app.get('/inventory/:id', requireOwner, async (c) => c.json(await getItem(c.env.DB, c.req.param('id'))));
+app.patch('/inventory/:id', requireOwner, async (c) => c.json(await updateItem(c.env.DB, c.req.param('id'), await json(c.req.raw))));
+app.get('/inventory/:id/movements', requireOwner, async (c) => c.json({ movements: await listMovements(c.env.DB, c.req.param('id')) }));
+app.post('/inventory/:id/movements', requireOwner, async (c) =>
+  c.json(await addMovement(c.env.DB, c.req.param('id'), await json(c.req.raw), who(c.get('owner'))), 201),
+);
+app.get('/jobs/:id/usage', requireOwner, async (c) => c.json(await jobUsage(c.env.DB, c.req.param('id'))));
+app.put('/jobs/:id/usage', requireOwner, async (c) =>
+  c.json(await saveJobUsage(c.env.DB, c.req.param('id'), await json(c.req.raw), who(c.get('owner')))),
+);
 
 /* -------------------------------------------------------------- books */
 
