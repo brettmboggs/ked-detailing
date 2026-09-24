@@ -59,7 +59,7 @@ import {
   registerDevice,
   removeDevice,
 } from './notify.ts';
-import { ApiError, json, list, text, type Bindings } from './lib.ts';
+import { ApiError, countingDb, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import {
@@ -87,6 +87,15 @@ app.use('*', (c, next) =>
     maxAge: 86400,
   })(c, next),
 );
+
+// Tests only: report each request's D1 query count (see countingDb).
+app.use('*', async (c, next) => {
+  if (c.env.COUNT_QUERIES !== '1') return next();
+  const count = { n: 0 };
+  c.env = { ...c.env, DB: countingDb(c.env.DB, count) };
+  await next();
+  c.res.headers.set('X-D1-Queries', String(count.n));
+});
 
 /* ------------------------------------------------------------- public */
 

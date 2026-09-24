@@ -203,7 +203,7 @@ export async function resolvePayee(db: D1Database, body: Record<string, unknown>
 
 /* ------------------------------------------------------------ entries */
 
-interface NewEntry {
+export interface NewEntry {
   date: string;
   kind: 'expense' | 'income' | 'transfer' | 'reversal';
   memo?: string | null;
@@ -224,20 +224,36 @@ export async function postEntry(db: D1Database, e: NewEntry, also: (id: string) 
   const accounts = await listAccounts(db);
   ledger(() => checkLines(e.lines, accounts));
   const id = ulid();
-  await db.batch([
+  await db.batch([...entryStatements(db, [{ ...e, id }]), ...also(id)]);
+  return id;
+}
+
+/**
+ * Any number of entries as two statements, entries then lines, read from
+ * JSON. The free Workers plan caps a request at 50 queries, counting each
+ * statement in a batch, so filing a whole bank statement has to be a
+ * constant number of statements, not a few per line. Check the lines first.
+ */
+export function entryStatements(db: D1Database, entries: (NewEntry & { id: string })[]): D1PreparedStatement[] {
+  if (!entries.length) return [];
+  const heads = entries.map((e) => ({
+    id: e.id, date: e.date, kind: e.kind, memo: e.memo ?? null, payee: e.payeeId ?? null, job: e.jobId ?? null,
+    method: e.method ?? null, receipt: e.receiptKey ?? null, reverses: e.reverses ?? null, by: e.by,
+  }));
+  const lines = entries.flatMap((e) => e.lines.map((l, i) => ({ e: e.id, n: i + 1, a: l.accountId, amt: l.amount })));
+  const col = (k: string) => `json_extract(value, '$.${k}')`;
+  return [
     db
       .prepare(
         `INSERT INTO entries (id, date, kind, memo, payee_id, job_id, method, receipt_key, reverses, created_at, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         SELECT ${['id', 'date', 'kind', 'memo', 'payee', 'job', 'method', 'receipt', 'reverses'].map(col).join(', ')}, ?, ${col('by')}
+         FROM json_each(?)`,
       )
-      .bind(id, e.date, e.kind, e.memo ?? null, e.payeeId ?? null, e.jobId ?? null, e.method ?? null,
-        e.receiptKey ?? null, e.reverses ?? null, now(), e.by),
-    ...e.lines.map((l, i) =>
-      db.prepare('INSERT INTO entry_lines (entry_id, line, account_id, amount) VALUES (?, ?, ?, ?)').bind(id, i + 1, l.accountId, l.amount),
-    ),
-    ...also(id),
-  ]);
-  return id;
+      .bind(now(), JSON.stringify(heads)),
+    db
+      .prepare(`INSERT INTO entry_lines (entry_id, line, account_id, amount) SELECT ${['e', 'n', 'a', 'amt'].map(col).join(', ')} FROM json_each(?)`)
+      .bind(JSON.stringify(lines)),
+  ];
 }
 
 async function jobExists(db: D1Database, jobId: unknown): Promise<string | null> {

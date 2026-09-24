@@ -262,7 +262,8 @@ export async function listMovements(db: D1Database, id: string) {
 
 function readAmounts(value: unknown): { itemId: string; amount: number }[] {
   if (!Array.isArray(value)) throw new ApiError(422, 'invalid', 'items must be a list.');
-  if (value.length > 100) throw new ApiError(422, 'invalid', 'Too many items.');
+  // Two statements per changed item, under the free plan's 50-query cap.
+  if (value.length > 20) throw new ApiError(422, 'invalid', 'Up to 20 items at a time.');
   const seen = new Set<string>();
   return value.map((v: unknown, i) => {
     const o = (v ?? {}) as Record<string, unknown>;

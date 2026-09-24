@@ -269,7 +269,7 @@ There are no passwords and no sign-up screen.
 | `GET /v1/inventory/usage` | owner | `{ usage: { [serviceId]: [{ itemId, name, unit, amount }] } }`: each package's usual products |
 | `PUT /v1/inventory/usage/:serviceId` | owner | `{ items: [{ itemId, amount }] }` replaces that package's usual products. Edit this under More → Pricing, per package |
 | `GET /v1/jobs/:id/usage` | owner | `{ used, suggested, productCost }`. `suggested` is the package's usual list until something is recorded: pre-fill "What did you use?" with it |
-| `PUT /v1/jobs/:id/usage` | owner | `{ items: [{ itemId, amount }] }` sets what the job used. Only the differences move stock, so saving twice changes nothing and a removed item goes back on the shelf |
+| `PUT /v1/jobs/:id/usage` | owner | `{ items: [{ itemId, amount }] }` (up to 20) sets what the job used. Only the differences move stock, so saving twice changes nothing and a removed item goes back on the shelf |
 
 **Job shape** (what `GET /v1/jobs` returns per job): `id`, `status`, `source`
 (`web` = customer booked online, `app` = Jacob added it), `service`,

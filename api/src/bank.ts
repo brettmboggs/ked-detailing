@@ -8,9 +8,10 @@ import {
   readBankFile,
   starterTreatment,
   transferLines,
+  type Account,
   type Line,
 } from '@ked/books';
-import { listAccounts, postEntry, resolvePayee } from './books.ts';
+import { entryStatements, listAccounts, postEntry, resolvePayee, type NewEntry } from './books.ts';
 import { ApiError, now, text, ulid } from './lib.ts';
 
 interface BankLineRow {
@@ -85,21 +86,20 @@ export async function importBank(db: D1Database, body: Record<string, unknown>, 
     .bind(importId, account.id, text(body.filename, 'File name', 200) ?? null, rows.length, at)
     .run();
   const prints = fingerprints(account.id, rows);
-  let added = 0;
-  // D1 batches are transactions; keep them modest in size.
-  for (let i = 0; i < rows.length; i += 50) {
-    const results = await db.batch(
-      rows.slice(i, i + 50).map((r, j) =>
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO bank_lines (id, import_id, account_id, date, description, merchant, amount, fingerprint, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          )
-          .bind(ulid(), importId, account.id, r.date, r.description, merchantKey(r.description), r.amount, prints[i + j], at),
-      ),
-    );
-    added += results.reduce((n, r) => n + (r.meta.changes ?? 0), 0);
-  }
+  // One statement for the whole file (see entryStatements on the query cap).
+  const lines = rows.map((r, i) => ({
+    id: ulid(), date: r.date, description: r.description, merchant: merchantKey(r.description), amount: r.amount, print: prints[i],
+  }));
+  const col = (k: string) => `json_extract(value, '$.${k}')`;
+  const inserted = await db
+    .prepare(
+      `INSERT OR IGNORE INTO bank_lines (id, import_id, account_id, date, description, merchant, amount, fingerprint, created_at)
+       SELECT ${col('id')}, ?, ?, ${col('date')}, ${col('description')}, ${col('merchant')}, ${col('amount')}, ${col('print')}, ?
+       FROM json_each(?)`,
+    )
+    .bind(importId, account.id, at, JSON.stringify(lines))
+    .run();
+  const added = inserted.meta.changes ?? 0;
   await db.prepare('UPDATE bank_imports SET added = ? WHERE id = ?').bind(added, importId).run();
 
   const matched = await autoMatch(db, account.id);
@@ -131,14 +131,20 @@ export async function autoMatch(db: D1Database, accountId: string): Promise<numb
 
   const pairs = matchBank(waiting, candidates);
   if (!pairs.size) return 0;
-  await db.batch(
-    [...pairs].map(([bankId, entryId]) =>
-      db
-        .prepare("UPDATE bank_lines SET status = 'matched', entry_id = ?, suggestion = NULL WHERE id = ? AND status = 'unmatched'")
-        .bind(entryId, bankId),
-    ),
-  );
+  await markMatched(db, [...pairs].map(([bankId, entryId]) => ({ bankId, entryId, auto: false }))).run();
   return pairs.size;
+}
+
+/** Mark many bank lines matched to their entries, as one statement. */
+function markMatched(db: D1Database, pairs: { bankId: string; entryId: string; auto: boolean }[]) {
+  return db
+    .prepare(
+      `UPDATE bank_lines SET status = 'matched', suggestion = NULL,
+         entry_id = (SELECT json_extract(value, '$.entryId') FROM json_each(?1) WHERE json_extract(value, '$.bankId') = bank_lines.id),
+         auto = (SELECT json_extract(value, '$.auto') FROM json_each(?1) WHERE json_extract(value, '$.bankId') = bank_lines.id)
+       WHERE status = 'unmatched' AND id IN (SELECT json_extract(value, '$.bankId') FROM json_each(?1))`,
+    )
+    .bind(JSON.stringify(pairs.map((p) => ({ ...p, auto: p.auto ? 1 : 0 }))));
 }
 
 const shift = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
@@ -175,19 +181,30 @@ export async function smartSort(db: D1Database, accountId: string, by: string) {
   if (!waiting.length) return { filed: 0, suggested: 0 };
 
   const { results: rules } = await db.prepare('SELECT * FROM bank_rules').all<RuleRow>();
-  const names = new Map((await listAccounts(db)).map((a) => [a.id, a.name]));
+  const accounts = await listAccounts(db);
+  const names = new Map(accounts.map((a) => [a.id, a.name]));
   const ruleFor = new Map(rules.map((r) => [`${r.merchant}|${r.direction}`, r]));
-  let filed = 0;
-  let suggested = 0;
+  const jobs = await unpaidJobs(db, waiting);
+
+  // Work it all out here, then write it in a handful of statements.
+  const entries: (NewEntry & { id: string })[] = [];
+  const matched: { bankId: string; entryId: string; auto: boolean }[] = [];
+  const hits = new Map<string, number>();
+  const suggestions: { id: string; suggestion: string | null }[] = [];
+  const transfersTo = new Set<string>();
+  const usedJobs = new Set<string>();
 
   for (const line of waiting) {
     const merchant = line.merchant ?? merchantKey(line.description);
     const rule = ruleFor.get(`${merchant}|${line.amount < 0 ? -1 : 1}`);
     if (rule) {
       try {
-        await applyDecision(db, line, ruleDecision(rule), by, { auto: true });
-        await db.prepare('UPDATE bank_rules SET hits = hits + 1 WHERE id = ?').bind(rule.id).run();
-        filed++;
+        const d = ruleDecision(rule);
+        const id = ulid();
+        entries.push({ ...buildEntry(accounts, line, d, by, {}), id });
+        matched.push({ bankId: line.id, entryId: id, auto: true });
+        hits.set(rule.id, (hits.get(rule.id) ?? 0) + 1);
+        if (d.action === 'transfer') transfersTo.add(d.otherAccountId);
         continue;
       } catch (err) {
         // A rule that no longer fits (an archived category, say) just stops
@@ -195,27 +212,71 @@ export async function smartSort(db: D1Database, accountId: string, by: string) {
         if (!(err instanceof ApiError)) throw err;
       }
     }
-    const suggestion = (await jobSuggestion(db, line)) ?? starterSuggestion(line, names);
-    if (suggestion) suggested++;
-    await db.prepare('UPDATE bank_lines SET suggestion = ? WHERE id = ?').bind(suggestion ? JSON.stringify(suggestion) : null, line.id).run();
+    const suggestion = jobSuggestion(line, jobs, usedJobs) ?? starterSuggestion(line, names);
+    suggestions.push({ id: line.id, suggestion: suggestion ? JSON.stringify(suggestion) : null });
   }
-  return { filed, suggested };
+
+  const stmts = [...entryStatements(db, entries)];
+  if (matched.length) stmts.push(markMatched(db, matched));
+  if (hits.size) {
+    stmts.push(
+      db
+        .prepare(
+          `UPDATE bank_rules SET hits = hits + (SELECT json_extract(value, '$.n') FROM json_each(?1) WHERE json_extract(value, '$.id') = bank_rules.id)
+           WHERE id IN (SELECT json_extract(value, '$.id') FROM json_each(?1))`,
+        )
+        .bind(JSON.stringify([...hits].map(([id, n]) => ({ id, n })))),
+    );
+  }
+  if (suggestions.length) {
+    stmts.push(
+      db
+        .prepare(
+          `UPDATE bank_lines SET suggestion = (SELECT json_extract(value, '$.suggestion') FROM json_each(?1) WHERE json_extract(value, '$.id') = bank_lines.id)
+           WHERE id IN (SELECT json_extract(value, '$.id') FROM json_each(?1))`,
+        )
+        .bind(JSON.stringify(suggestions)),
+    );
+  }
+  await db.batch(stmts);
+  // A transfer filed here may be the other half of a line on another account.
+  for (const other of transfersTo) await autoMatch(db, other);
+  return { filed: matched.length, suggested: suggestions.filter((x) => x.suggestion).length };
 }
 
-/** A deposit the same size as a recent job that has no payment recorded yet. */
-async function jobSuggestion(db: D1Database, line: BankLineRow): Promise<Suggestion | null> {
-  if (line.amount <= 0) return null;
-  const job = await db
+interface UnpaidJob {
+  id: string;
+  local_date: string;
+  name: string;
+  price: number;
+}
+
+/** Recent jobs with no payment recorded, across all the waiting deposits' dates, in one query. */
+async function unpaidJobs(db: D1Database, lines: BankLineRow[]): Promise<UnpaidJob[]> {
+  const deposits = lines.filter((l) => l.amount > 0).map((l) => l.date).sort();
+  if (!deposits.length) return [];
+  const { results } = await db
     .prepare(
-      `SELECT j.id, j.local_date, c.name FROM jobs j JOIN customers c ON c.id = j.customer_id
+      `SELECT j.id, j.local_date, c.name, COALESCE(j.final_price, json_extract(j.quote, '$.total')) AS price
+       FROM jobs j JOIN customers c ON c.id = j.customer_id
        WHERE j.status != 'cancelled' AND j.history = 0 AND j.local_date BETWEEN ? AND ?
-         AND COALESCE(j.final_price, json_extract(j.quote, '$.total')) = ?
-         AND NOT EXISTS (SELECT 1 FROM entries e WHERE e.job_id = j.id AND e.kind = 'income' AND e.voided_by IS NULL)
-       ORDER BY abs(julianday(j.local_date) - julianday(?)) LIMIT 1`,
+         AND NOT EXISTS (SELECT 1 FROM entries e WHERE e.job_id = j.id AND e.kind = 'income' AND e.voided_by IS NULL)`,
     )
-    .bind(shift(line.date, -21), line.date, line.amount, line.date)
-    .first<{ id: string; local_date: string; name: string }>();
+    .bind(shift(deposits[0]!, -21), deposits.at(-1)!)
+    .all<UnpaidJob>();
+  return results;
+}
+
+/** A deposit the same size as a job in the three weeks before it, nearest first. Each job is offered once. */
+function jobSuggestion(line: BankLineRow, jobs: UnpaidJob[], used: Set<string>): Suggestion | null {
+  if (line.amount <= 0) return null;
+  const from = shift(line.date, -21);
+  const days = (j: UnpaidJob) => Math.abs(Date.parse(j.local_date) - Date.parse(line.date));
+  const job = jobs
+    .filter((j) => !used.has(j.id) && j.price === line.amount && j.local_date >= from && j.local_date <= line.date)
+    .sort((a, b) => days(a) - days(b))[0];
   if (!job) return null;
+  used.add(job.id);
   return { action: 'job', jobId: job.id, source: 'job', label: `Payment for ${job.name}'s job on ${job.local_date}` };
 }
 
@@ -235,9 +296,17 @@ function starterSuggestion(line: BankLineRow, names: Map<string, string>): Sugge
   return { ...t, source: 'starter', label };
 }
 
-/** Post the entry a decision describes and mark the line matched to it, in one batch. */
-async function applyDecision(db: D1Database, line: BankLineRow, d: Decision, by: string, opts: { memo?: string | null; auto?: boolean } = {}) {
-  const accounts = await listAccounts(db);
+/**
+ * The entry a decision describes, not yet written. A job decision needs the
+ * job's service, looked up by the caller. Throws ApiError if it can't be made.
+ */
+function buildEntry(
+  accounts: Account[],
+  line: BankLineRow,
+  d: Decision,
+  by: string,
+  opts: { memo?: string | null; jobService?: string },
+): NewEntry {
   const amount = Math.abs(line.amount);
   const out = line.amount < 0;
   const memo = opts.memo ?? line.description;
@@ -250,30 +319,33 @@ async function applyDecision(db: D1Database, line: BankLineRow, d: Decision, by:
     }
   };
 
-  let entry: Parameters<typeof postEntry>[1];
   if (d.action === 'categorize') {
     const lines = ledger(() =>
       out ? expenseLines(accounts, amount, d.categoryId, line.account_id) : incomeLines(accounts, amount, d.categoryId, line.account_id),
     );
-    entry = { date: line.date, kind: out ? 'expense' : 'income', memo, payeeId: d.payeeId ?? null, lines, by };
-  } else if (d.action === 'transfer' || d.action === 'personal') {
+    return { date: line.date, kind: out ? 'expense' : 'income', memo, payeeId: d.payeeId ?? null, lines, by };
+  }
+  if (d.action === 'transfer' || d.action === 'personal') {
     // Personal money out is an owner draw; personal money in is a contribution.
     const other = d.action === 'transfer' ? d.otherAccountId : out ? 'owner-draws' : 'owner-contributions';
     const lines = ledger(() => (out ? transferLines(accounts, amount, line.account_id, other) : transferLines(accounts, amount, other, line.account_id)));
-    entry = { date: line.date, kind: 'transfer', memo: d.action === 'personal' ? `Personal: ${memo}` : memo, lines, by };
-  } else {
-    if (out) throw new ApiError(422, 'invalid', 'Only money coming in can be a job payment.');
-    const job = await db.prepare('SELECT id, service FROM jobs WHERE id = ?').bind(d.jobId).first<{ id: string; service: string }>();
-    if (!job) throw new ApiError(422, 'invalid', 'No job with that ID.');
-    const lines = ledger(() => incomeLines(accounts, amount, job.service === 'marine' ? 'income-marine' : 'income-detailing', line.account_id));
-    entry = { date: line.date, kind: 'income', memo, jobId: job.id, method: 'bank deposit', lines, by };
+    return { date: line.date, kind: 'transfer', memo: d.action === 'personal' ? `Personal: ${memo}` : memo, lines, by };
   }
+  if (out) throw new ApiError(422, 'invalid', 'Only money coming in can be a job payment.');
+  const lines = ledger(() => incomeLines(accounts, amount, opts.jobService === 'marine' ? 'income-marine' : 'income-detailing', line.account_id));
+  return { date: line.date, kind: 'income', memo, jobId: d.jobId, method: 'bank deposit', lines, by };
+}
 
-  await postEntry(db, entry, (entryId) => [
-    db
-      .prepare("UPDATE bank_lines SET status = 'matched', entry_id = ?, auto = ?, suggestion = NULL WHERE id = ?")
-      .bind(entryId, opts.auto ? 1 : 0, line.id),
-  ]);
+/** Post the entry a decision describes and mark the line matched to it, in one batch. */
+async function applyDecision(db: D1Database, line: BankLineRow, d: Decision, by: string, opts: { memo?: string | null } = {}) {
+  let jobService: string | undefined;
+  if (d.action === 'job') {
+    const job = await db.prepare('SELECT service FROM jobs WHERE id = ?').bind(d.jobId).first<{ service: string }>();
+    if (!job) throw new ApiError(422, 'invalid', 'No job with that ID.');
+    jobService = job.service;
+  }
+  const entry = buildEntry(await listAccounts(db), line, d, by, { ...opts, jobService });
+  await postEntry(db, entry, (entryId) => [markMatched(db, [{ bankId: line.id, entryId, auto: false }])]);
   if (d.action === 'transfer') await autoMatch(db, d.otherAccountId);
 }
 

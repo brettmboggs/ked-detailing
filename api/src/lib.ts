@@ -18,7 +18,45 @@ export type Bindings = Env & {
   CUSTOMER_EMAIL?: string;
   /** Tests point this away from Expo. */
   EXPO_PUSH_URL?: string;
+  /** Tests set "1" to get each response's query count in X-D1-Queries. */
+  COUNT_QUERIES?: string;
 };
+
+/**
+ * The free Workers plan caps a request at 50 D1 queries, counting every
+ * statement in a batch, and local dev doesn't enforce it. This wraps the
+ * database to count, so tests can hold heavy endpoints under the cap.
+ */
+export function countingDb(db: D1Database, count: { n: number }): D1Database {
+  const wrap = (stmt: D1PreparedStatement): D1PreparedStatement =>
+    new Proxy(stmt, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof value !== 'function') return value;
+        if (prop === 'bind') return (...args: unknown[]) => wrap(value.apply(target, args));
+        if (['first', 'all', 'run', 'raw'].includes(prop as string)) {
+          return (...args: unknown[]) => {
+            count.n++;
+            return value.apply(target, args);
+          };
+        }
+        return value.bind(target);
+      },
+    });
+  return new Proxy(db, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (prop === 'prepare') return (sql: string) => wrap(target.prepare(sql));
+      if (prop === 'batch') {
+        return (stmts: D1PreparedStatement[]) => {
+          count.n += stmts.length;
+          return target.batch(stmts);
+        };
+      }
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+}
 
 /** Thrown anywhere; rendered as the contract's error body by `onError`. */
 export class ApiError extends HTTPException {

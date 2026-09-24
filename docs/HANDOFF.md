@@ -113,19 +113,20 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (66), import (6). The API tests
+  scheduling (11), books (18) and API (68), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
   (`POST /books/accounts`) so other suites' data can't interfere.
 - **Type checks:** `npm run check -w @ked/api` for the API, and
   `npx astro check` or `npm run verify` for the site.
-- **Free-plan query cap:** Cloudflare's D1 docs say a free-plan request can
-  make 50 database queries, and every statement in a `batch` counts. It
-  wasn't possible to confirm this in production (deploying a probe Worker
-  was blocked). The importers stay under it. **The bank import makes several
-  queries per line**, so a long statement may fail in production. Test with
-  a real month's QFX early, and if it fails, file lines in chunks.
+- **Free-plan query cap:** Cloudflare's docs say a free-plan request may make
+  50 database queries, and every statement in a `batch` counts. Local dev
+  doesn't enforce it, so the test Worker runs with `COUNT_QUERIES=1`, reports
+  each response's count in `X-D1-Queries`, and `test/queries.test.ts` holds
+  the heavy paths under 50. Bulk writes go through `json_each` in one
+  statement (`entryStatements`, `markMatched`). Anything that loops over rows
+  must do the same, and needs a case in that test.
 - **npm bug:** installing `@cloudflare/vitest-pool-workers` crashes npm's
   resolver (`reading 'edgesOut'`). That's why the API tests are node:test
   against `wrangler dev`. Don't add vitest back.
