@@ -13,7 +13,8 @@
     "check": "astro check",
     "verify": "astro check && astro build",
     "build:staging": "KED_BASE=/ked/ KED_SITE=https://brettboggs.dev astro build",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "stage": "bash tools/stage.sh"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
