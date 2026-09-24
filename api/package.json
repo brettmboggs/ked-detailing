@@ -1,0 +1,24 @@
+{
+  "name": "@ked/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The one backend for the website and Jacob's iPhone app. Cloudflare Worker + D1.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate:local": "wrangler d1 migrations apply ked --local",
+    "migrate:remote": "wrangler d1 migrations apply ked --remote",
+    "types": "wrangler types",
+    "test": "bash test/run.sh",
+    "check": "tsc -p ."
+  },
+  "dependencies": {
+    "@ked/pricing": "0.1.0",
+    "hono": "^4.13.9",
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "wrangler": "^4.138.0"
+  }
+}

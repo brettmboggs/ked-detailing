@@ -1,0 +1,31 @@
+{
+  // The one backend for kedservice.com and Jacob's iPhone app.
+  // Contract: ../docs/mobile-app.md#backend-api-contract-v0
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "ked-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ked",
+      "database_id": "2affc5fe-4049-4575-abfc-13193c95d52e",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Browsers allowed to call the public endpoints. The app is native and
+    // doesn't need CORS.
+    "ALLOWED_ORIGINS": "https://www.kedservice.com,https://kedservice.com,https://ked-detailing.pages.dev,https://brettboggs.dev,http://localhost:4321",
+    // The iPhone app's bundle ID: Apple issues identity tokens for it.
+    // Placeholder until the app repo picks its real one.
+    "APPLE_AUDIENCE": "com.brettboggs.ked",
+    // Who may sign in. Apple `sub` values and/or verified emails, comma-separated.
+    // A refused sign-in returns its `sub`, so the first attempt tells you what to add.
+    "OWNER_APPLE_SUBS": "",
+    "OWNER_EMAILS": "brettmboggs@gmail.com,knockemdowndetailing@gmail.com"
+  }
+  // Secrets (wrangler secret put): ADMIN_TOKEN — break-glass bearer token for
+  // Brett's scripts and curl. Optional; owner endpoints refuse it if unset.
+}

@@ -28,7 +28,7 @@ He called it an "AI estimator". It is not AI. Quotes come from a tunable formula
 ```
 ked-detailing  (this repo, github.com/brettmboggs/ked-detailing)
 ├── packages/pricing   quote formula, shared: TypeScript, zero dependencies
-├── api/               Cloudflare Worker + D1: the one backend   ← NOT BUILT YET
+├── api/               Cloudflare Worker + D1: the one backend   ← partly built
 └── src/               the website (Astro), incl. /quote
 
 ked-app  (the mobile repo)
@@ -110,10 +110,15 @@ money is **integer cents**.
 
 ## Backend API (contract v0)
 
-> **Status: not built.** The Worker gets built in `api/` in this repo against
-> this contract. Until then, the app builds against a typed client with an
-> in-memory mock, selected when `EXPO_PUBLIC_API_URL` is unset. When the real
-> API lands, only the client's transport changes.
+> **Status:** the Worker lives in `api/` in this repo (Hono, D1 database `ked`).
+> **Built and tested:** auth, pricing and leads. Everything else in the table is
+> still to come. For endpoints that don't exist yet, the app uses a typed client
+> with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
+> unset. When an endpoint lands, only the client's transport changes.
+>
+> Sign-in allowlist: `OWNER_EMAILS` / `OWNER_APPLE_SUBS` in `api/wrangler.jsonc`.
+> `APPLE_AUDIENCE` there must match the app's bundle ID. It's currently a
+> placeholder, `com.brettboggs.ked`, so tell this repo the real one.
 
 **Conventions**
 - Base URL comes from `EXPO_PUBLIC_API_URL`: a `*.workers.dev` URL until

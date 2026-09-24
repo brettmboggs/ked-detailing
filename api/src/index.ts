@@ -1,0 +1,71 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
+import { requireOwner, signInWithApple, type Owner } from './auth.ts';
+import { createLead, listLeads, updateLead } from './leads.ts';
+import { ApiError, json, list, text, type Bindings } from './lib.ts';
+import { currentPricing, savePricing } from './pricing.ts';
+
+/**
+ * The contract lives in docs/mobile-app.md. Change it there first, then here.
+ */
+const app = new Hono<{ Bindings: Bindings; Variables: { owner: Owner } }>().basePath('/v1');
+
+// Browsers only hit the public endpoints; the native app doesn't send Origin.
+app.use('*', (c, next) =>
+  cors({
+    origin: (origin) => (list(c.env.ALLOWED_ORIGINS).includes(origin.toLowerCase()) ? origin : null),
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
+    maxAge: 86400,
+  })(c, next),
+);
+
+/* ------------------------------------------------------------- public */
+
+app.get('/pricing', async (c) => {
+  const pricing = await currentPricing(c.env.DB);
+  // Short cache: a save shows up on the website within a minute.
+  c.header('Cache-Control', 'public, max-age=60');
+  return c.json(pricing);
+});
+
+app.post('/leads', async (c) => c.json(await createLead(c.env.DB, await json(c.req.raw)), 201));
+
+app.post('/auth/apple', async (c) => {
+  const identityToken = text((await json(c.req.raw)).identityToken, 'identityToken', 5000);
+  if (!identityToken) throw new ApiError(422, 'invalid', 'identityToken is required.');
+  return c.json(await signInWithApple(c.env, identityToken));
+});
+
+/* -------------------------------------------------------------- owner */
+
+app.put('/pricing', requireOwner, async (c) =>
+  c.json(await savePricing(c.env.DB, await json(c.req.raw), c.get('owner').email ?? c.get('owner').subject)),
+);
+
+app.get('/leads', requireOwner, async (c) => c.json({ leads: await listLeads(c.env.DB, c.req.query('status')) }));
+
+app.patch('/leads/:id', requireOwner, async (c) =>
+  c.json(await updateLead(c.env.DB, c.req.param('id'), await json(c.req.raw))),
+);
+
+/* ------------------------------------------------------------- errors */
+
+app.notFound((c) => c.json({ error: { code: 'not_found', message: 'No such endpoint.' } }, 404));
+
+app.onError((err, c) => {
+  if (err instanceof ApiError) {
+    return c.json(
+      { error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) } },
+      err.status,
+    );
+  }
+  if (err instanceof HTTPException) {
+    return c.json({ error: { code: 'http_error', message: err.message } }, err.status);
+  }
+  console.error(err);
+  return c.json({ error: { code: 'server_error', message: 'Something went wrong on our side.' } }, 500);
+});
+
+export default app;
