@@ -444,6 +444,10 @@ Tokens (from the website's `src/styles/global.css`):
 | bone-200 | `#d3d7de` | Secondary text |
 | bone-400 | `#8a919e` | Muted text |
 
+A **light look** (More → Settings) is there for full sun: the same tokens as a
+paper sheet (off-white ground, near-black text, gold darkened to `#a8740f` so it
+reads on white). Dark stays the default.
+
 Type: **Archivo** (variable, condensed widths, heavy weights, uppercase) for
 headings and numbers, **Inter** for body. Both are on Google Fonts and load with
 `expo-font`.
