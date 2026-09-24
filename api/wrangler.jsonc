@@ -30,7 +30,7 @@
     // Who may sign in. Apple `sub` values and/or verified emails, comma-separated.
     // A refused sign-in returns its `sub`, so the first attempt tells you what to add.
     "OWNER_APPLE_SUBS": "001980.46513f188ea7479eb56b73ed3e16f9a1.1958",
-    "OWNER_EMAILS": "brettmboggs@gmail.com,knockemdowndetailing@gmail.com",
+    "OWNER_EMAILS": "brettmboggs@gmail.com,knockemdowndetailing@gmail.com,jjsmitty314@yahoo.com",
     // The website's pay page. Invoice links are this plus ?i=<token>. Switch
     // to https://www.kedservice.com/pay/ when the domain moves.
     "PAY_URL": "https://ked-detailing.pages.dev/pay/",
