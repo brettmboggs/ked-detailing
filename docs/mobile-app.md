@@ -157,7 +157,8 @@ means money in and `−` means money out, from the account's point of view.
 > **photos** (receipts and before/after job shots), and **invoices** (pay
 > links texted from his phone, paid status read from the books), and
 > **inventory** (barcodes, stock history, low-stock list, product use per job),
-> and **alerts** (push to his phone on a booking, a quote request, or an invoice opened).
+> **alerts** (push to his phone on a booking, a quote request, or an invoice opened), and
+> **customer booking links** (customers see, move or cancel their own booking).
 > Photos are stored in Cloudflare KV (free plan: 1 GB, 1,000 uploads a day),
 > so **downscale to about 1600 px and JPEG quality 0.7 before uploading**, which
 > keeps each photo around 200 KB. If storage is ever missing, calls return `503
@@ -202,10 +203,13 @@ There are no passwords and no sign-up screen.
 | `GET /v1/leads?status=` | owner | New quote requests |
 | `PATCH /v1/leads/:id` | owner | `status`: `new` → `contacted` → `booked` / `lost` |
 | `POST /v1/availability` | – | `{ input: QuoteInput }` → `{ bookable, reason?, timezone, minutes, quote, days: [{ date, slots: [ISO] }] }`. `reason` is customer-facing text when it can't be booked online |
-| `POST /v1/bookings` | – | Website booking: `{ input, start, name, phone, address, email?, zip?, vehicle?, notes? }` → `201 { id, start, end, quote }`. `409 slot_taken` means someone else got it, so refetch availability |
+| `POST /v1/bookings` | – | Website booking: `{ input, start, name, phone, address, email?, zip?, vehicle?, notes? }` → `201 { id, start, end, quote, manageUrl }`. `409 slot_taken` means someone else got it, so refetch availability |
+| `GET /v1/manage/:token` | – | The customer's booking page (`/booking/?b=<token>` on the site). First name only |
+| `GET /v1/manage/:token/availability` / `POST …/reschedule` / `POST …/cancel` | – | The customer moves or cancels it, under the same rules as booking online: only while `scheduled` and further off than `minNoticeHours`. Jacob gets a push (`rescheduled` / `cancelled`, id = job) |
 | `GET/PUT /v1/settings/booking` | owner | `{ rules: BookingRules, updatedAt }`. PUT runs `validateRules` (`422` with `details`) |
 | `GET /v1/jobs?from=&to=` | owner | `{ jobs }` overlapping the range (ISO). Defaults to yesterday through two weeks out. Each job embeds `customer: { id, name, phone, email }` |
 | `GET /v1/jobs/:id` | owner | One job |
+| `POST /v1/jobs/:id/confirmation` | owner | `{ url, message }`: the text confirming a booking, with the customer's own link to see, move or cancel it. **Confirm** on a web booking opens the SMS composer with `message`. Works for jobs he adds too |
 | `POST /v1/jobs` | owner | Jacob adds a job: `{ customerId \| customer: { name, phone?, email?, address? }, input, start, address?, zip?, vehicle?, notes?, minutes? }` → `201 { job, warnings: string[] }`. He can book anything. Clashes (overlap, day limit, closed day, outside hours) come back as warnings to show him, not errors |
 | `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents) |
 | `GET /v1/customers?q=` | owner | `{ customers }`. Search by name, phone digits or email. Empty `q` lists the newest |
@@ -271,8 +275,10 @@ There are no passwords and no sign-up screen.
 (`web` = customer booked online, `app` = Jacob added it), `service`,
 `customer { id, name, phone, email }`, `vehicle`, `address`, `zip`, `notes`,
 `input` (the `QuoteInput`), `quote` (`{ service, lines, total, range, hours,
-inspection, notes }`), `configVersion`, `finalPrice`, `start`, `end`, `date`
-(the local day), `createdAt`, `updatedAt`.
+inspection, notes }`), `configVersion`, `finalPrice`, `manageToken`,
+`cancelledBy` (`customer` or `owner`), `cancelReason`, `start`, `end`, `date`
+(the local day), `createdAt`, `updatedAt`. Show a customer's cancel reason on
+the job.
 
 **Invoice shape**: `id`, `number` (1001 up), `jobId`, `customer { id, name,
 phone, email }`, `status` (`draft` → `sent` → `paid`, or `void`), `lines`,
@@ -293,7 +299,8 @@ e.g. 0.25 gal), `reorderAt`, `reorderUrl`, `cost` (cents per unit), `notes`,
 **Push alerts.** The server pushes through Expo's push service (free, no
 keys needed) when a customer books online (`type: 'booking'`, `id` = job), a
 website quote request comes in (`'lead'`, lead id), or a customer first opens
-an invoice (`'invoice_opened'`, invoice id). Each push carries `data: { type,
+an invoice (`'invoice_opened'`, invoice id), or moves or cancels
+their booking through their link (`'rescheduled'` / `'cancelled'`, job id). Each push carries `data: { type,
 id }`: open that screen on tap. Ask for notification permission right after
 sign-in, with a line on why ("So you hear the moment someone books"). This is
 how Jacob learns about online bookings, so it has to work before `/quote`

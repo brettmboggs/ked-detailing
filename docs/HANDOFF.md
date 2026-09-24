@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0008 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0009 applied |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -87,6 +87,13 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   `wrangler.jsonc`). **Customer email needs Brett's call:** it needs the
   Workers Paid plan, $5/month, which breaks the $0 goal. Until then,
   customers get the on-page confirmation, and Jacob texts invoice links.
+- **Customer booking links:** every job has a private link
+  (`/booking/?b=<token>`, `src/pages/booking.astro`) where the customer can
+  see it, move it (same calendar as /quote, `src/scripts/slot-picker.ts`) or
+  cancel, until the booking notice window. Jacob gets a push for each change.
+  /quote shows the link after booking, and `POST /jobs/:id/confirmation`
+  gives Jacob a text to send with it. `MANAGE_URL` also switches to
+  kedservice.com at cutover.
 - **Photos:** receipts and before/after job photos, stored in **KV**, not R2.
   R2 requires a credit card on the account, and Brett won't put his own card
   on Jacob's business. The storage interface prefers R2 if it's ever bound.
@@ -97,7 +104,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (58). The API tests
+  scheduling (11), books (18) and API (63). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
@@ -110,7 +117,8 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 - **Killing processes:** `pkill -f "wrangler dev --port 8787"` matches its own
   shell and kills it. Use `pkill -f "[w]rangler.*dev --port 8787"`.
 - **Browser checks:** the site uses Lenis smooth scroll, so `scrollIntoView`
-  and `window.scrollTo` don't move the page. Scroll with the mouse-wheel
+  and `window.scrollTo` don't move the page. Page scripts scroll by
+  dispatching a cancelable `ked:scroll-to` event (see `motion.ts`). Scroll with the mouse-wheel
   action, or read state through JavaScript.
 - **Tailwind** only scans `src/` (`@import 'tailwindcss' source('..')` in
   `src/styles/global.css`), so words in `api/`, `docs/` and `packages/` can't
@@ -168,7 +176,7 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 3. **His Apple ID email:** add it to `OWNER_EMAILS` and deploy.
 4. **Domain switched:** remove `KED_NOINDEX` from Pages (GOING-LIVE.md step 4).
    Then switch on email (steps in `api/wrangler.jsonc`) and change
-   `PAY_URL` to kedservice.com. Push alerts already tell Jacob about
+   `PAY_URL` and `MANAGE_URL` to kedservice.com. Push alerts already tell Jacob about
    bookings, as long as the app has notifications on.
 5. **Stripe:** once he adds Brett as a Developer, fill in Checkout behind the
    existing pay links (`startCheckout`, plus a webhook calling
@@ -185,12 +193,10 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 
 ## What to build next (none of it needs Jacob)
 
-1. **Customer self-service:** a link in the confirmation to view, reschedule
-   or cancel a booking.
-2. **Wire the website into the navigation** behind one switch (`quoteLive` in
+1. **Wire the website into the navigation** behind one switch (`quoteLive` in
    `src/data/site.ts`): header "Get a quote", "from $X" on the packages, the
    CTA. It stays off until cutover.
-3. **Housecall Pro and QuickBooks importers** for the cutover.
+2. **Housecall Pro and QuickBooks importers** for the cutover.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.

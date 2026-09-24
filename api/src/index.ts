@@ -47,7 +47,17 @@ import {
   updateItem,
 } from './inventory.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
-import { bookingMade, invoiceOpened, leadMade, listAlerts, registerDevice, removeDevice } from './notify.ts';
+import { cancelBooking, confirmationText, manageAvailability, manageUrl, reschedule, viewBooking } from './manage.ts';
+import {
+  bookingCancelled,
+  bookingMade,
+  bookingMoved,
+  invoiceOpened,
+  leadMade,
+  listAlerts,
+  registerDevice,
+  removeDevice,
+} from './notify.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
@@ -104,8 +114,30 @@ app.post('/availability', async (c) => {
 
 app.post('/bookings', async (c) => {
   const booking = await createBooking(c.env.DB, await json(c.req.raw));
-  if (booking.start) later(c, bookingMade(c.env, booking.id)); // no start means the honeypot caught it
-  return c.json(booking, 201);
+  if (!booking.start) return c.json(booking, 201); // the honeypot caught it
+  later(c, bookingMade(c.env, booking.id));
+  const { manageToken, ...rest } = booking;
+  return c.json({ ...rest, manageUrl: manageUrl(c.env, manageToken!) }, 201);
+});
+
+// The customer's own booking, by the secret in their link. Never cached.
+app.get('/manage/:token', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await viewBooking(c.env, c.req.param('token')));
+});
+app.get('/manage/:token/availability', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await manageAvailability(c.env, c.req.param('token')));
+});
+app.post('/manage/:token/reschedule', async (c) => {
+  const r = await reschedule(c.env, c.req.param('token'), await json(c.req.raw));
+  if (r.moved) later(c, bookingMoved(c.env, r.jobId!, r.from!));
+  return c.json(r.booking);
+});
+app.post('/manage/:token/cancel', async (c) => {
+  const r = await cancelBooking(c.env, c.req.param('token'), await json(c.req.raw).catch(() => ({})));
+  later(c, bookingCancelled(c.env, r.jobId, r.reason));
+  return c.json(r.booking);
 });
 
 // A customer's invoice, by the secret in their pay link. Never cached: it
@@ -157,6 +189,7 @@ app.put('/settings/booking', requireOwner, async (c) => {
 
 app.get('/jobs', requireOwner, async (c) => c.json({ jobs: await listJobs(c.env.DB, c.req.query('from'), c.req.query('to')) }));
 app.post('/jobs', requireOwner, async (c) => c.json(await createJob(c.env.DB, await json(c.req.raw)), 201));
+app.post('/jobs/:id/confirmation', requireOwner, async (c) => c.json(await confirmationText(c.env, c.req.param('id'))));
 app.get('/jobs/:id', requireOwner, async (c) => c.json(await getJob(c.env.DB, c.req.param('id'))));
 app.patch('/jobs/:id', requireOwner, async (c) =>
   c.json(await updateJob(c.env.DB, c.req.param('id'), await json(c.req.raw))),

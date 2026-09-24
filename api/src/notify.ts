@@ -24,7 +24,7 @@ const BUSINESS = "Knock Em' Down Detailing";
 const PHONE = '(314) 223-2988';
 
 interface Alert {
-  type: 'booking' | 'lead' | 'invoice_opened';
+  type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled';
   refId: string;
   title: string;
   body: string;
@@ -216,4 +216,26 @@ export async function invoiceOpened(env: Bindings, invoice: { id: string; number
     title: `${invoice.customerName} opened invoice ${invoice.number}`,
     body: `${dollars(invoice.balance)} still due.`,
   });
+}
+
+/** The customer moved their booking through their link. */
+export async function bookingMoved(env: Bindings, jobId: string, from: string) {
+  const job = await getJob(env.DB, jobId);
+  const [was, now] = await Promise.all([when(env, from), when(env, job.start)]);
+  await alert(
+    env,
+    { type: 'rescheduled', refId: job.id, title: `${job.customer.name} moved their booking`, body: `Now ${now} (was ${was}).` },
+    { to: '', subject: `Moved: ${job.customer.name}, now ${now}`, text: `${job.customer.name} moved their booking.\nNow: ${now}\nWas: ${was}\nWhere: ${job.address}` },
+  );
+}
+
+/** The customer cancelled through their link. */
+export async function bookingCancelled(env: Bindings, jobId: string, reason: string | null) {
+  const job = await getJob(env.DB, jobId);
+  const at = await when(env, job.start);
+  await alert(
+    env,
+    { type: 'cancelled', refId: job.id, title: `${job.customer.name} cancelled`, body: `${at}${reason ? `: "${reason}"` : ''}. That time is open again.` },
+    { to: '', subject: `Cancelled: ${job.customer.name}, ${at}`, text: `${job.customer.name} cancelled ${at}.${reason ? `\nReason: ${reason}` : ''}` },
+  );
 }

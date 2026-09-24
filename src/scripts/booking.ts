@@ -1,4 +1,5 @@
 import type { Quote, QuoteInput } from '@ked/pricing';
+import { slotPicker, type Day } from './slot-picker';
 
 /**
  * The "When" and "Your details" half of /quote: fetches open times for the job
@@ -8,11 +9,6 @@ import type { Quote, QuoteInput } from '@ked/pricing';
  * The server decides everything that matters — the price, the job length and
  * whether a time is free. This only displays what it says.
  */
-
-interface Day {
-  date: string;
-  slots: string[];
-}
 
 interface Availability {
   bookable: boolean;
@@ -29,16 +25,10 @@ interface Options {
   phone: string;
 }
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
 export function initBooking({ api, form, readInput, phone }: Options) {
   const $ = <T extends HTMLElement>(sel: string) => form.querySelector<T>(sel)!;
   const status = $('[data-when-status]');
   const calendar = $('[data-calendar]');
-  const daysEl = $('[data-days]');
-  const timesWrap = $('[data-times-wrap]');
-  const timesLabel = $('[data-times-label]');
-  const timesEl = $('[data-times]');
   const lengthEl = $('[data-length]');
   const bookBtn = $<HTMLButtonElement>('[data-book]');
   const leadBtn = $<HTMLButtonElement>('[data-send-lead]');
@@ -48,8 +38,10 @@ export function initBooking({ api, form, readInput, phone }: Options) {
   const chosenText = document.querySelector<HTMLElement>('[data-chosen-text]');
 
   let avail: Availability | null = null;
-  let day: string | null = null;
-  let slot: string | null = null;
+  const picker = slotPicker(
+    { days: $('[data-days]'), timesWrap: $('[data-times-wrap]'), timesLabel: $('[data-times-label]'), times: $('[data-times]') },
+    (d, s) => choose(d, s),
+  );
   let lastKey = '';
   let request = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -57,14 +49,7 @@ export function initBooking({ api, form, readInput, phone }: Options) {
 
   /* ------------------------------------------------------ formatting */
 
-  const tz = () => avail?.timezone ?? 'America/Chicago';
-  const time = (iso: string) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: tz(), hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
-  // Dates are plain calendar days: format at noon UTC so no zone can shift them.
-  const dayName = (date: string, opts: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', ...opts }).format(new Date(`${date}T12:00:00Z`));
-  const longDay = (date: string) => dayName(date, { weekday: 'long', month: 'long', day: 'numeric' });
-  const when = (iso: string, date: string) => `${dayName(date, { weekday: 'short', month: 'short', day: 'numeric' })} at ${time(iso)}`;
+  const { when } = picker;
   const hoursText = (minutes: number) => {
     const h = minutes / 60;
     return `${h} ${h === 1 ? 'hour' : 'hours'}`;
@@ -137,86 +122,8 @@ export function initBooking({ api, form, readInput, phone }: Options) {
     calendar.hidden = false;
     calendar.classList.remove('opacity-50', 'pointer-events-none');
     lengthEl.textContent = `Jacob holds ${hoursText(avail.minutes)} for this job.`;
-
-    // Keep the customer's pick if it's still open; otherwise the first open day.
-    if (!day || !open.some((d) => d.date === day)) day = open[0]!.date;
-    if (slot && !avail.days.find((d) => d.date === day)?.slots.includes(slot)) slot = null;
-    drawDays();
-    drawTimes();
-    choose(day, slot);
-  }
-
-  function drawDays() {
-    const cells: HTMLElement[] = WEEKDAYS.map((w) => cell('py-2 text-xs uppercase tracking-[0.15em] text-bone-500', w));
-    let column = 0;
-    const pad = (to: number) => {
-      while (column < to) {
-        cells.push(cell('py-3'));
-        column++;
-      }
-    };
-    avail!.days.forEach((d, i) => {
-      const weekday = new Date(`${d.date}T12:00:00Z`).getUTCDay();
-      if (i === 0 || d.date.endsWith('-01')) {
-        if (column !== 0) pad(7);
-        column = 0;
-        const month = cell(
-          'col-span-7 px-3 py-2 text-left font-display text-sm uppercase tracking-[0.1em] text-bone-200',
-          dayName(d.date, { month: 'long', year: 'numeric' }),
-        );
-        cells.push(month);
-        pad(weekday);
-      }
-      cells.push(d.slots.length ? dayOption(d) : cell('py-3 text-sm text-ink-600', String(Number(d.date.slice(8)))));
-      column = (column + 1) % 7;
-    });
-    if (column !== 0) pad(7);
-    daysEl.replaceChildren(...cells);
-  }
-
-  function dayOption(d: Day) {
-    const label = cell(
-      'relative cursor-pointer py-3 text-sm font-semibold text-bone-50 transition-colors hover:bg-ink-900 ' +
-        'has-[:checked]:bg-gold-500 has-[:checked]:text-ink-950 ' +
-        'has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold-400',
-      String(Number(d.date.slice(8))),
-      'label',
-    );
-    label.title = longDay(d.date);
-    const input = radio('day', d.date, d.date === day, longDay(d.date));
-    input.addEventListener('change', () => {
-      day = d.date;
-      slot = null;
-      drawTimes();
-      choose(day, slot);
-    });
-    label.prepend(input);
-    return label;
-  }
-
-  function drawTimes() {
-    const d = avail!.days.find((x) => x.date === day);
-    if (!d) return void (timesWrap.hidden = true);
-    timesWrap.hidden = false;
-    timesLabel.textContent = longDay(d.date);
-    timesEl.replaceChildren(
-      ...d.slots.map((iso) => {
-        const label = cell(
-          'cursor-pointer py-3 text-sm tabular-nums text-bone-200 transition-colors hover:bg-ink-900 hover:text-bone-50 ' +
-            'has-[:checked]:bg-gold-500 has-[:checked]:font-semibold has-[:checked]:text-ink-950 ' +
-            'has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold-400',
-          time(iso),
-          'label',
-        );
-        const input = radio('slot', iso, iso === slot, `${longDay(d.date)} at ${time(iso)}`);
-        input.addEventListener('change', () => {
-          slot = iso;
-          choose(day, slot);
-        });
-        label.prepend(input);
-        return label;
-      }),
-    );
+    // Keeps the customer's pick if it's still open.
+    picker.set(avail.days, avail.timezone);
   }
 
   /** Reflect the current pick in the book button and the summary panel. */
@@ -230,25 +137,6 @@ export function initBooking({ api, form, readInput, phone }: Options) {
     }
   }
 
-  /** A ruled grid cell. Pickable cells are labels, so a click anywhere selects. */
-  function cell(className: string, text?: string, tag: 'div' | 'label' = 'div') {
-    const el = document.createElement(tag);
-    el.className = `border-b border-r border-ink-800 ${className}`;
-    if (text !== undefined) el.append(text);
-    return el;
-  }
-
-  function radio(name: string, value: string, checked: boolean, label: string) {
-    const input = document.createElement('input');
-    input.type = 'radio';
-    input.name = name;
-    input.value = value;
-    input.checked = checked;
-    input.className = 'sr-only';
-    input.setAttribute('aria-label', label);
-    return input;
-  }
-
   /* ------------------------------------------------------ submitting */
 
   const field = (name: string) => String(new FormData(form).get(name) ?? '').trim();
@@ -258,11 +146,16 @@ export function initBooking({ api, form, readInput, phone }: Options) {
     errorEl.hidden = false;
   }
 
-  function finish(title: string, body: string) {
+  function finish(title: string, body: string, manageUrl?: string) {
     form.querySelector<HTMLElement>('[data-when]')!.hidden = true;
     form.querySelector<HTMLElement>('[data-details]')!.hidden = true;
     done.querySelector('[data-done-title]')!.textContent = title;
     done.querySelector('[data-done-body]')!.textContent = body;
+    const link = done.querySelector<HTMLAnchorElement>('[data-done-link]');
+    if (link && manageUrl) {
+      link.href = manageUrl;
+      link.hidden = false;
+    }
     done.hidden = false;
     done.focus();
   }
@@ -273,8 +166,8 @@ export function initBooking({ api, form, readInput, phone }: Options) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const json = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-    return { res, error: json?.error };
+    const json = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string }; manageUrl?: string } | null;
+    return { res, error: json?.error, body: json };
   }
 
   async function run(button: HTMLButtonElement, working: string, task: () => Promise<void>) {
@@ -291,12 +184,14 @@ export function initBooking({ api, form, readInput, phone }: Options) {
       busy = false;
       button.textContent = label;
       leadBtn.disabled = false;
-      choose(day, slot);
+      choose(picker.day, picker.slot);
     }
   }
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    const slot = picker.slot;
+    const day = picker.day;
     if (!slot || !day) return fail('Pick a day and a time first.');
     if (!field('name')) return fail('Add your name so Jacob knows who to ask for.');
     if (!field('phone')) return fail('Add a phone number so Jacob can reach you on the day.');
@@ -306,7 +201,7 @@ export function initBooking({ api, form, readInput, phone }: Options) {
 
     void run(bookBtn, 'Booking…', async () => {
       const input = readInput();
-      const { res, error } = await post('bookings', {
+      const { res, error, body: booking } = await post('bookings', {
         name: field('name'),
         phone: field('phone'),
         email: field('email'),
@@ -319,13 +214,17 @@ export function initBooking({ api, form, readInput, phone }: Options) {
         start,
       });
       if (res.status === 201) {
-        finish(`Booked: ${when(start, date)}`, `Jacob has it on his calendar and will text you to confirm. Need to change it? Call or text ${formatPhone(phone)}.`);
+        finish(
+          `Booked: ${when(start, date)}`,
+          'Jacob has it on his calendar and will text you to confirm. Save the link below: it lets you move or cancel your booking.',
+          booking?.manageUrl,
+        );
         return;
       }
       fail(error?.message ?? `That didn't go through. Call or text ${formatPhone(phone)}.`);
       // Someone else got there first: show what's still open.
       if (res.status === 409) {
-        slot = null;
+        picker.clearSlot();
         lastKey = '';
         await load(input);
       }

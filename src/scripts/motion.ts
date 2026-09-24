@@ -323,6 +323,13 @@ export function initMotion() {
 
   initHeader(() => lenis.scroll);
 
+  // Page scripts can't reach Lenis, and native scrolling fights it, so they ask
+  // with this event. Cancelling it tells them it was handled.
+  document.addEventListener('ked:scroll-to', (e) => {
+    e.preventDefault();
+    lenis.scrollTo((e as CustomEvent<HTMLElement>).detail, { offset: -120, duration: 0.9 });
+  });
+
   // In-page links go through Lenis so the easing matches the rest of the site.
   // Nav hrefs are root-relative ("/#work") so they also work from /store, so
   // match on the resolved URL rather than on a leading "#".

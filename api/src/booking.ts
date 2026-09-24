@@ -9,7 +9,7 @@ import {
   type Calendar,
   type SlotProblem,
 } from '@ked/scheduling';
-import { ApiError, now, text, ulid } from './lib.ts';
+import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 import { priceRequest, type QuoteSummary } from './pricing.ts';
 import { findOrCreateCustomer } from './customers.ts';
 
@@ -57,11 +57,11 @@ export async function saveRules(db: D1Database, body: unknown, by: string) {
 /* --------------------------------------------------------- calendar */
 
 /** Everything that occupies time between two instants: live jobs and time off. */
-export async function loadCalendar(db: D1Database, from: Date, to: Date): Promise<Calendar> {
+export async function loadCalendar(db: D1Database, from: Date, to: Date, exceptJobId = ''): Promise<Calendar> {
   const [jobs, timeOff] = await db.batch<{ start_at: string; end_at: string }>([
     db
-      .prepare("SELECT start_at, end_at FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ?")
-      .bind(to.toISOString(), from.toISOString()),
+      .prepare("SELECT start_at, end_at FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ? AND id != ?")
+      .bind(to.toISOString(), from.toISOString(), exceptJobId),
     db.prepare('SELECT start_at, end_at FROM time_off WHERE start_at < ? AND end_at > ?').bind(to.toISOString(), from.toISOString()),
   ]);
   const span = (r: { start_at: string; end_at: string }) => ({ start: r.start_at, end: r.end_at });
@@ -104,7 +104,7 @@ export async function availability(db: D1Database, body: Record<string, unknown>
 
 /* ---------------------------------------------------------- booking */
 
-const PROBLEMS: Record<SlotProblem, string> = {
+export const PROBLEMS: Record<SlotProblem, string> = {
   booking_off: 'Online booking is off right now.',
   too_long: 'This job is too long to book online.',
   closed: "Jacob isn't working that day.",
@@ -160,11 +160,12 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
   const stamp = now();
   const day = localDate(start, rules.timezone);
   const buffer = rules.bufferMinutes * 60_000;
+  const token = randomToken();
   const result = await db
     .prepare(
       `INSERT INTO jobs (id, customer_id, status, source, service, vehicle, address, zip, notes, input, quote,
-                         config_version, start_at, end_at, local_date, created_at, updated_at)
-       SELECT ?, ?, 'scheduled', 'web', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                         config_version, start_at, end_at, local_date, created_at, updated_at, manage_token)
+       SELECT ?, ?, 'scheduled', 'web', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (
                SELECT 1 FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ?)
          AND NOT EXISTS (
@@ -174,7 +175,7 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
     .bind(
       id, customer.id, summary.service, vehicle ?? null, address, zip ?? null, notes ?? null,
       JSON.stringify(input), JSON.stringify(summary), version,
-      start.toISOString(), end.toISOString(), day, stamp, stamp,
+      start.toISOString(), end.toISOString(), day, stamp, stamp, token,
       new Date(end.getTime() + buffer).toISOString(), new Date(start.getTime() - buffer).toISOString(),
       end.toISOString(), start.toISOString(),
       day, rules.maxJobsPerDay,
@@ -182,5 +183,6 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
     .run();
   if (result.meta.changes !== 1) throw new ApiError(409, 'slot_taken', PROBLEMS.taken);
 
-  return { id, start: start.toISOString(), end: end.toISOString(), quote: summary };
+  // The customer's own link to see, move or cancel it.
+  return { id, start: start.toISOString(), end: end.toISOString(), quote: summary, manageToken: token };
 }

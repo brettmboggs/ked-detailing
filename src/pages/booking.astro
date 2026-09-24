@@ -1,0 +1,291 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { business } from '../data/site';
+
+/**
+ * A customer's booking, reached through the private link from their
+ * confirmation: /booking/?b=<token>. See it, move it, or cancel it, within
+ * the same notice Jacob sets for online booking. Everything comes from
+ * /v1/manage/:token in the browser; the page itself holds nothing.
+ *
+ * Never indexed and sends no Referer, because the URL carries the secret.
+ * The calendar is the same one /quote uses (src/scripts/slot-picker.ts).
+ */
+const row = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
+const rowLabel = 'shrink-0 text-sm text-bone-400';
+const rowValue = 'text-right text-bone-50';
+const heading = 'mb-5 font-display uppercase text-bone-50';
+const headingStyle = "font-variation-settings:'wdth' 76,'wght' 800; font-size: clamp(1.35rem, 2.6vw, 1.9rem); letter-spacing:-0.01em";
+---
+
+<Base
+  title="Your booking | Knock Em' Down Detailing"
+  description="Your booking with Knock Em' Down Detailing."
+  noindex
+  noReferrer
+>
+  <Header />
+
+  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p class="eyebrow">Your booking</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>
+        <span data-subtitle class="block text-gold-500"></span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Loading your booking…</p>
+
+      <!-- A fresh change, or why it can't be changed online. -->
+      <p data-notice hidden role="status" class="mt-8 max-w-xl border-l-2 border-gold-500 pl-4 text-bone-200"></p>
+
+      <div data-booking hidden class="mt-12">
+        <dl class="border-t border-ink-800">
+          <div class={row}><dt class={rowLabel}>When</dt><dd data-when class={rowValue}></dd></div>
+          <div class={row}><dt class={rowLabel}>Where</dt><dd data-where class={rowValue}></dd></div>
+          <div data-vehicle-row class={row}><dt class={rowLabel}>Vehicle</dt><dd data-vehicle class={rowValue}></dd></div>
+          <div class={row}><dt class={rowLabel}>Service</dt><dd data-service class={rowValue}></dd></div>
+          <div data-estimate-row class={row}><dt class={rowLabel}>Estimate</dt><dd data-estimate class={`${rowValue} tabular-nums`}></dd></div>
+        </dl>
+
+        <div data-actions hidden class="mt-10 flex flex-wrap gap-3">
+          <button type="button" data-open-move class="btn-gold">Change the time</button>
+          <button type="button" data-open-cancel class="btn-ghost">Cancel booking</button>
+        </div>
+
+        <!-- Moving: the /quote calendar, offering only times that fit this job. -->
+        <section data-move hidden class="mt-14" aria-labelledby="move-heading">
+          <h2 id="move-heading" class={heading} style={headingStyle}>Pick a new time</h2>
+          <p data-move-status aria-live="polite" class="text-sm text-bone-400">Finding open times…</p>
+          <div data-calendar hidden>
+            <div data-days role="radiogroup" aria-label="Day" class="grid grid-cols-7 border-l border-t border-ink-800 text-center"></div>
+            <div data-times-wrap hidden class="mt-8">
+              <p data-times-label class="mb-3 text-bone-200"></p>
+              <div data-times role="radiogroup" aria-label="Start time" class="grid grid-cols-3 border-l border-t border-ink-800 text-center sm:grid-cols-4"></div>
+            </div>
+          </div>
+          <div class="mt-8 flex flex-wrap items-center gap-3">
+            <button type="button" data-move-go disabled class="btn-gold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none">
+              Pick a time above
+            </button>
+            <button type="button" data-close class="btn-ghost">Keep my time</button>
+          </div>
+        </section>
+
+        <!-- Cancelling: asked on the page, never in a browser pop-up. -->
+        <section data-cancel hidden class="mt-14" aria-labelledby="cancel-heading">
+          <h2 id="cancel-heading" class={heading} style={headingStyle}>Cancel this booking?</h2>
+          <label class="flex max-w-xl flex-col gap-1.5 text-sm text-bone-200">
+            <span>Anything Jacob should know? <span class="text-bone-500">(optional)</span></span>
+            <textarea
+              data-reason
+              rows="3"
+              maxlength="500"
+              class="w-full rounded-sm border border-ink-700 bg-ink-900 px-4 py-3 text-bone-50 placeholder:text-bone-600 focus:border-gold-500 focus:outline-none"
+            ></textarea>
+          </label>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <button type="button" data-cancel-go class="btn-gold">Yes, cancel it</button>
+            <button type="button" data-close class="btn-ghost">Keep my booking</button>
+          </div>
+        </section>
+
+        <p data-error role="alert" hidden class="mt-6 border-l-2 border-red-400 pl-3 text-sm text-red-300"></p>
+      </div>
+
+      <div data-contact hidden class="mt-14 border-t border-ink-800 pt-10">
+        <p class="max-w-xl text-bone-200">Questions about your booking? Jacob's easiest to reach by text.</p>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  import { formatters, slotPicker } from '../scripts/slot-picker';
+
+  interface Booking {
+    status: 'scheduled' | 'in_progress' | 'done' | 'cancelled';
+    customerName: string;
+    service: string;
+    start: string;
+    end: string;
+    timezone: string;
+    address: string;
+    vehicle: string | null;
+    estimate: [number, number] | null;
+    canChange: boolean;
+    locked: string | null;
+  }
+
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const token = new URLSearchParams(location.search).get('b') ?? '';
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+  const show = (sel: string, on: boolean) => ($(sel).hidden = !on);
+
+  let timezone = 'America/Chicago';
+  let canChange = false;
+  const f = formatters(() => timezone);
+  const whenLong = (iso: string) =>
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone, weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+    }).format(new Date(iso));
+  const dollars = (c: number) => `$${Math.round(c / 100).toLocaleString('en-US')}`;
+
+  const moveBtn = $<HTMLButtonElement>('[data-move-go]');
+  const picker = slotPicker(
+    { days: $('[data-days]'), timesWrap: $('[data-times-wrap]'), timesLabel: $('[data-times-label]'), times: $('[data-times]') },
+    (day, slot) => {
+      moveBtn.disabled = !(day && slot);
+      moveBtn.textContent = day && slot ? `Move to ${f.when(slot, day)}` : 'Pick a time above';
+    },
+  );
+
+  function missing(text: string) {
+    show('[data-loading]', false);
+    set('[data-title]', "Can't find it.");
+    set('[data-subtitle]', '');
+    set('[data-notice]', text);
+    show('[data-notice]', true);
+    show('[data-contact]', true);
+  }
+
+  function render(b: Booking, notice?: string) {
+    timezone = b.timezone;
+    show('[data-loading]', false);
+    const cancelled = b.status === 'cancelled';
+    set('[data-title]', `Hi ${b.customerName}.`);
+    set('[data-subtitle]', cancelled ? 'This one is cancelled.' : b.status === 'done' ? 'All done.' : "You're booked.");
+
+    set('[data-when]', whenLong(b.start));
+    set('[data-where]', b.address);
+    if (b.vehicle) set('[data-vehicle]', b.vehicle);
+    show('[data-vehicle-row]', Boolean(b.vehicle));
+    set('[data-service]', b.service);
+    if (b.estimate) set('[data-estimate]', b.estimate[0] === b.estimate[1] ? dollars(b.estimate[0]) : `${dollars(b.estimate[0])}–${dollars(b.estimate[1])}`);
+    show('[data-estimate-row]', Boolean(b.estimate) && !cancelled);
+
+    const message = notice ?? (cancelled ? null : b.locked);
+    set('[data-notice]', message ?? '');
+    show('[data-notice]', Boolean(message));
+    canChange = b.canChange;
+    closePanels();
+    show('[data-booking]', true);
+    show('[data-contact]', true);
+    if (notice) reveal($('[data-notice]'));
+  }
+
+  /** Bring an element into view, through Lenis when it's running (see motion.ts). */
+  function reveal(el: HTMLElement) {
+    const handled = !document.dispatchEvent(new CustomEvent('ked:scroll-to', { detail: el, cancelable: true }));
+    if (!handled) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  function closePanels() {
+    show('[data-move]', false);
+    show('[data-cancel]', false);
+    show('[data-error]', false);
+    show('[data-actions]', canChange);
+  }
+
+  function fail(message: string) {
+    set('[data-error]', message);
+    show('[data-error]', true);
+  }
+
+  async function call(path: string, body?: unknown) {
+    const res = await fetch(`${API}/v1/manage/${token}${path}`, body === undefined ? {} : {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => null);
+    if (!res.ok) throw Object.assign(new Error(json?.error?.message ?? "That didn't go through. Text Jacob and he'll sort it."), { status: res.status });
+    return json;
+  }
+
+  async function openMove() {
+    closePanels();
+    show('[data-actions]', false);
+    show('[data-move]', true);
+    show('[data-calendar]', false);
+    set('[data-move-status]', 'Finding open times…');
+    show('[data-move-status]', true);
+    try {
+      const avail = await call('/availability');
+      if (avail.locked) return set('[data-move-status]', avail.locked);
+      if (!picker.set(avail.days, avail.timezone)) {
+        return set('[data-move-status]', "Nothing else is open online in the next few weeks. Text Jacob and he'll find you a time.");
+      }
+      show('[data-move-status]', false);
+      show('[data-calendar]', true);
+      reveal($('[data-move]'));
+    } catch (err) {
+      set('[data-move-status]', (err as Error).message);
+    }
+  }
+
+  async function busy(button: HTMLButtonElement, working: string, task: () => Promise<void>) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = working;
+    show('[data-error]', false);
+    try {
+      await task();
+    } catch (err) {
+      fail((err as Error).message);
+      button.textContent = label;
+      button.disabled = false;
+      // Someone else took the time: show what's still open.
+      if ((err as { status?: number }).status === 409 && !$('[data-move]').hidden) await openMove();
+    }
+  }
+
+  $('[data-open-move]').addEventListener('click', openMove);
+  $('[data-open-cancel]').addEventListener('click', () => {
+    closePanels();
+    show('[data-actions]', false);
+    show('[data-cancel]', true);
+    $<HTMLTextAreaElement>('[data-reason]').focus();
+  });
+  for (const el of document.querySelectorAll('[data-close]')) el.addEventListener('click', closePanels);
+
+  moveBtn.addEventListener('click', () => {
+    const slot = picker.slot;
+    if (!slot) return;
+    void busy(moveBtn, 'Moving…', async () => {
+      const b = (await call('/reschedule', { start: slot })) as Booking;
+      render(b, `Moved. Jacob's been told. See you ${whenLong(b.start)}.`);
+    });
+  });
+
+  $<HTMLButtonElement>('[data-cancel-go]').addEventListener('click', (e) => {
+    void busy(e.currentTarget as HTMLButtonElement, 'Cancelling…', async () => {
+      const b = (await call('/cancel', { reason: $<HTMLTextAreaElement>('[data-reason]').value })) as Booking;
+      render(b, "Cancelled. Jacob's been told. Whenever you're ready, you can book again from the website.");
+    });
+  });
+
+  if (!API || !/^[A-Za-z0-9_-]{40,64}$/.test(token)) {
+    missing("This link doesn't match a booking. Check you have the whole link, or text Jacob.");
+  } else {
+    call('')
+      .then((b: Booking) => render(b))
+      .catch((err: { status?: number }) =>
+        missing(err.status === 404
+          ? "This link doesn't match a booking. Check you have the whole link, or text Jacob."
+          : "We couldn't load your booking just now. Try again in a minute, or text Jacob."),
+      );
+  }
+</script>

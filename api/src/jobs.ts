@@ -1,7 +1,7 @@
 import { jobMinutes, localDate, slotProblem, type BookingRules, type Calendar } from '@ked/scheduling';
 import { currentRules, loadCalendar } from './booking.ts';
 import { findOrCreateCustomer, getCustomer } from './customers.ts';
-import { ApiError, now, text, ulid } from './lib.ts';
+import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 import { priceRequest } from './pricing.ts';
 
 export const JOB_STATUSES = ['scheduled', 'in_progress', 'done', 'cancelled'] as const;
@@ -21,6 +21,9 @@ interface JobRow {
   quote: string;
   config_version: number;
   final_price: number | null;
+  manage_token: string;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
   start_at: string;
   end_at: string;
   local_date: string;
@@ -49,6 +52,11 @@ function toJob(r: JobRow) {
     quote: JSON.parse(r.quote),
     configVersion: r.config_version,
     finalPrice: r.final_price,
+    /** The customer's private link is MANAGE_URL?b=<this>. POST /jobs/:id/confirmation builds the text. */
+    manageToken: r.manage_token,
+    /** 'customer' if they cancelled through their link. */
+    cancelledBy: r.cancelled_by,
+    cancelReason: r.cancel_reason,
     start: r.start_at,
     end: r.end_at,
     date: r.local_date,
@@ -170,13 +178,13 @@ export async function createJob(db: D1Database, body: Record<string, unknown>) {
   await db
     .prepare(
       `INSERT INTO jobs (id, customer_id, status, source, service, vehicle, address, zip, notes, input, quote,
-                         config_version, start_at, end_at, local_date, created_at, updated_at)
-       VALUES (?, ?, 'scheduled', 'app', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                         config_version, start_at, end_at, local_date, created_at, updated_at, manage_token)
+       VALUES (?, ?, 'scheduled', 'app', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id, customerId, summary.service, text(body.vehicle, 'Vehicle', 120) ?? null, address, zip ?? null,
       text(body.notes, 'Notes', 5000) ?? null, JSON.stringify(input), JSON.stringify(summary), version,
-      start.toISOString(), end.toISOString(), localDate(start, rules.timezone), at, at,
+      start.toISOString(), end.toISOString(), localDate(start, rules.timezone), at, at, randomToken(),
     )
     .run();
   return { job: await getJob(db, id), warnings };
@@ -192,6 +200,10 @@ export async function updateJob(db: D1Database, id: string, body: Record<string,
       throw new ApiError(422, 'invalid', `status must be one of ${JOB_STATUSES.join(', ')}.`);
     }
     fields.push(['status', body.status]);
+    // Remember who cancelled; un-cancelling forgets it.
+    if (body.status !== job.status) {
+      fields.push(['cancelled_by', body.status === 'cancelled' ? 'owner' : null], ['cancel_reason', null]);
+    }
   }
   if ('start' in body || 'end' in body) {
     const start = 'start' in body ? instant(body.start, 'start') : new Date(job.start);
