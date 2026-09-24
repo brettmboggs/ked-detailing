@@ -116,6 +116,12 @@ money is **integer cents**.
 > with an in-memory mock, selected per endpoint or when `EXPO_PUBLIC_API_URL` is
 > unset. When an endpoint lands, only the client's transport changes.
 >
+> The website reads prices **at build time** from `GET /v1/pricing`, using the
+> Pages env var `PUBLIC_KED_API_URL`, and falls back to the defaults if the API
+> is down. A pricing save POSTs the Pages deploy hook (Worker secret
+> `PAGES_DEPLOY_HOOK`), so the site shows new prices about a minute after Jacob
+> saves. `/quote` posts to `POST /v1/leads` when that env var is set.
+>
 > Sign-in allowlist: `OWNER_EMAILS` / `OWNER_APPLE_SUBS` in `api/wrangler.jsonc`.
 > `APPLE_AUDIENCE` there must match the app's bundle ID. It's currently a
 > placeholder, `com.brettboggs.ked`, so tell this repo the real one.

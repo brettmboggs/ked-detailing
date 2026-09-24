@@ -40,9 +40,22 @@ app.post('/auth/apple', async (c) => {
 
 /* -------------------------------------------------------------- owner */
 
-app.put('/pricing', requireOwner, async (c) =>
-  c.json(await savePricing(c.env.DB, await json(c.req.raw), c.get('owner').email ?? c.get('owner').subject)),
-);
+app.put('/pricing', requireOwner, async (c) => {
+  const owner = c.get('owner');
+  const saved = await savePricing(c.env.DB, await json(c.req.raw), owner.email ?? owner.subject);
+  // The website bakes prices in at build time, so rebuild it. Best effort: the
+  // save has already succeeded, and leads are re-priced here either way.
+  const hook = c.env.PAGES_DEPLOY_HOOK;
+  if (hook) {
+    c.executionCtx.waitUntil(
+      fetch(hook, { method: 'POST' }).then(
+        (r) => { if (!r.ok) console.error(`deploy hook: HTTP ${r.status}`); },
+        (err) => console.error('deploy hook failed', err),
+      ),
+    );
+  }
+  return c.json(saved);
+});
 
 app.get('/leads', requireOwner, async (c) => c.json({ leads: await listLeads(c.env.DB, c.req.query('status')) }));
 

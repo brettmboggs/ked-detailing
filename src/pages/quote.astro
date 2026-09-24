@@ -4,12 +4,8 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { business } from '../data/site';
 import { withBase } from '../lib/url';
-import {
-  defaultConfig as config,
-  formatHours,
-  formatMoney,
-  fromPrice,
-} from '@ked/pricing';
+import { formatHours, formatMoney, fromPrice } from '@ked/pricing';
+import { apiUrl, loadPricing } from '../lib/pricing';
 
 /**
  * Instant Quote. The formula lives in @ked/pricing and runs in the browser, so
@@ -23,6 +19,11 @@ import {
  * segmented controls. No chips, no card grids, no numbered steps.
  */
 const PLACEHOLDER_PRICING = true;
+
+const config = await loadPricing();
+// Handed to the browser script so it prices with exactly what was rendered.
+// `<` is escaped so no string in the config can close the script tag.
+const configJson = JSON.stringify(config).replace(/</g, '\\u003c');
 
 const vehicleServices = config.services.filter((s) => s.craft === 'vehicle');
 const boatServices = config.services.filter((s) => s.craft === 'boat');
@@ -52,6 +53,7 @@ const segment =
 const heading =
   'mb-5 font-display uppercase text-bone-50';
 const headingStyle = "font-variation-settings:'wdth' 76,'wght' 800; font-size: clamp(1.35rem, 2.6vw, 1.9rem); letter-spacing:-0.01em";
+const fieldLabel = 'flex flex-col gap-1.5 text-sm text-bone-200';
 const input =
   'w-full rounded-sm border border-ink-700 bg-ink-900 px-4 py-3 text-bone-50 placeholder:text-bone-600 focus:border-gold-500 focus:outline-none';
 ---
@@ -264,7 +266,8 @@ const input =
 
       <!-- Summary. Sticky beside the form on desktop, after it on phones. -->
       <aside id="summary" class="lg:sticky lg:top-28 lg:self-start">
-        <div class="rounded-sm border border-ink-700 bg-ink-900 p-6 edge-light">
+        <!-- Capped to the viewport on desktop so the send button is never pinned out of reach. -->
+        <div class="rounded-sm border border-ink-700 bg-ink-900 p-6 edge-light lg:max-h-[calc(100dvh-8rem)] lg:overflow-y-auto lg:overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--color-ink-700)_transparent]">
           <p class="eyebrow mb-3">Your estimate</p>
           <p data-range aria-live="polite" class="font-display text-bone-50" style="font-size:clamp(2.2rem,4vw,3rem);font-variation-settings:'wdth' 80,'wght' 800">
             —
@@ -279,10 +282,51 @@ const input =
             nothing is charged until the work is agreed.
           </p>
 
+          {
+            apiUrl && (
+              <>
+                <form data-lead class="mt-6 flex flex-col gap-4 border-t border-ink-800 pt-6" novalidate>
+                  <div>
+                    <p class="font-semibold text-bone-50">Send it to Jacob</p>
+                    <p class="mt-1 text-sm text-bone-400">He'll come back to you with a firm price and a time.</p>
+                  </div>
+                  <label class={fieldLabel}>
+                    Name
+                    <input name="name" autocomplete="name" required maxlength="100" class={input} />
+                  </label>
+                  <label class={fieldLabel}>
+                    Phone
+                    <input name="phone" type="tel" autocomplete="tel" maxlength="30" class={input} />
+                  </label>
+                  <label class={fieldLabel}>
+                    <span>Email <span class="text-bone-500">(if you'd rather)</span></span>
+                    <input name="email" type="email" autocomplete="email" maxlength="200" class={input} />
+                  </label>
+                  {/* Honeypot. Hidden from people and screen readers; bots fill it in. */}
+                  <label class="hidden" aria-hidden="true">
+                    Website <input name="website" tabindex="-1" autocomplete="off" />
+                  </label>
+                  <p data-lead-error role="alert" hidden class="border-l-2 border-red-400 pl-3 text-sm text-red-300" />
+                  <button type="submit" class="btn-gold w-full">Send to Jacob</button>
+                </form>
+                <div data-lead-done hidden class="mt-6 border-t border-ink-800 pt-6" tabindex="-1">
+                  <p class="font-semibold text-bone-50">Sent.</p>
+                  <p class="mt-1 text-sm text-bone-400">
+                    Jacob has your quote and will be in touch. If it's urgent, call {business.phone}.
+                  </p>
+                </div>
+              </>
+            )
+          }
+
           <div class="mt-6 flex flex-col gap-3">
-            <a data-sms href={business.phoneHref} class="btn-gold w-full">Text Jacob this quote</a>
+            <a data-sms href={business.phoneHref} class={apiUrl ? 'btn-ghost w-full' : 'btn-gold w-full'}>
+              {apiUrl ? 'Or text Jacob' : 'Text Jacob this quote'}
+            </a>
             <!-- Housecall Pro until our own booking replaces it. -->
-            <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-ghost w-full">Book online</a>
+            <a href={business.bookingUrl} target="_blank" rel="noopener" class="text-center text-sm text-bone-400 hover:text-gold-400">
+              Book online
+            </a>
             <a href={business.phoneHref} class="text-center text-sm text-bone-400 hover:text-gold-400">
               Or call {business.phone}
             </a>
@@ -306,23 +350,26 @@ const input =
   </main>
 
   <Footer />
+  <script type="application/json" id="ked-pricing" set:html={configJson} />
 </Base>
 
 <script>
   import {
     applicableAddOns,
     applicableConditions,
-    defaultConfig as config,
     formatHours,
     formatMoney,
     formatRange,
     quote,
     QuoteError,
     type Craft,
+    type PricingConfig,
     type QuoteInput,
   } from '@ked/pricing';
 
   const PHONE = '+13142232988';
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const config = JSON.parse(document.getElementById('ked-pricing')!.textContent!) as PricingConfig;
 
   const form = document.querySelector<HTMLFormElement>('[data-quote]')!;
   const $ = <T extends Element>(sel: string) => document.querySelector<T>(sel)!;
@@ -436,6 +483,59 @@ const input =
       .join('\n');
     // `?&body=` is the form both iOS and Android Messages accept.
     smsEl.href = `sms:${PHONE}?&body=${encodeURIComponent(body)}`;
+  }
+
+  /* ------------------------------------------------ send it to Jacob */
+
+  const leadForm = document.querySelector<HTMLFormElement>('[data-lead]');
+  if (leadForm && API) {
+    const errorEl = leadForm.querySelector<HTMLElement>('[data-lead-error]')!;
+    const button = leadForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const done = $<HTMLElement>('[data-lead-done]');
+
+    const fail = (message: string) => {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    };
+
+    leadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      errorEl.hidden = true;
+      const contact = new FormData(leadForm);
+      const field = (name: string) => String(contact.get(name) ?? '').trim();
+      if (!field('name')) return fail('Add your name so Jacob knows who to ask for.');
+      if (!field('phone') && !field('email')) return fail('Add a phone number or an email.');
+
+      button.disabled = true;
+      button.textContent = 'Sending…';
+      try {
+        const res = await fetch(`${API}/v1/leads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: field('name'),
+            phone: field('phone'),
+            email: field('email'),
+            website: field('website'),
+            vehicle: String(new FormData(form).get('vehicle') ?? '').trim(),
+            zip: readInput().zip,
+            input: readInput(),
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+          return fail(body?.error?.message ?? "That didn't go through. Text or call Jacob instead.");
+        }
+        leadForm.hidden = true;
+        done.hidden = false;
+        done.focus();
+      } catch {
+        fail("Couldn't reach us. Check your signal, or text Jacob instead.");
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Send to Jacob';
+      }
+    });
   }
 
   form.addEventListener('input', render);

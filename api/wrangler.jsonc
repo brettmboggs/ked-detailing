@@ -26,6 +26,8 @@
     "OWNER_APPLE_SUBS": "",
     "OWNER_EMAILS": "brettmboggs@gmail.com,knockemdowndetailing@gmail.com"
   }
-  // Secrets (wrangler secret put): ADMIN_TOKEN — break-glass bearer token for
-  // Brett's scripts and curl. Optional; owner endpoints refuse it if unset.
+  // Secrets (wrangler secret put), both optional:
+  //   ADMIN_TOKEN        break-glass bearer token for Brett's scripts and curl.
+  //   PAGES_DEPLOY_HOOK  the ked-detailing Pages deploy hook URL; a pricing save
+  //                      POSTs it so the site rebuilds with the new prices.
 }

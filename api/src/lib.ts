@@ -2,7 +2,11 @@ import { HTTPException } from 'hono/http-exception';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 /** Secrets aren't in wrangler.jsonc, so `wrangler types` can't see them. */
-export type Bindings = Env & { ADMIN_TOKEN?: string };
+export type Bindings = Env & {
+  ADMIN_TOKEN?: string;
+  /** Cloudflare Pages deploy hook. Rebuilds the site so /quote shows new prices. */
+  PAGES_DEPLOY_HOOK?: string;
+};
 
 /** Thrown anywhere; rendered as the contract's error body by `onError`. */
 export class ApiError extends HTTPException {
