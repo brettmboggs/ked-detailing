@@ -1,0 +1,248 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { business } from '../data/site';
+
+/**
+ * A customer's invoice, reached only through the private link Jacob texts
+ * them: /pay/?i=<token>. Everything is fetched in the browser from
+ * GET /v1/pay/:token, so the page itself is static and holds nothing.
+ *
+ * Never indexed and sends no Referer, because the URL carries the secret.
+ * Styled like the quote page's work order: ruled rows, no cards or chips.
+ *
+ * `payOnline` turns on the Pay button once Stripe is connected; until then the
+ * customer is pointed at Jacob.
+ */
+const row = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
+const rowLabel = 'text-sm text-bone-400';
+---
+
+<Base
+  title="Your invoice | Knock Em' Down Detailing"
+  description="Your invoice from Knock Em' Down Detailing."
+  noindex
+  noReferrer
+>
+  <Header />
+
+  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p data-eyebrow class="eyebrow">Invoice</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>
+        <span data-subtitle class="block text-gold-500"></span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Loading your invoice…</p>
+
+      <!-- No such invoice, a bad link, or the API can't be reached. -->
+      <div data-missing hidden class="mt-8 max-w-xl">
+        <p data-missing-text class="text-lg leading-relaxed text-bone-200"></p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-gold">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+
+      <div data-invoice hidden class="mt-12">
+        <dl class="border-t border-ink-800">
+          <div class={row}><dt class={rowLabel}>Service date</dt><dd data-job-date class="text-bone-50"></dd></div>
+          <div data-vehicle-row class={row}><dt class={rowLabel}>Vehicle</dt><dd data-vehicle class="text-right text-bone-50"></dd></div>
+          <div class={row}><dt class={rowLabel}>Issued</dt><dd data-issued class="text-bone-50"></dd></div>
+          <div class={row}><dt class={rowLabel}>Due</dt><dd data-due class="text-bone-50"></dd></div>
+        </dl>
+
+        <table class="mt-12 w-full border-collapse text-left">
+          <caption class="eyebrow mb-3 text-left">The work</caption>
+          <thead class="sr-only">
+            <tr><th scope="col">Item</th><th scope="col">Amount</th></tr>
+          </thead>
+          <tbody data-lines class="border-t border-ink-800"></tbody>
+          <tfoot>
+            <tr class="border-b border-ink-800">
+              <th scope="row" class="py-4 font-semibold text-bone-50">Total</th>
+              <td data-total class="py-4 text-right font-semibold text-bone-50 tabular-nums"></td>
+            </tr>
+            <tr data-paid-row hidden class="border-b border-ink-800">
+              <th scope="row" class="py-3 text-sm font-normal text-bone-400">Paid</th>
+              <td data-paid class="py-3 text-right text-sm text-bone-400 tabular-nums"></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- The one number that matters, set apart with the gold rule. -->
+        <div class="mt-10 flex items-end justify-between gap-6 border-l-2 border-gold-500 pl-5">
+          <p data-balance-label class="eyebrow">Balance due</p>
+          <p
+            data-balance
+            class="font-display text-bone-50 tabular-nums"
+            style="font-size:clamp(2.2rem,5vw,3.25rem);font-variation-settings:'wdth' 80,'wght' 800;line-height:1"
+          >
+          </p>
+        </div>
+
+        <p data-notes hidden class="mt-10 max-w-xl whitespace-pre-line text-bone-200"></p>
+
+        <div data-pay hidden class="mt-12 border-t border-ink-800 pt-10">
+          <button type="button" data-pay-online hidden class="btn-gold w-full sm:w-auto">Pay now</button>
+          <p data-pay-offline class="max-w-xl leading-relaxed text-bone-200">
+            Online payment is coming soon. For now, pay Jacob directly. Text or call him and he'll
+            sort it out with you.
+          </p>
+          <p data-pay-error role="alert" hidden class="mt-4 border-l-2 border-red-400 pl-3 text-sm text-red-300"></p>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <a data-sms href={business.phoneHref} class="btn-ghost">Text Jacob</a>
+            <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+          </div>
+        </div>
+
+        <p class="mt-14 text-xs leading-relaxed text-bone-500">
+          {business.legalName} · {business.city}, {business.region} · {business.email}
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  interface PublicInvoice {
+    number: number;
+    status: 'sent' | 'paid' | 'void';
+    customerName: string;
+    vehicle: string | null;
+    jobDate: string;
+    issued: string;
+    dueDate: string | null;
+    lines: { label: string; amount: number }[];
+    total: number;
+    paid: number;
+    balance: number;
+    notes: string | null;
+    payOnline: boolean;
+  }
+
+  const PHONE = '+13142232988';
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+
+  /** Invoices show cents; the quote page's formatMoney rounds to dollars. */
+  const money = (c: number) =>
+    `${c < 0 ? '−' : ''}$${(Math.abs(c) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const date = (d: string) =>
+    new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+
+  function missing(text: string) {
+    $('[data-loading]').hidden = true;
+    set('[data-title]', "Can't find it.");
+    set('[data-subtitle]', '');
+    set('[data-missing-text]', text);
+    $('[data-missing]').hidden = false;
+  }
+
+  function render(inv: PublicInvoice) {
+    $('[data-loading]').hidden = true;
+    set('[data-eyebrow]', `Invoice ${inv.number}`);
+    document.title = `Invoice ${inv.number} | Knock Em' Down Detailing`;
+
+    if (inv.status === 'void') {
+      set('[data-title]', `Hi ${inv.customerName}.`);
+      set('[data-subtitle]', 'This one was cancelled.');
+      set('[data-missing-text]', "Jacob cancelled this invoice, so there's nothing to pay here. If he sent you a new link, use that one, or text him to check.");
+      $('[data-missing]').hidden = false;
+      return;
+    }
+
+    const paid = inv.status === 'paid';
+    set('[data-title]', paid ? 'Paid in full.' : `Hi ${inv.customerName}.`);
+    set('[data-subtitle]', paid ? `Thank you, ${inv.customerName}.` : "Here's your invoice.");
+
+    set('[data-job-date]', date(inv.jobDate));
+    if (inv.vehicle) set('[data-vehicle]', inv.vehicle);
+    else $('[data-vehicle-row]').hidden = true;
+    set('[data-issued]', date(inv.issued));
+    set('[data-due]', paid ? 'Paid' : inv.dueDate ? date(inv.dueDate) : 'On receipt');
+
+    const body = $<HTMLTableSectionElement>('[data-lines]');
+    for (const line of inv.lines) {
+      const tr = body.insertRow();
+      tr.className = 'border-b border-ink-800';
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.className = 'py-3 pr-6 font-normal text-bone-200';
+      th.textContent = line.label;
+      const td = document.createElement('td');
+      td.className = `py-3 text-right tabular-nums ${line.amount < 0 ? 'text-gold-400' : 'text-bone-200'}`;
+      td.textContent = money(line.amount);
+      tr.append(th, td);
+    }
+    set('[data-total]', money(inv.total));
+    if (inv.paid > 0) {
+      set('[data-paid]', `−${money(inv.paid)}`);
+      $('[data-paid-row]').hidden = false;
+    }
+    set('[data-balance-label]', paid ? 'Balance' : 'Balance due');
+    set('[data-balance]', money(inv.balance));
+
+    if (inv.notes) {
+      set('[data-notes]', inv.notes);
+      $('[data-notes]').hidden = false;
+    }
+
+    if (!paid) {
+      const sms = $<HTMLAnchorElement>('[data-sms]');
+      // "?&body=" works in both iOS and Android Messages.
+      sms.href = `sms:${PHONE}?&body=${encodeURIComponent(`Hi Jacob, about invoice ${inv.number}: `)}`;
+      if (inv.payOnline) {
+        $('[data-pay-offline]').hidden = true;
+        const btn = $<HTMLButtonElement>('[data-pay-online]');
+        btn.textContent = `Pay ${money(inv.balance)}`;
+        btn.hidden = false;
+        btn.addEventListener('click', checkout);
+      }
+      $('[data-pay]').hidden = false;
+    }
+    $('[data-invoice]').hidden = false;
+  }
+
+  async function checkout() {
+    const btn = $<HTMLButtonElement>('[data-pay-online]');
+    const error = $('[data-pay-error]');
+    btn.disabled = true;
+    error.hidden = true;
+    try {
+      const res = await fetch(`${API}/v1/pay/${token}/checkout`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok || !body.url) throw new Error(body.error?.message ?? 'Payment could not start.');
+      location.assign(body.url);
+    } catch (err) {
+      error.textContent = `${(err as Error).message} Text Jacob and he'll help.`;
+      error.hidden = false;
+      btn.disabled = false;
+    }
+  }
+
+  const token = new URLSearchParams(location.search).get('i') ?? '';
+
+  if (!API || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    missing("This link doesn't match an invoice. Check you have the whole link from Jacob's text, or ask him to send it again.");
+  } else {
+    fetch(`${API}/v1/pay/${token}`)
+      .then(async (res) => {
+        if (res.status === 404) {
+          missing("This link doesn't match an invoice. Check you have the whole link from Jacob's text, or ask him to send it again.");
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render((await res.json()) as PublicInvoice);
+      })
+      .catch(() => missing("We couldn't load your invoice just now. Try again in a minute, or text Jacob."));
+  }
+</script>

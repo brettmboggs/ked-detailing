@@ -14,8 +14,9 @@ export default defineConfig({
   site,
   base,
   // /quote shows placeholder prices until Jacob's real numbers are in, so it
-  // stays out of the sitemap as well as noindexed.
-  integrations: [sitemap({ filter: (page) => !page.includes('/quote') })],
+  // stays out of the sitemap as well as noindexed. /pay is only ever reached
+  // through a customer's private invoice link.
+  integrations: [sitemap({ filter: (page) => !page.includes('/quote') && !page.includes('/pay') })],
 
   // Mirrors public/_redirects, from which Cloudflare serves the real 301s.
   // These are the meta-refresh fallback for any host that ignores that file.

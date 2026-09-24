@@ -22,6 +22,17 @@ import {
 } from './books.ts';
 import { getCustomer, listCustomers, updateCustomer } from './customers.ts';
 import { addTimeOff, createJob, customerJobs, getJob, listJobs, listTimeOff, removeTimeOff, updateJob } from './jobs.ts';
+import {
+  getInvoice,
+  invoiceForJob,
+  listInvoices,
+  publicInvoice,
+  recordInvoicePayment,
+  sendInvoice,
+  startCheckout,
+  updateInvoice,
+  voidInvoice,
+} from './invoices.ts';
 import { createLead, listLeads, updateLead } from './leads.ts';
 import { ApiError, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
@@ -70,6 +81,14 @@ app.post('/availability', async (c) => {
 });
 
 app.post('/bookings', async (c) => c.json(await createBooking(c.env.DB, await json(c.req.raw)), 201));
+
+// A customer's invoice, by the secret in their pay link. Never cached: it
+// changes the moment they pay.
+app.get('/pay/:token', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await publicInvoice(c.env, c.req.param('token')));
+});
+app.post('/pay/:token/checkout', async (c) => c.json(await startCheckout(c.env, c.req.param('token'))));
 
 app.post('/auth/apple', async (c) => {
   const identityToken = text((await json(c.req.raw)).identityToken, 'identityToken', 5000);
@@ -142,9 +161,36 @@ app.delete('/photos/:id', requireOwner, async (c) => {
 });
 app.get('/jobs/:id/photos', requireOwner, async (c) => c.json({ photos: await jobPhotos(c.env.DB, c.req.param('id')) }));
 
-/* -------------------------------------------------------------- books */
-
 const who = (o: Owner) => o.email ?? o.subject;
+
+/* ----------------------------------------------------------- invoices */
+
+// The job's live invoice, made from its quote if it has none yet.
+app.post('/jobs/:id/invoice', requireOwner, async (c) => {
+  const body = await json(c.req.raw).catch(() => ({}));
+  const { invoice, created } = await invoiceForJob(c.env, c.req.param('id'), body);
+  return c.json(invoice, created ? 201 : 200);
+});
+app.get('/invoices', requireOwner, async (c) =>
+  c.json({
+    invoices: await listInvoices(c.env, {
+      status: c.req.query('status'),
+      jobId: c.req.query('jobId'),
+      customerId: c.req.query('customerId'),
+    }),
+  }),
+);
+app.get('/invoices/:id', requireOwner, async (c) => c.json(await getInvoice(c.env, c.req.param('id'))));
+app.patch('/invoices/:id', requireOwner, async (c) =>
+  c.json(await updateInvoice(c.env, c.req.param('id'), await json(c.req.raw))),
+);
+app.post('/invoices/:id/send', requireOwner, async (c) => c.json(await sendInvoice(c.env, c.req.param('id'))));
+app.post('/invoices/:id/payments', requireOwner, async (c) =>
+  c.json(await recordInvoicePayment(c.env, c.req.param('id'), await json(c.req.raw), who(c.get('owner'))), 201),
+);
+app.post('/invoices/:id/void', requireOwner, async (c) => c.json(await voidInvoice(c.env, c.req.param('id'))));
+
+/* -------------------------------------------------------------- books */
 
 app.get('/books/accounts', requireOwner, async (c) =>
   c.json({ accounts: await listAccounts(c.env.DB, c.req.query('archived') === 'true') }),

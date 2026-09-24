@@ -154,11 +154,12 @@ means money in and `−` means money out, from the account's point of view.
 > reports and CSV exports, **the smart layer** (QFX/OFX/QBO import, rules
 > learned from how Jacob files, starter suggestions for common merchants,
 > deposits matched to unpaid jobs, "That was personal", the inbox), and
-> **photos** (receipts and before/after job shots).
+> **photos** (receipts and before/after job shots), and **invoices** (pay
+> links texted from his phone, paid status read from the books).
 > Photos are stored in Cloudflare KV (free plan: 1 GB, 1,000 uploads a day),
 > so **downscale to about 1600 px and JPEG quality 0.7 before uploading**, which
 > keeps each photo around 200 KB. If storage is ever missing, calls return `503
-> photos_off`, so show "Photo storage isn't on" rather than failing silently. Still to come: invoices, Stripe and inventory. A live
+> photos_off`, so show "Photo storage isn't on" rather than failing silently. Still to come: Stripe and inventory. A live
 > bank feed (Plaid) is optional; Teller doesn't support Commerce Bank. It
 > would feed the same import path, so nothing in the app changes except
 > gaining a "Connect bank" button. For endpoints that don't exist yet, the app uses a typed client
@@ -238,7 +239,15 @@ There are no passwords and no sign-up screen.
 | `GET /v1/jobs/:id/photos` | owner | `{ photos }` for a job, oldest first |
 | `DELETE /v1/photos/:id` | owner | `204`. A receipt attached to a books entry returns `409` and is kept |
 | `POST /v1/books/entries/:id/receipt` | owner | `{ photoId }`: attach a receipt after the fact. Expenses also take `receiptKey: photoId` when created |
-| `POST /v1/jobs/:id/invoice` | owner | Create or send an invoice. Emails a pay link |
+| `POST /v1/jobs/:id/invoice` | owner | The job's live invoice: `200` with the one it has, or `201` with a new one built from its quote (plus a `Discount`/`Adjustment` line if `finalPrice` differs). Optional `{ lines, dueDate, notes }` only apply when creating. `422 no_price` for an inspection job with no `finalPrice`, `409 job_cancelled` for a cancelled one |
+| `GET /v1/invoices?status=&jobId=&customerId=` | owner | `{ invoices }`, newest number first. `status`: `draft`, `sent`, `paid`, `void`, or `unpaid` (draft and sent) |
+| `GET /v1/invoices/:id` | owner | One invoice |
+| `PATCH /v1/invoices/:id` | owner | `lines` (`[{ label, amount }]`, cents, negative for a discount, total above zero), `dueDate` (`YYYY-MM-DD` or null for "on receipt"), `notes` (shown to the customer). Changing lines also sets the job's `finalPrice`. `409` once void |
+| `POST /v1/invoices/:id/send` | owner | Marks it sent → `{ invoice, message }`. **Open the SMS composer** (`expo-sms`) to the customer's phone with `message`, which includes the pay link. Email comes once the domain moves. `409` if paid or void |
+| `POST /v1/invoices/:id/payments` | owner | "Got paid": `{ depositToId, method?, date?, amount?, tip? }`. `amount` defaults to the balance. A tip posts as its own entry under Tips and doesn't count against the balance → `201 { invoice, entries }` |
+| `POST /v1/invoices/:id/void` | owner | `409 has_payments` while a payment stands: void it in the books first. Then `POST /jobs/:id/invoice` makes a fresh one with the next number |
+| `GET /v1/pay/:token` | – | The customer's copy, for the website's `/pay/?i=<token>` page. First name only; no address or phone |
+| `POST /v1/pay/:token/checkout` | – | Starts Stripe Checkout. `503 payments_off` until Stripe is connected |
 | `POST /v1/terminal/connection-token` | owner | Stripe Terminal token for Tap to Pay |
 | `POST /v1/jobs/:id/payment-intent` | owner | Create a PaymentIntent for the job's final amount |
 | `GET/POST/PATCH /v1/inventory[/:id]` | owner | Items: name, barcode, unit, on hand, reorder at, reorder URL, cost |
@@ -251,6 +260,18 @@ There are no passwords and no sign-up screen.
 `input` (the `QuoteInput`), `quote` (`{ service, lines, total, range, hours,
 inspection, notes }`), `configVersion`, `finalPrice`, `start`, `end`, `date`
 (the local day), `createdAt`, `updatedAt`.
+
+**Invoice shape**: `id`, `number` (1001 up), `jobId`, `customer { id, name,
+phone, email }`, `status` (`draft` → `sent` → `paid`, or `void`), `lines`,
+`total`, `paid`, `balance`, `paidOn`, `dueDate`, `notes`, `payUrl`, `sentAt`,
+`viewedAt` (when the customer first opened the link; show "Seen"), `voidedAt`,
+`createdAt`, `updatedAt`.
+
+**Paid is never stored.** It's the money received on the job's income entries,
+so every way of recording a payment settles the invoice: "Got paid" above,
+`POST /books/income` with the `jobId`, a bank deposit filed to the job, and
+Stripe later. Voiding a payment reopens it. After any of those, refetch the
+invoice rather than updating it locally.
 
 **How online booking works.** The website posts the customer's answers to
 `/availability`. The server prices them, sizes the job with `jobMinutes`, and

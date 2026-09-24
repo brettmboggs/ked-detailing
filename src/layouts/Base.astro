@@ -12,6 +12,8 @@ interface Props {
   includeFaq?: boolean;
   /** Keep this one page out of search, e.g. while it shows placeholder prices. */
   noindex?: boolean;
+  /** Send no Referer anywhere, for pages whose URL carries a secret (a pay link). */
+  noReferrer?: boolean;
 }
 
 const {
@@ -20,6 +22,7 @@ const {
   ogImage = '/og.jpg',
   includeFaq = false,
   noindex: pageNoindex = false,
+  noReferrer = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
@@ -156,6 +159,7 @@ const schema = {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href={liveCanonical.href} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
+    {noReferrer && <meta name="referrer" content="no-referrer" />}
 
     <title>{title}</title>
     <meta name="description" content={description} />

@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0005 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0005 applied; **0006 (invoices) written, not yet applied or deployed** |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -65,6 +65,15 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   suggestions: a deposit matching an unpaid job is offered as its payment, and
   common merchants get their usual category. "That was personal" records an
   owner draw. `/books/inbox` is the weekly check-in list.
+- **Invoices:** one live invoice per job, built from its quote, numbered
+  from 1001. Paid status is read from the books (the job's income entries,
+  tips excluded), so every way of recording a payment settles it. Sending
+  returns a text message with the pay link for the app's SMS composer, since
+  email waits on the domain. The customer's page is `src/pages/pay.astro`
+  (`/pay/?i=<token>`, noindex, no referrer). `PAY_URL` in `wrangler.jsonc`
+  points at pages.dev and **must change to kedservice.com at cutover**.
+  `startCheckout` and `recordInvoicePayment` in `api/src/invoices.ts` are where
+  Stripe plugs in.
 - **Photos:** receipts and before/after job photos, stored in **KV**, not R2.
   R2 requires a credit card on the account, and Brett won't put his own card
   on Jacob's business. The storage interface prefers R2 if it's ever bound.
@@ -75,7 +84,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (42). The API tests
+  scheduling (11), books (18) and API (48). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
@@ -149,7 +158,9 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
    alerts to Jacob, confirmations to customers. **Until then, nothing tells
    Jacob that someone booked.** This must be solved before `/quote` goes
    public.
-5. **Stripe:** once he adds Brett as a Developer, build invoices and pay links,
+5. **Stripe:** once he adds Brett as a Developer, fill in Checkout behind the
+   existing pay links (`startCheckout`, plus a webhook calling
+   `recordInvoicePayment` with `depositToId: 'stripe'`, and `payOnline: true`),
    then Tap to Pay (Stripe Terminal in the app needs Apple's Tap to Pay
    entitlement; request it early). Payments should post into the books
    automatically.
@@ -162,20 +173,18 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 
 ## What to build next (none of it needs Jacob)
 
-1. **Invoices:** `invoices` table, invoice from a job, line items from the
-   quote, status, a customer-facing pay page, and hooks ready for Stripe. When
-   paid, post income to the books with `jobId`.
-2. **Inventory:** items (name, barcode, unit, on hand, reorder at, reorder
+1. **Inventory:** items (name, barcode, unit, on hand, reorder at, reorder
    URL, cost), barcode lookup, stock movements, a low-stock list, then product
    use per job. The endpoints are sketched in `docs/mobile-app.md`.
-3. **Booking and quote email:** designed to be ready the day the domain moves
+2. **Booking and quote email:** designed to be ready the day the domain moves
    (Email Workers `send_email` binding, verified destination address).
-4. **Customer self-service:** a link in the confirmation to view, reschedule
+   Invoices should email their pay link too, alongside the text.
+3. **Customer self-service:** a link in the confirmation to view, reschedule
    or cancel a booking.
-5. **Wire the website into the navigation** behind one switch (`quoteLive` in
+4. **Wire the website into the navigation** behind one switch (`quoteLive` in
    `src/data/site.ts`): header "Get a quote", "from $X" on the packages, the
    CTA. It stays off until cutover.
-6. **Housecall Pro and QuickBooks importers** for the cutover.
+5. **Housecall Pro and QuickBooks importers** for the cutover.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.
