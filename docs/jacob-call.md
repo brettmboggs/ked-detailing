@@ -1,10 +1,19 @@
 # Call with Jacob: everything only he can do
 
+This is Brett's version, with the why behind each step. **Jacob follows
+[jacob-steps.md](jacob-steps.md)**, the same jobs in plain words with nothing
+to decode. Send him that one.
+
 Work top to bottom. Part 1 unblocks the most. Nothing here cancels or breaks
 anything live: Housecall Pro, QuickBooks and Squarespace all keep running until
 the full switch-over.
 
 **Brett, before the call (10 min):**
+- [ ] **TestFlight, before the call:** get Jacob's Apple ID email from him by
+      text. In App Store Connect → KED → TestFlight, add him as a tester. An
+      external tester needs Apple's one-time beta review first, which can take
+      a day, so start early. Or make him an internal tester by adding him under
+      Users and Access first, which needs no review.
 - [ ] Cloudflare → `kedservice.com` → DNS: check the imported records include
       anything for Google (TXT `google-site-verification`) or Housecall Pro.
       Add any that are missing.

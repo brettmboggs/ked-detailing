@@ -1,8 +1,9 @@
 # Going live
 
 Everything between "the build is finished" and "kedservice.com serves it".
-Jacob's half is written to be pasted into a message unchanged — see
-[Jacob's steps](#jacobs-steps).
+**For Jacob himself, use [docs/jacob-steps.md](docs/jacob-steps.md)**, which is
+written plainly enough to follow on his own. The "Jacob's steps" section below
+is the background for Brett.
 
 **Host: Cloudflare Pages.** The goal is to end the recurring bills, not move
 them. Pages is free, Email Routing is free, and Cloudflare Registrar renews a
@@ -99,7 +100,9 @@ domain owner alone.
 
 ## Jacob's steps
 
-> Copy from here down. Fill in the two nameservers from step 1 first.
+> Background for Brett. Don't send this to Jacob: send
+> [docs/jacob-steps.md](docs/jacob-steps.md), which has the nameservers filled
+> in (`georgia.ns.cloudflare.com`, `lou.ns.cloudflare.com`).
 
 ### Why it has to be him
 
