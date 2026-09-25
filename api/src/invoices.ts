@@ -1,6 +1,7 @@
 import { localDate } from '@ked/scheduling';
 import { cents, createIncome, day } from './books.ts';
 import { currentRules } from './booking.ts';
+import { getBrand } from './brand.ts';
 import { extraLines } from './extras.ts';
 import { getJob } from './jobs.ts';
 import { ApiError, now, randomToken, text, ulid, type Bindings } from './lib.ts';
@@ -260,16 +261,16 @@ export async function sendInvoice(env: Bindings, id: string) {
   if (inv.status === 'paid') throw new ApiError(409, 'paid', "That invoice is already paid.");
   const at = now();
   await env.DB.prepare('UPDATE invoices SET sent_at = ?, updated_at = ? WHERE id = ?').bind(at, at, id).run();
-  const sent = await getInvoice(env, id);
+  const [sent, brand] = await Promise.all([getInvoice(env, id), getBrand(env)]);
   const message =
-    `Hi ${firstName(sent.customer.name)}, thanks for choosing Knock Em' Down Detailing! ` +
+    `Hi ${firstName(sent.customer.name)}, thanks for choosing ${brand.name}! ` +
     `Here's your invoice for ${dollars(sent.balance)}: ${sent.payUrl}`;
   // Emailed as well when customer email is switched on; the text still goes.
   const emailed = sent.customer.email
     ? await mailCustomer(env, {
         to: sent.customer.email,
-        subject: `Invoice ${sent.number} from Knock Em' Down Detailing`,
-        text: `${message}\n\nQuestions? Call or text (314) 223-2988.`,
+        subject: `Invoice ${sent.number} from ${brand.name}`,
+        text: `${message}\n\nQuestions? Call or text ${brand.phone}.`,
       })
     : false;
   return { invoice: sent, message, emailed };
@@ -304,7 +305,36 @@ export async function recordInvoicePayment(env: Bindings, id: string, body: Reco
   const entries = [];
   if (amount !== 0) entries.push(await createIncome(env.DB, { ...common, amount, memo: `Invoice ${inv.number}` }, by));
   if (tip) entries.push(await createIncome(env.DB, { ...common, amount: tip, categoryId: 'income-tips', memo: `Tip, invoice ${inv.number}` }, by));
-  return { invoice: await getInvoice(env, id), entries };
+  const after = await getInvoice(env, id);
+  const receipted = inv.status !== 'paid' && after.status === 'paid' ? await sendReceipt(env, after, tip) : false;
+  return { invoice: after, entries, receipted };
+}
+
+/**
+ * A thank-you and receipt the moment an invoice is paid in full, however it
+ * was paid. Only for invoices the customer was sent, so settling an old or
+ * imported one quietly doesn't email anybody.
+ */
+async function sendReceipt(env: Bindings, inv: Invoice, tip: number): Promise<boolean> {
+  if (!inv.customer.email || !inv.sentAt) return false;
+  const brand = await getBrand(env);
+  const lines = [
+    `Hi ${firstName(inv.customer.name)},`,
+    '',
+    `Got it, thank you! Invoice ${inv.number} is paid in full: ${dollars(inv.paid)}${tip ? `, plus your ${dollars(tip)} tip` : ''}.`,
+    '',
+    `Your receipt is here any time: ${inv.payUrl}`,
+    '',
+    `Thanks for trusting ${brand.name} with your vehicle. If you know anyone who'd like theirs looking this good, I'd be grateful for the referral.`,
+    '',
+    brand.owner,
+  ];
+  return mailCustomer(env, {
+    to: inv.customer.email,
+    subject: `Receipt for invoice ${inv.number} from ${brand.name}`,
+    text: lines.join('\n'),
+    action: { label: 'View your receipt', url: inv.payUrl },
+  }).catch((err) => (console.error('receipt email failed', err), false));
 }
 
 /* ------------------------------------------------------------- public */

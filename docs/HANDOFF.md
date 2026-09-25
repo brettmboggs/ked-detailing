@@ -134,6 +134,15 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   codes, referrals, reviews, lead playbook). Customer email goes through
   Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC `p=none` added 2026-09-25). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
   campaign batches. Migrations through 0016 are applied.
+- **Branding** (2026-09-25): every customer email is branded automatically.
+  Senders write plain text; `sendEmail` (`api/src/crm-email.ts`) lays it into
+  the HTML layout in `api/src/email-html.ts` (logo on black, gold rule,
+  business details, unsubscribe line for marketing) and turns the first link
+  to a customer page (pay, approve, booking, quote) into a gold button. The
+  business's details live in `api/src/brand.ts`; phone, email and social links
+  follow the site document Jacob edits. The logo is `public/email/logo.png`.
+  Paying an invoice in full emails a receipt (only if it was sent). The
+  invoice page prints, or saves as a PDF, as a letterhead invoice.
 - **Add-ons found at the car** (2026-09-25): on a job, Jacob offers a fix
   from his price list or his own ("pet hair, $40") with a note and a photo,
   then texts the customer a link (`/approve/?a=<token>`,
@@ -181,11 +190,13 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (16),
-  scheduling (15), books (18) and API (118), import (6). The API tests
+  scheduling (15), books (18) and API (121), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
-  (`POST /books/accounts`) so other suites' data can't interfere.
+  (`POST /books/accounts`) so other suites' data can't interfere. `run.sh`
+  needs `setsid`, which macOS lacks: put a shim on PATH that runs
+  `perl -e 'setpgrp(0,0); exec @ARGV' -- "$@"`.
 - **Type checks:** `npm run check -w @ked/api` for the API, and
   `npx astro check` or `npm run verify` for the site.
 - **Free-plan query cap:** Cloudflare's docs say a free-plan request may make

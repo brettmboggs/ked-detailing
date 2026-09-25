@@ -1,4 +1,6 @@
+import { getBrand, siteUrl, type Brand } from './brand.ts';
 import { logActivity } from './crm-activity.ts';
+import { findAction, renderEmail, type EmailAction } from './email-html.ts';
 import { randomToken, type Bindings } from './lib.ts';
 
 /**
@@ -11,6 +13,10 @@ import { randomToken, type Bindings } from './lib.ts';
  * it skips anyone who unsubscribed and adds the unsubscribe link and header.
  * Service email (booking confirmations, reminders about their own booking)
  * uses `sendEmail`.
+ *
+ * Every email goes out branded (email-html.ts) without the caller doing
+ * anything: `sendEmail` lays the plain text into the HTML layout and makes the
+ * first link to a customer page (invoice, add-ons, booking) a button.
  */
 
 const RESEND = 'https://api.resend.com/emails';
@@ -19,13 +25,24 @@ export interface OutgoingEmail {
   to: string;
   subject: string;
   text: string;
-  html?: string;
   headers?: Record<string, string>;
+  /** The button. Left out, it's found in the text; null for none. */
+  action?: EmailAction | null;
+  /** Small print, e.g. the unsubscribe line. Added to both parts. */
+  footer?: { text: string; link?: EmailAction };
+  /** Pass it in when sending many, to look it up once. */
+  brand?: Brand;
 }
 
 export async function sendEmail(env: Bindings, m: OutgoingEmail): Promise<boolean> {
   if (!env.RESEND_API_KEY) return false;
   try {
+    const brand = m.brand ?? (await getBrand(env));
+    const action = m.action === undefined ? findAction(m.text, siteUrl(env)) : m.action;
+    const html = renderEmail(brand, { subject: m.subject, text: m.text, action, footer: m.footer });
+    const text = m.footer
+      ? `${m.text.trimEnd()}\n\n--\n${brand.legalName}, ${brand.city}, ${brand.region}\n${m.footer.text}${m.footer.link ? ` ${m.footer.link.url}` : ''}`
+      : m.text;
     const res = await fetch(env.RESEND_URL || RESEND, {
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -34,8 +51,8 @@ export async function sendEmail(env: Bindings, m: OutgoingEmail): Promise<boolea
         to: [m.to],
         reply_to: env.REPLY_TO || undefined,
         subject: m.subject,
-        text: m.text,
-        html: m.html,
+        text,
+        html,
         headers: m.headers,
       }),
     });
@@ -66,9 +83,11 @@ export async function unsubscribeUrl(env: Bindings, customerId: string): Promise
 export const oneClickUrl = (env: Bindings, token: string) =>
   `${(env.API_URL || 'https://ked-api.ked-api.workers.dev').replace(/\/$/, '')}/v1/crm/public/unsubscribe/${encodeURIComponent(token)}`;
 
-/** The footer every marketing email ends with. */
-export const marketingFooter = (link: string) =>
-  `\n\n--\nKnock Em' Down Auto & Marine Detailing, St. Louis\nDon't want these emails? ${link}`;
+/** The small print every marketing email ends with. */
+export const unsubscribeFooter = (link: string) => ({
+  text: "Don't want these emails?",
+  link: { label: 'Unsubscribe', url: link },
+});
 
 export type MarketingResult = 'sent' | 'unsubscribed' | 'no_email' | 'not_configured' | 'failed';
 
@@ -80,7 +99,7 @@ export type MarketingResult = 'sent' | 'unsubscribed' | 'no_email' | 'not_config
 export async function sendMarketingEmail(
   env: Bindings,
   customerId: string,
-  m: { subject: string; text: string; meta?: Record<string, unknown> },
+  m: { subject: string; text: string; meta?: Record<string, unknown>; brand?: Brand },
 ): Promise<MarketingResult> {
   if (!env.RESEND_API_KEY) return 'not_configured';
   const c = await env.DB.prepare('SELECT email, email_ok FROM customers WHERE id = ?').bind(customerId).first<{ email: string | null; email_ok: number }>();
@@ -91,7 +110,9 @@ export async function sendMarketingEmail(
   const ok = await sendEmail(env, {
     to: c.email,
     subject: m.subject,
-    text: `${m.text.trimEnd()}${marketingFooter(link)}`,
+    text: m.text,
+    footer: unsubscribeFooter(link),
+    brand: m.brand,
     headers: { 'List-Unsubscribe': `<${oneClickUrl(env, token)}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
   });
   if (!ok) return 'failed';

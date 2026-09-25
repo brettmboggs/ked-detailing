@@ -1,4 +1,5 @@
 import { offerableAddOns } from '@ked/pricing';
+import { getBrand } from './brand.ts';
 import { getJob } from './jobs.ts';
 import { mailCustomer } from './notify.ts';
 import { currentPricing } from './pricing.ts';
@@ -240,7 +241,7 @@ export async function sendExtras(env: Bindings, jobId: string) {
     ? await mailCustomer(env, {
         to: job.customer.email,
         subject: waiting.length === 1 ? `Add ${waiting[0]!.label} to your detail?` : 'A few add-ons for your detail',
-        text: `${message}\n\nQuestions? Call or text ${PHONE}.`,
+        text: `${message}\n\nQuestions? Call or text ${(await getBrand(env)).phone}.`,
       })
     : false;
   return { url, message, emailed };

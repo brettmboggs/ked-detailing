@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { loadSite } from '../lib/live-site';
+import { withBase } from '../lib/url';
 
 const { business } = await loadSite();
 
@@ -16,6 +17,9 @@ const { business } = await loadSite();
  *
  * `payOnline` turns on the Pay button once Stripe is connected; until then the
  * customer is pointed at Jacob.
+ *
+ * Printing it, or saving it as a PDF, gives a plain letterhead invoice: black
+ * on white, the logo and business details on top, no site navigation.
  */
 const row = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
 const rowLabel = 'text-sm text-bone-400';
@@ -29,8 +33,19 @@ const rowLabel = 'text-sm text-bone-400';
 >
   <Header />
 
-  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+  <main id="main" class="invoice-doc min-h-[70svh] bg-ink-950 pb-24">
     <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <!-- Paper only: the letterhead. -->
+      <div class="print-only letterhead">
+        <img src={withBase('/email/logo.png')} alt={business.name} width="200" height="113" />
+        <div>
+          <p class="letterhead-name">{business.legalName}</p>
+          <p>{business.city}, {business.region}</p>
+          <p>{business.phone} · {business.email}</p>
+          <p>{new URL(Astro.site ?? 'https://www.kedservice.com').host.replace(/^www\./, '')}</p>
+        </div>
+      </div>
+
       <div class="mb-6 flex items-center gap-4">
         <span class="h-px w-10 bg-gold-500"></span>
         <p data-eyebrow class="eyebrow">Invoice</p>
@@ -103,6 +118,10 @@ const rowLabel = 'text-sm text-bone-400';
           </div>
         </div>
 
+        <div class="no-print mt-10">
+          <button type="button" data-print class="btn-ghost">Save as PDF or print</button>
+        </div>
+
         <p class="mt-14 text-xs leading-relaxed text-bone-500">
           {business.legalName} · {business.city}, {business.region} · {business.email}
         </p>
@@ -112,6 +131,71 @@ const rowLabel = 'text-sm text-bone-400';
 
   <Footer />
 </Base>
+
+<style is:global>
+  .print-only {
+    display: none;
+  }
+  @media print {
+    @page {
+      margin: 14mm;
+    }
+    body > header,
+    body > footer,
+    body > a[href='#main'],
+    .no-print,
+    [data-pay] {
+      display: none !important;
+    }
+    html,
+    body,
+    .invoice-doc {
+      background: #fff !important;
+    }
+    .invoice-doc > div {
+      padding-top: 0 !important;
+      max-width: none !important;
+    }
+    .invoice-doc,
+    .invoice-doc * {
+      color: #111 !important;
+      border-color: #d6d6d6 !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .invoice-doc .border-gold-500 {
+      border-color: #e8b14c !important;
+    }
+    .invoice-doc h1 {
+      font-size: 22pt !important;
+      margin-top: 18pt;
+    }
+    .invoice-doc h1 .text-gold-500 {
+      color: #555 !important;
+    }
+    .print-only.letterhead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24pt;
+      padding-bottom: 14pt;
+      border-bottom: 2pt solid #e8b14c !important;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      text-align: right;
+    }
+    /* The logo is white for the site's black; invert it for paper. */
+    .letterhead img {
+      width: 150px;
+      height: auto;
+      filter: invert(1);
+    }
+    .letterhead-name {
+      font-weight: 700;
+      font-size: 11pt;
+    }
+  }
+</style>
 
 <script>
   interface PublicInvoice {
@@ -213,6 +297,8 @@ const rowLabel = 'text-sm text-bone-400';
     }
     $('[data-invoice]').hidden = false;
   }
+
+  $('[data-print]').addEventListener('click', () => window.print());
 
   async function checkout() {
     const btn = $<HTMLButtonElement>('[data-pay-online]');

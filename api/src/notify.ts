@@ -1,6 +1,9 @@
 import { currentRules } from './booking.ts';
+import { getBrand } from './brand.ts';
 import { sendEmail } from './crm-email.ts';
+import type { EmailAction } from './email-html.ts';
 import { getJob } from './jobs.ts';
+import { manageUrl } from './manage.ts';
 import { ApiError, list, now, text, ulid, type Bindings } from './lib.ts';
 
 /**
@@ -21,9 +24,9 @@ import { ApiError, list, now, text, ulid, type Bindings } from './lib.ts';
  */
 
 const PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-// TENANT: name and phone belong to the business, not the code. See docs/multi-tenant.md.
+// TENANT: the sender name on Jacob's own alerts. Customer email takes the
+// business's details from brand.ts.
 const BUSINESS = "Knock Em' Down Detailing";
-const PHONE = '(314) 223-2988';
 
 interface Alert {
   type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled' | 'extra_approved' | 'extra_declined';
@@ -36,6 +39,8 @@ interface Mail {
   to: string;
   subject: string;
   text: string;
+  /** Customer email only: the button, when it isn't the first customer link in the text. */
+  action?: EmailAction;
 }
 
 /* ------------------------------------------------------------ devices */
@@ -125,7 +130,7 @@ async function alert(env: Bindings, a: Alert, email?: Mail) {
 
 /** Customer email: through Resend when it's set up (free), else Cloudflare if switched on. Returns whether it went. */
 export async function mailCustomer(env: Bindings, m: Mail): Promise<boolean> {
-  if (env.RESEND_API_KEY) return sendEmail(env, { to: m.to, subject: m.subject, text: m.text });
+  if (env.RESEND_API_KEY) return sendEmail(env, { to: m.to, subject: m.subject, text: m.text, action: m.action });
   if (env.CUSTOMER_EMAIL !== 'on') return false;
   return mail(env, m).catch((err) => (console.error('customer email failed', err), false));
 }
@@ -168,18 +173,21 @@ export async function bookingMade(env: Bindings, jobId: string) {
     { to: '', subject: `New booking: ${job.customer.name}, ${at}`, text: lines.join('\n') },
   );
   if (job.customer.email) {
+    const brand = await getBrand(env);
     await mailCustomer(env, {
       to: job.customer.email,
-      subject: `You're booked with ${BUSINESS}`,
+      subject: `You're booked with ${brand.name}`,
       text: [
         `Hi ${job.customer.name.split(' ')[0]},`,
         '',
         `You're booked for ${service} on ${at}, at ${job.address}.`,
-        `Estimate: ${price(job.quote)}. Jacob confirms the final price when he sees the vehicle.`,
+        `Estimate: ${price(job.quote)}. ${brand.owner} confirms the final price when he sees the vehicle.`,
         '',
-        `Need to change something? Call or text ${PHONE}.`,
+        `To see, move or cancel it: ${manageUrl(env, job.manageToken)}`,
         '',
-        BUSINESS,
+        `Anything else, call or text ${brand.phone}.`,
+        '',
+        brand.name,
       ].join('\n'),
     });
   }

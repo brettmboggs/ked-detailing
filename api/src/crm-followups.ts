@@ -4,7 +4,8 @@ import { defaultConfig, type PricingConfig } from '@ked/pricing';
 import type { AppEnv } from './app-env.ts';
 import { requireOwner, type Owner } from './auth.ts';
 import { activityStatement } from './crm-activity.ts';
-import { sendEmail } from './crm-email.ts';
+import { getBrand } from './brand.ts';
+import { sendEmail, unsubscribeFooter } from './crm-email.ts';
 import { STATS_CTE } from './crm-segments.ts';
 import { ApiError, json, now, text, ulid, type Bindings } from './lib.ts';
 
@@ -653,6 +654,7 @@ async function sendQueued(env: Bindings, s: FollowUpSettings, today: string, at:
   ]);
 
   const site = siteUrl(env);
+  const brand = rows!.results.length ? await getBrand(env) : undefined;
   const api = apiUrl(env);
   const results = await Promise.all(
     rows!.results.map(async (r) => {
@@ -662,18 +664,17 @@ async function sendQueued(env: Bindings, s: FollowUpSettings, today: string, at:
       if (marketing && !r.unsubscribe_token) return { r, ok: false, note: 'No unsubscribe link, so it was held back.' };
       const subject = r.subject || "Knock Em' Down Detailing";
       const body = r.message ?? '';
-      let textBody = body;
+      let footer: ReturnType<typeof unsubscribeFooter> | undefined;
       let headers: Record<string, string> | undefined;
       if (marketing) {
         const token = encodeURIComponent(r.unsubscribe_token!);
-        const page = `${site}/unsubscribe/?t=${token}`;
-        textBody = `${body.trimEnd()}\n\n--\nKnock Em' Down Auto & Marine Detailing, St. Louis\nDon't want these emails? ${page}`;
+        footer = unsubscribeFooter(`${site}/unsubscribe/?t=${token}`);
         headers = {
           'List-Unsubscribe': `<${api}/v1/crm/public/unsubscribe/${token}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         };
       }
-      const ok = await sendEmail(env, { to: r.email, subject, text: textBody, headers });
+      const ok = await sendEmail(env, { to: r.email, subject, text: body, headers, footer, brand });
       return { r, ok, note: ok ? null : 'The email service refused it.' };
     }),
   );

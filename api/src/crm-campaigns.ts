@@ -1,6 +1,7 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from './app-env.ts';
 import { requireOwner } from './auth.ts';
+import { getBrand } from './brand.ts';
 import { activityStatement, logActivity } from './crm-activity.ts';
 import { sendMarketingEmail, type MarketingResult } from './crm-email.ts';
 import { readSegment, segmentCustomers, type CustomerStats, type Segment } from './crm-segments.ts';
@@ -1093,9 +1094,10 @@ export async function sendBatch(env: Bindings, camp: CampaignRow, size = BATCH):
     .all<{ customer_id: string }>();
   if (!claimed.length) return out;
 
-  const [{ results: people }, ctx] = await Promise.all([
+  const [{ results: people }, ctx, brand] = await Promise.all([
     peopleQuery(db, camp.id, claimed.map((r) => r.customer_id)).all<SendPerson>(),
     renderCtx(env, [camp.subject, camp.body], 'email', camp.name),
+    getBrand(env),
   ]);
   const results: { id: string; status: string; error: string | null; at: string | null }[] = [];
   let last = 0;
@@ -1107,6 +1109,7 @@ export async function sendBatch(env: Bindings, camp: CampaignRow, size = BATCH):
       subject: render(camp.subject ?? camp.name, asPerson(p), ctx),
       text: render(camp.body, asPerson(p), ctx),
       meta: { campaignId: camp.id },
+      brand,
     });
     if (r === 'sent') out.sent++;
     else if (r === 'failed') out.failed++;
