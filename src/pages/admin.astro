@@ -4,8 +4,9 @@ import { business } from '../data/site';
 import { withBase } from '../lib/url';
 
 /**
- * The web admin for Jacob and Brett: bookings, quote requests, prices and
- * hours, from any browser. The same API the iPhone app uses, so every rule
+ * The web admin for Jacob and Brett: the whole business from any browser.
+ * Calendar, customers, quote requests, invoices, books, inventory, prices,
+ * hours and the website's own words and photos. The same API the iPhone app uses, so every rule
  * (price validation, booking rules) is enforced in one place.
  *
  * Sign-in is a one-time link emailed to an owner address (OWNER_EMAILS on
@@ -30,10 +31,15 @@ const tab =
         </div>
       </div>
       <nav data-tabs hidden role="tablist" aria-label="Admin sections" class="mx-auto flex max-w-6xl gap-6 overflow-x-auto px-5 sm:px-8">
-        <button type="button" role="tab" data-tab="bookings" class={tab}>Bookings</button>
+        <button type="button" role="tab" data-tab="bookings" class={tab}>Calendar</button>
+        <button type="button" role="tab" data-tab="customers" class={tab}>Customers</button>
         <button type="button" role="tab" data-tab="leads" class={tab}>Quote requests</button>
+        <button type="button" role="tab" data-tab="invoices" class={tab}>Invoices</button>
+        <button type="button" role="tab" data-tab="books" class={tab}>Books</button>
+        <button type="button" role="tab" data-tab="inventory" class={tab}>Inventory</button>
         <button type="button" role="tab" data-tab="prices" class={tab}>Prices</button>
         <button type="button" role="tab" data-tab="hours" class={tab}>Hours</button>
+        <button type="button" role="tab" data-tab="website" class={tab}>Website</button>
       </nav>
     </header>
 
@@ -57,9 +63,14 @@ const tab =
       <p data-error role="alert" hidden class="mb-6 border-l-2 border-red-400 pl-4 text-red-300"></p>
 
       <section data-view="bookings" hidden></section>
+      <section data-view="customers" hidden></section>
       <section data-view="leads" hidden></section>
+      <section data-view="invoices" hidden></section>
+      <section data-view="books" hidden></section>
+      <section data-view="inventory" hidden></section>
       <section data-view="prices" hidden></section>
       <section data-view="hours" hidden></section>
+      <section data-view="website" hidden></section>
 
       <p class="mt-16 text-xs text-bone-500">Something wrong? Text Brett. {business.name}</p>
     </div>
@@ -67,6 +78,6 @@ const tab =
 </Base>
 
 <script>
-  import { initAdmin } from '../scripts/admin';
+  import { initAdmin } from '../scripts/admin/index';
   initAdmin();
 </script>
