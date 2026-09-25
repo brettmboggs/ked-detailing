@@ -1,6 +1,6 @@
 import { currentRules } from './booking.ts';
 import { getJob } from './jobs.ts';
-import { ApiError, now, text, ulid, type Bindings } from './lib.ts';
+import { ApiError, list, now, text, ulid, type Bindings } from './lib.ts';
 
 /**
  * Telling Jacob (and customers) what happened.
@@ -99,7 +99,7 @@ async function push(env: Bindings, alert: Alert): Promise<number> {
 
 async function mail(env: Bindings, m: Mail): Promise<boolean> {
   if (!env.EMAIL || !env.MAIL_FROM) return false;
-  await env.EMAIL.send({ to: m.to, from: env.MAIL_FROM, subject: m.subject, text: m.text });
+  await env.EMAIL.send({ to: m.to, from: { name: BUSINESS, email: env.MAIL_FROM }, subject: m.subject, text: m.text });
   return true;
 }
 
@@ -113,7 +113,9 @@ async function alert(env: Bindings, a: Alert, email?: Mail) {
   const [pushed, emailed] = await Promise.all([
     push(env, a).catch((err) => (console.error('push failed', err), 0)),
     env.ALERT_EMAIL && email
-      ? mail(env, { ...email, to: env.ALERT_EMAIL }).catch((err) => (console.error('alert email failed', err), false))
+      ? Promise.all(
+          list(env.ALERT_EMAIL).map((to) => mail(env, { ...email, to }).catch((err) => (console.error(`alert email to ${to} failed`, err), false))),
+        ).then((sent) => sent.some(Boolean))
       : false,
   ]);
   await env.DB.prepare('UPDATE alerts SET pushed = ?, emailed = ? WHERE id = ?').bind(pushed, emailed ? 1 : 0, id).run();

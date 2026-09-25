@@ -20,6 +20,10 @@
   // create the bucket, add { "binding": "PHOTOS", "bucket_name": "ked-photos" }
   // under r2_buckets, and new uploads go there. Old ones are still read from KV.
   "kv_namespaces": [{ "binding": "PHOTO_KV", "id": "ffcb3a9165a243488fafa424ec08fd39" }],
+  // Email from kedservice.com (Cloudflare Email Routing). Free to addresses
+  // verified under Email → Destination addresses: Jacob's and Brett's. Customer
+  // email needs the Workers Paid plan, so CUSTOMER_EMAIL stays unset.
+  "send_email": [{ "name": "EMAIL" }],
   "vars": {
     // Browsers allowed to call the public endpoints. The app is native and
     // doesn't need CORS.
@@ -36,18 +40,11 @@
     "PAY_URL": "https://www.kedservice.com/pay/",
     // The customer's page to see, move or cancel a booking: this plus ?b=<token>.
     // Also switches to kedservice.com at cutover.
-    "MANAGE_URL": "https://www.kedservice.com/booking/"
+    "MANAGE_URL": "https://www.kedservice.com/booking/",
+    "MAIL_FROM": "alerts@kedservice.com",
+    // Booking and quote alerts. Comma-separated; each must be a verified destination.
+    "ALERT_EMAIL": "knockemdowndetailing@gmail.com"
   }
-  // Email, the day kedservice.com is on Cloudflare (code in src/notify.ts):
-  //   1. Dashboard → Email → verify Jacob's inbox as a destination, and set
-  //      up sending for kedservice.com.
-  //   2. Add  "send_email": [{ "name": "EMAIL" }]  at the top level, and vars
-  //      "MAIL_FROM": "Knock Em' Down Detailing <jobs@kedservice.com>",
-  //      "ALERT_EMAIL": "<Jacob's verified inbox>".
-  //   That's free: booking and quote alerts to Jacob. Customer emails
-  //   (booking confirmations, invoice links) also need "CUSTOMER_EMAIL": "on"
-  //   and the Workers Paid plan ($5/month), because they go to unverified
-  //   addresses. Until then Jacob gets push alerts, and texts customers.
   // Secrets (wrangler secret put), both optional:
   //   ADMIN_TOKEN        break-glass bearer token for Brett's scripts and curl.
   //   PAGES_DEPLOY_HOOK  the ked-detailing Pages deploy hook URL; a pricing save
