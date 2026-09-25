@@ -200,7 +200,7 @@ There are no passwords and no sign-up screen.
 | `POST /v1/auth/apple` | – | Exchange an Apple identity token for a session |
 | `GET /v1/pricing` | – | `{ config, version, updatedAt }`. The website reads this too |
 | `GET /v1/hours` | – | `{ timezone, week, updatedAt }`. The working days only, for the website's footer and search listing |
-| `GET /v1/site` | – | `{ content, updatedAt }`: the website's words and photos as Jacob changed them in the web admin's Website tab. `content` holds only the changed fields (`hero`, `intro`, `area`, `contact`, `reviews`, `packages['level-1'…'level-4']`, `also`, `faqs`, `marquee`, `recent`) and is `{}` until the first save. The site's build lays it over `src/data/site.ts` (`src/lib/site-content.ts` has the shape). The app doesn't need it |
+| `GET /v1/site` | – | `{ content, updatedAt }`: the website's words and photos as Jacob changed them in the web admin's Website tab. `content` holds only the changed fields (`hero`, `intro`, `area`, `contact`, `reviews`, `packages['level-1'…'level-4']`, `also`, `faqs`, `marquee`, `recent`) and is `{}` until the first save. The site's build lays it over `src/data/site.ts` (`src/lib/site-content.ts` has the shape). The app's Website editor reads it too, over its vendored copy of `src/data/site.ts` |
 | `PUT /v1/site` | owner | Replace the document. Strict: unknown fields, over-long text and `<` `>` are refused (`422 invalid_site` with `details`). Photos are a built-in file name or a site upload's id. Rebuilds the website, like a pricing save, and deletes site uploads no longer used (after an hour) |
 | `POST /v1/site/photos` | owner | Raw image bytes, JPEG, PNG or WebP (convert HEIC first), up to 5 MB → `201 { id, contentType, bytes, url }`. Kept apart from job photos and receipts. Private until a `PUT /v1/site` uses it |
 | `GET /v1/site/photos/:id` | – | A website photo, only while the saved site uses it (else `404`). Cached for a year. The build copies these into the site, so pages never load them from here |
@@ -351,7 +351,7 @@ Owner-only. See `docs/crm.md`. Money is in cents.
 
 | Method | Path | What |
 | --- | --- | --- |
-| GET | `/v1/crm/customers?segment=<json>` | `{ customers }` with their numbers, filtered and sorted by a segment (`q`, `lifecycle`: any/lead/customer/repeat/lapsed, `lapsedDays`, `minSpend`, `maxSpend`, `minVisits`, `maxVisits`, `lastVisitBefore`, `lastVisitAfter`, `noUpcoming`, `services`, `zips` (prefixes), `sources`, `tags`, `canEmail`, `canText`, `sort`: spend/recent/visits/name/newest, `limit` ≤ 2000, default 500). 422 on a bad segment |
+| GET | `/v1/crm/customers?segment=<json>` | `{ customers }` with their numbers, filtered and sorted by a segment (`q`, `lifecycle`: any/lead/customer/repeat/lapsed, `lapsedDays`, `minSpend`, `maxSpend`, `minVisits`, `maxVisits`, `lastVisitBefore`, `lastVisitAfter`, `noUpcoming`, `services`, `zips` (prefixes), `sources`, `tags`, `canEmail`, `canText`, `createdAfter`, `sort`: spend/recent/visits/name/newest, `limit` ≤ 2000, default 500). 422 on a bad segment |
 | GET | `/v1/crm/customers/export?segment=<json>` | The same segment as a CSV download (up to 2,000 rows): Name, Phone, Email, Visits, Spent (dollars), Last visit, Next booking, Source, Tags, Can email, Can text. Cells starting with `= + - @` are prefixed with `'` |
 | GET | `/v1/crm/customers/tags` | `{ tags: [{ tag, count }] }`, most used first, for filters |
 | GET | `/v1/crm/customers/duplicates` | `{ groups: [{ reasons: ['phone' \| 'email' \| 'name'], customers: [{ id, name, phone, email, address, createdAt, visits }] }] }` |
@@ -364,7 +364,7 @@ Owner-only. See `docs/crm.md`. Money is in cents.
 
 **Profile shape** (`GET /v1/crm/customers/:id`):
 
-- `customer`: the customer (as `GET /v1/customers/:id`, plus `attribution`:
+- `customer`: the customer (as `GET /v1/customers/:id`, plus `referralCode` and `attribution`:
   what the website saw on their first visit, `{ utmSource, utmMedium,
   utmCampaign, referrer, landing, firstSeen, ref }`, or null).
 - `numbers`: `visits`, `spend`, `avgTicket`, `firstVisit`, `lastVisit`
@@ -416,9 +416,9 @@ marked public. See `docs/crm.md`.
 **Follow-up shape**: `id`, `kind` (`review` = first thank-you with the review
 ask, `thank_you`, `reminder`, `rebook`, `winback`, `quote_chase`, `custom`),
 `status` (`open`, `done`, `skipped`, `sent`), `channel` (`text`, `email`,
-`call`), `title` (the why: "Due for a Level I: last one June 12"), `message`
+`call`, or null for his own reminder with no one to reach), `title` (the why: "Due for a Level I: last one June 12"), `message`
 (ready to send), `subject`, `dueDate`, `customer { id, name, phone, email,
-emailOk, textOk }` (or null), `leadId`, `jobId`, `email` (`{ state: queued |
+emailOk, textOk }` (or null; `id` is null for a quote chase whose lead isn't a customer yet), `leadId`, `jobId`, `email` (`{ state: queued |
 sending | sent | failed, note, sentAt }` for automatic email, else null),
 `auto` (made by a rule), `createdAt`, `updatedAt`, `doneAt`.
 
@@ -659,7 +659,8 @@ business from the van. The CRM screens use the CRM endpoints above:
   marketing spend by month and channel, and the Monday notes with "Make one
   now".
 - **Website** (More → Website): the site's words and photos, as in the web
-  admin's Website tab. Photos come from the camera roll, shrunk to JPEG and
+  admin's Website tab. Built-in photos load from the site's own
+  `/site-photos/<name>-400.webp`, and the picker lists `/site-photos/library.json`. Photos come from the camera roll, shrunk to JPEG and
   sent to `POST /v1/site/photos`. Saving rebuilds the site.
 
 Out of scope for v1: multiple staff, recurring maintenance plans, Android. **Payroll is deliberately never built here.** When Jacob hires
