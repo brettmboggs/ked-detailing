@@ -33,7 +33,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 
 | Piece | Where | State |
 | --- | --- | --- |
-| Website (Astro 7, Tailwind 4) | `src/` | Live on `ked-detailing.pages.dev` and `brettboggs.dev/ked/`. `kedservice.com` still points at Squarespace until Jacob switches nameservers |
+| Website (Astro 7, Tailwind 4) | `src/` | **Live on www.kedservice.com** (nameservers moved to Cloudflare 2026-09-24, `KED_NOINDEX` removed). Also on `ked-detailing.pages.dev` and `brettboggs.dev/ked/` |
 | Instant quote + booking calendar | `src/pages/quote.astro`, `src/scripts/booking.ts` | Built and live on staging, hidden. **Placeholder prices and booking rules** until Jacob answers |
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
@@ -176,7 +176,7 @@ message to paste to the Mac session ("Re-read docs/mobile-app.md … new: …").
 | KV namespace (photos) | `PHOTO_KV`, `ffcb3a9165a243488fafa424ec08fd39` |
 | API | `https://ked-api.ked-api.workers.dev` |
 | Pages project | `ked-detailing` (env vars `PUBLIC_KED_API_URL`, `KED_NOINDEX=true`) |
-| Zone | `kedservice.com`, pending. Nameservers `georgia.ns.cloudflare.com`, `lou.ns.cloudflare.com` |
+| Zone | `kedservice.com`, on Cloudflare since 2026-09-24. Registration is still at Squarespace (Jacob's account). Nameservers `georgia.ns.cloudflare.com`, `lou.ns.cloudflare.com` |
 | App bundle ID | `com.brettboggs.ked` |
 | Jacob's steps page | https://claude.ai/artifact/UKW361pRA3X3vfQDvgaGY4 (source: `docs/jacob-steps.md`; republish the page if the doc changes) |
 

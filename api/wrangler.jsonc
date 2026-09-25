@@ -33,10 +33,10 @@
     "OWNER_EMAILS": "brettmboggs@gmail.com,knockemdowndetailing@gmail.com,jjsmitty314@yahoo.com",
     // The website's pay page. Invoice links are this plus ?i=<token>. Switch
     // to https://www.kedservice.com/pay/ when the domain moves.
-    "PAY_URL": "https://ked-detailing.pages.dev/pay/",
+    "PAY_URL": "https://www.kedservice.com/pay/",
     // The customer's page to see, move or cancel a booking: this plus ?b=<token>.
     // Also switches to kedservice.com at cutover.
-    "MANAGE_URL": "https://ked-detailing.pages.dev/booking/"
+    "MANAGE_URL": "https://www.kedservice.com/booking/"
   }
   // Email, the day kedservice.com is on Cloudflare (code in src/notify.ts):
   //   1. Dashboard → Email → verify Jacob's inbox as a destination, and set
