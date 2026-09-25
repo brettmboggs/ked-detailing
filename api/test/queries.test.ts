@@ -94,3 +94,46 @@ test('the importers stay under the cap at full chunks', async () => {
   assert.equal(e.status, 200);
   assert.ok(e.queries < CAP, `10 entries: ${e.queries} queries`);
 });
+
+test('insights read every number in one batch, and the weekly note stays under the cap', async () => {
+  const all = await call('GET', '/crm/insights?from=2037-01-01&to=2039-12-31');
+  assert.equal(all.status, 200, JSON.stringify(all.body));
+  assert.ok(all.queries <= 10, `insights: ${all.queries} queries`);
+  const note = await call('POST', '/crm/insights/summary');
+  assert.equal(note.status, 201, JSON.stringify(note.body));
+  assert.ok(note.queries < CAP, `weekly note: ${note.queries} queries`);
+});
+
+test('the daily follow-up rules and the list stay under the cap with a crowd to contact', async () => {
+  // 30 people who've gone quiet, all with email: win-backs for every one, and a full batch of sends.
+  const { settings } = (await call('GET', '/crm/follow-ups/settings')).body;
+  await call('PUT', '/crm/follow-ups/settings', { ...settings, newPerDay: { rebook: 200, winback: 200 }, emailsPerDay: 100 });
+  const start = new Date(Date.now() - 270 * 864e5).toISOString();
+  for (const chunk of [0, 1]) {
+    const jobs = Array.from({ length: 15 }, (_, i) => ({
+      ref: `fu-cap-${chunk}-${i}`, customer: { name: `Fu Cap ${chunk}-${i}`, phone: `636-555-${3000 + chunk * 100 + i}`, email: `fu.cap${chunk}.${i}@example.com` },
+      address: '1 Cap St', start, total: 12000,
+    }));
+    assert.equal((await call('POST', '/import/jobs', { jobs })).status, 200);
+  }
+  // A fake Resend for this case (RESEND_URL points at RESEND_PORT), closed after.
+  const { createServer } = await import('node:http');
+  let sent = 0;
+  const resend = createServer((req, res) => {
+    req.resume().on('end', () => {
+      sent++;
+      res.setHeader('Content-Type', 'application/json');
+      res.end('{"id":"re_cap"}');
+    });
+  });
+  await new Promise<void>((r) => resend.listen(Number(process.env.RESEND_PORT), r));
+  const run = await call('POST', '/crm/follow-ups/run', {}).finally(() => resend.close());
+  console.log(`# follow-up run: ${run.queries} queries, ${sent} emails`);
+  assert.equal(run.status, 200, JSON.stringify(run.body));
+  assert.ok(run.body.created.winback >= 30);
+  assert.equal(run.body.emailed, 30, 'a full batch went out');
+  assert.equal(sent, 30);
+  assert.ok(run.queries < CAP, `daily run: ${run.queries} queries`);
+  const list = await call('GET', '/crm/follow-ups');
+  assert.ok(list.queries < CAP, `list: ${list.queries} queries`);
+});

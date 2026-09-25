@@ -1,0 +1,143 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
+
+/**
+ * Stop emails: /unsubscribe/?t=<token>, the link at the bottom of every
+ * follow-up and campaign email. Shows who is unsubscribing (first name and a
+ * masked address) and does it with one press. Everything comes from
+ * /v1/crm/public/unsubscribe/:token in the browser; the page holds nothing.
+ *
+ * Never indexed and sends no Referer, because the URL carries the token.
+ * Mail apps' one-click unsubscribe posts to the API directly, not here.
+ */
+const row = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
+const rowLabel = 'shrink-0 text-sm text-bone-400';
+---
+
+<Base
+  title="Stop emails | Knock Em' Down Detailing"
+  description="Stop emails from Knock Em' Down Detailing."
+  noindex
+  noReferrer
+>
+  <Header />
+
+  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p class="eyebrow">Emails</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Looking you up…</p>
+
+      <div data-found hidden class="mt-10 max-w-xl">
+        <dl class="border-t border-ink-800">
+          <div class={row}><dt class={rowLabel}>Email</dt><dd data-email class="text-right text-bone-50"></dd></div>
+          <div class={row}><dt class={rowLabel}>Emails from Jacob</dt><dd data-state class="text-right text-bone-50"></dd></div>
+        </dl>
+
+        <p data-text class="mt-8 text-lg leading-relaxed text-bone-200"></p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <button type="button" data-stop hidden class="btn-gold disabled:opacity-50">Stop emails</button>
+          <button type="button" data-undo hidden class="btn-ghost disabled:opacity-50">Keep getting them</button>
+        </div>
+        <p data-status role="status" aria-live="polite" class="mt-4 text-sm text-bone-400"></p>
+      </div>
+
+      <div data-missing hidden class="mt-8 max-w-xl">
+        <p data-missing-text class="text-lg leading-relaxed text-bone-200"></p>
+        <p class="mt-4 text-bone-400">Text or call Jacob and he'll take you off the list himself.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-gold">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  interface Who {
+    firstName: string;
+    email: string | null;
+    unsubscribed: boolean;
+  }
+
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const token = new URLSearchParams(location.search).get('t') ?? '';
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+  const url = `${API}/v1/crm/public/unsubscribe/${encodeURIComponent(token)}`;
+
+  function missing(text: string) {
+    $('[data-loading]').hidden = true;
+    $('[data-found]').hidden = true;
+    set('[data-title]', "That link didn't work.");
+    set('[data-missing-text]', text);
+    $('[data-missing]').hidden = false;
+  }
+
+  function draw(w: Who, justChanged = false) {
+    $('[data-loading]').hidden = true;
+    $('[data-found]').hidden = false;
+    set('[data-email]', w.email ?? 'No email on file');
+    set('[data-state]', w.unsubscribed ? 'Stopped' : 'On');
+    const hi = w.firstName ? `${w.firstName}, ` : '';
+    if (w.unsubscribed) {
+      set('[data-title]', justChanged ? "You're off the list." : "You're already off the list.");
+      set('[data-text]', `${hi}you won't get any more emails from Jacob about detailing. If you have a booking, you'll still hear about that one.`);
+    } else {
+      set('[data-title]', justChanged ? "You're back on the list." : 'Stop emails?');
+      set(
+        '[data-text]',
+        justChanged
+          ? `Thanks${w.firstName ? `, ${w.firstName}` : ''}. Jacob will keep you posted.`
+          : `${hi}press the button and Jacob won't email you about detailing again. No hard feelings.`,
+      );
+    }
+    $('[data-stop]').hidden = w.unsubscribed;
+    $('[data-undo]').hidden = !w.unsubscribed;
+  }
+
+  async function send(path: string, button: HTMLButtonElement) {
+    button.disabled = true;
+    set('[data-status]', 'Saving…');
+    try {
+      const res = await fetch(url + path, { method: 'POST' });
+      if (!res.ok) throw new Error();
+      draw((await res.json()) as Who, true);
+      set('[data-status]', '');
+    } catch {
+      set('[data-status]', "That didn't go through. Try again, or text Jacob.");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  $('[data-stop]').addEventListener('click', (e) => void send('', e.currentTarget as HTMLButtonElement));
+  $('[data-undo]').addEventListener('click', (e) => void send('/undo', e.currentTarget as HTMLButtonElement));
+
+  if (!API) missing("This page can't reach the server right now.");
+  else if (!token) missing('This link is missing its code. Open the link in the email again.');
+  else {
+    fetch(url)
+      .then(async (res) => {
+        if (res.status === 404) return missing("We couldn't find you from this link. It may have been cut off.");
+        if (!res.ok) throw new Error();
+        draw((await res.json()) as Who);
+      })
+      .catch(() => missing("This page can't reach the server right now. Try again in a minute."));
+  }
+</script>
