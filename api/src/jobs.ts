@@ -208,7 +208,8 @@ export async function updateJob(db: D1Database, id: string, body: Record<string,
     fields.push(['status', body.status]);
     // Remember who cancelled; un-cancelling forgets it.
     if (body.status !== job.status) {
-      fields.push(['cancelled_by', body.status === 'cancelled' ? 'owner' : null], ['cancel_reason', null]);
+      const reason = body.status === 'cancelled' ? (text(body.cancelReason, 'Reason', 500) ?? null) : null;
+      fields.push(['cancelled_by', body.status === 'cancelled' ? 'owner' : null], ['cancel_reason', reason]);
     }
   }
   if ('start' in body || 'end' in body) {
@@ -247,10 +248,13 @@ export async function updateJob(db: D1Database, id: string, body: Record<string,
 
 /* ---------------------------------------------------------- time off */
 
-export async function listTimeOff(db: D1Database) {
+/** Time off overlapping [from, to); by default, anything that ended in the last week or later. */
+export async function listTimeOff(db: D1Database, from?: string, to?: string) {
+  const after = from ? instant(from, 'from') : new Date(Date.now() - 7 * 864e5);
+  const before = to ? instant(to, 'to') : new Date('9999-12-31T00:00:00Z');
   const { results } = await db
-    .prepare('SELECT id, start_at, end_at, reason FROM time_off WHERE end_at > ? ORDER BY start_at LIMIT 200')
-    .bind(new Date(Date.now() - 7 * 864e5).toISOString())
+    .prepare('SELECT id, start_at, end_at, reason FROM time_off WHERE end_at > ? AND start_at < ? ORDER BY start_at LIMIT 200')
+    .bind(after.toISOString(), before.toISOString())
     .all<{ id: string; start_at: string; end_at: string; reason: string | null }>();
   return results.map((r) => ({ id: r.id, start: r.start_at, end: r.end_at, reason: r.reason }));
 }

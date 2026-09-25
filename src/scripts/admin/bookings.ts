@@ -82,7 +82,7 @@ async function drawWeek() {
 
   const [{ jobs }, { timeOff }, settings] = await Promise.all([
     api<{ jobs: CalJob[] }>(`/jobs?from=${from.toISOString()}&to=${to.toISOString()}`),
-    api<{ timeOff: TimeOff[] }>('/time-off'),
+    api<{ timeOff: TimeOff[] }>(`/time-off?from=${from.toISOString()}&to=${to.toISOString()}`),
     rules ? Promise.resolve({ rules }) : api<{ rules: BookingRules }>('/settings/booking'),
   ]);
   rules = settings.rules;

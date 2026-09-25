@@ -114,8 +114,7 @@ export async function renderJob(
           'p',
           { class: 'mt-3 max-w-xl border-l-2 border-ink-600 pl-4 text-sm text-bone-200' },
           j.cancelledBy === 'customer' ? 'The customer cancelled this through their link.' : 'You cancelled this job.',
-          j.cancelReason ? ` Their reason: "${j.cancelReason}"` : '',
-          j.cancelledBy !== 'customer' && j.notes?.startsWith('Cancelled: ') ? ` ${j.notes.split('\n')[0]}` : '',
+          j.cancelReason ? (j.cancelledBy === 'customer' ? ` Their reason: "${j.cancelReason}"` : ` Why: ${j.cancelReason}`) : '',
         )
       : null,
     h(
@@ -332,10 +331,8 @@ export async function renderJob(
   const doCancel = action(
     'Yes, cancel it',
     async () => {
-      // PATCH clears the cancel reason, so Jacob's reason goes at the top of the notes.
       const why = reason.value.trim();
-      const extra = why ? { notes: `Cancelled: ${why}${j.notes ? `\n\n${j.notes}` : ''}` } : {};
-      await setStatus('cancelled', extra);
+      await setStatus('cancelled', why ? { cancelReason: why } : {});
     },
     'border border-red-400/60 px-3 py-1.5 text-sm text-red-300 transition-colors hover:border-red-400 hover:text-red-200',
   );

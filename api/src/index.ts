@@ -85,6 +85,8 @@ app.use('*', (c, next) =>
     origin: (origin) => (list(c.env.ALLOWED_ORIGINS).includes(origin.toLowerCase()) ? origin : null),
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // So the admin can name CSV downloads the way the API does.
+    exposeHeaders: ['Content-Disposition'],
     maxAge: 86400,
   })(c, next),
 );
@@ -255,7 +257,9 @@ app.patch('/customers/:id', requireOwner, async (c) =>
   c.json(await updateCustomer(c.env.DB, c.req.param('id'), await json(c.req.raw))),
 );
 
-app.get('/time-off', requireOwner, async (c) => c.json({ timeOff: await listTimeOff(c.env.DB) }));
+app.get('/time-off', requireOwner, async (c) =>
+  c.json({ timeOff: await listTimeOff(c.env.DB, c.req.query('from'), c.req.query('to')) }),
+);
 app.post('/time-off', requireOwner, async (c) => c.json(await addTimeOff(c.env.DB, await json(c.req.raw)), 201));
 app.delete('/time-off/:id', requireOwner, async (c) => {
   await removeTimeOff(c.env.DB, c.req.param('id'));

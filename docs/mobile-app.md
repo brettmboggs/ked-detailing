@@ -216,11 +216,11 @@ There are no passwords and no sign-up screen.
 | `GET /v1/jobs/:id` | owner | One job |
 | `POST /v1/jobs/:id/confirmation` | owner | `{ url, message }`: the text confirming a booking, with the customer's own link to see, move or cancel it. **Confirm** on a web booking opens the SMS composer with `message`. Works for jobs he adds too |
 | `POST /v1/jobs` | owner | Jacob adds a job: `{ customerId \| customer: { name, phone?, email?, address? }, input, start, address?, zip?, vehicle?, notes?, minutes? }` → `201 { job, warnings: string[] }`. He can book anything. Clashes (overlap, day limit, closed day, outside hours) come back as warnings to show him, not errors |
-| `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents) |
+| `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents). With `status: cancelled`, an optional `cancelReason` (only Jacob sees it) |
 | `GET /v1/customers?q=` | owner | `{ customers }`. Search by name, phone digits or email. Empty `q` lists the newest |
 | `GET /v1/customers/:id` | owner | The customer plus `jobs`, newest first |
 | `PATCH /v1/customers/:id` | owner | `name`, `phone`, `email`, `address`, `notes` |
-| `GET /v1/time-off` | owner | `{ timeOff: [{ id, start, end, reason }] }`, recent and upcoming |
+| `GET /v1/time-off?from=&to=` | owner | `{ timeOff: [{ id, start, end, reason }] }` overlapping the range. Without `from`, recent and upcoming |
 | `POST /v1/time-off` | owner | `{ start, end, reason? }`. Blocks online booking in that span |
 | `DELETE /v1/time-off/:id` | owner | `204` |
 | `GET /v1/books/accounts[?archived=true]` | owner | `{ accounts }`: the chart, in display order |

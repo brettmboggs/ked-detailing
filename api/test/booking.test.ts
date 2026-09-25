@@ -130,6 +130,10 @@ test('Jacob can add a clashing job by hand, and is warned', async () => {
   assert.equal(done.body.status, 'done');
   assert.equal(done.body.finalPrice, 16000);
   assert.equal((await call('PATCH', `/jobs/${r.body.job.id}`, { status: 'paid' }, admin)).status, 422);
+  const cancelled = await call('PATCH', `/jobs/${r.body.job.id}`, { status: 'cancelled', cancelReason: 'Rained out' }, admin);
+  assert.equal(cancelled.body.cancelReason, 'Rained out');
+  assert.equal(cancelled.body.cancelledBy, 'owner');
+  assert.equal((await call('PATCH', `/jobs/${r.body.job.id}`, { status: 'scheduled' }, admin)).body.cancelReason, null);
 });
 
 test('time off removes slots until it is deleted', async () => {
@@ -142,6 +146,10 @@ test('time off removes slots until it is deleted', async () => {
   );
   assert.equal(off.status, 201);
   assert.ok(!(await allSlots()).includes(start));
+  const inRange = await call('GET', `/time-off?from=${start}&to=${new Date(new Date(start).getTime() + 3_600_000).toISOString()}`, undefined, admin);
+  assert.ok(inRange.body.timeOff.some((t: { id: string }) => t.id === off.body.id));
+  const later = await call('GET', `/time-off?from=${new Date(new Date(start).getTime() + 13 * 3_600_000).toISOString()}`, undefined, admin);
+  assert.ok(!later.body.timeOff.some((t: { id: string }) => t.id === off.body.id));
   assert.equal((await call('DELETE', `/time-off/${off.body.id}`, undefined, admin)).status, 204);
   assert.ok((await allSlots()).includes(start));
 });
