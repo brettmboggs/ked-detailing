@@ -80,7 +80,7 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<s
 }
 
 export const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
-export const dollars = (c: number) => `$${(c / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+export const dollars = (c: number) => `$${(c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
 export const when = (iso: string, opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-US', { timeZone: TZ, ...opts }).format(new Date(iso));
 export const dayTitle = (date: string) =>
   new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${date}T12:00:00Z`));
