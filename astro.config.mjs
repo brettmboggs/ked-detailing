@@ -18,7 +18,7 @@ export default defineConfig({
   // link. /quote joins the sitemap when the cutover switch goes on.
   integrations: [
     sitemap({
-      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking)/?$`).test(new URL(page).pathname),
+      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking|unsubscribe)/?$`).test(new URL(page).pathname),
     }),
   ],
 

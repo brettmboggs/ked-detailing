@@ -23,6 +23,8 @@ export interface Segment {
   /** YYYY-MM-DD, compared with the last done visit's date. */
   lastVisitBefore?: string;
   lastVisitAfter?: string;
+  /** YYYY-MM-DD: added to the CRM on or after this day ("new this month"). */
+  createdAfter?: string;
   /** Has nothing booked from today on. */
   noUpcoming?: boolean;
   /** Ever had one of these service ids done. */
@@ -120,6 +122,7 @@ export function readSegment(raw: unknown): Segment {
     maxVisits: num(s.maxVisits, 'Most visits'),
     lastVisitBefore: day(s.lastVisitBefore, 'Last visit before'),
     lastVisitAfter: day(s.lastVisitAfter, 'Last visit after'),
+    createdAfter: day(s.createdAfter, 'Added after'),
     noUpcoming: s.noUpcoming === true ? true : undefined,
     services: arr(s.services, 'Services'),
     zips: arr(s.zips, 'ZIPs', 200),
@@ -154,6 +157,7 @@ export async function segmentCustomers(db: D1Database, seg: Segment, at = new Da
   if (seg.maxVisits !== undefined) where.push(`s.visits <= ${bind(seg.maxVisits)}`);
   if (seg.lastVisitBefore) where.push(`s.last_visit < ${bind(seg.lastVisitBefore)}`);
   if (seg.lastVisitAfter) where.push(`s.last_visit >= ${bind(seg.lastVisitAfter)}`);
+  if (seg.createdAfter) where.push(`c.created_at >= ${bind(seg.createdAfter)}`);
   if (seg.noUpcoming) where.push('s.next_visit IS NULL');
   if (seg.services) where.push(`EXISTS (SELECT 1 FROM json_each(s.services) x WHERE x.value IN (SELECT value FROM json_each(${bind(JSON.stringify(seg.services))})))`);
   if (seg.zips) where.push(`EXISTS (SELECT 1 FROM json_each(${bind(JSON.stringify(seg.zips))}) z WHERE s.zip LIKE z.value || '%')`);
@@ -164,7 +168,8 @@ export async function segmentCustomers(db: D1Database, seg: Segment, at = new Da
 
   const order = {
     spend: 's.spend DESC, s.visits DESC',
-    recent: 'COALESCE(s.last_visit, substr(c.created_at, 1, 10)) DESC',
+    // People who've never had a visit go after everyone who has.
+    recent: 's.last_visit IS NULL, s.last_visit DESC, c.id DESC',
     visits: 's.visits DESC, s.spend DESC',
     name: 'lower(c.name)',
     newest: 'c.id DESC',

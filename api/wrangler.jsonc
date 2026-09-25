@@ -55,7 +55,9 @@
     // Replies land in Jacob's inbox. The site's address builds unsubscribe links.
     "CUSTOMER_MAIL_FROM": "Jacob at Knock Em' Down <jacob@kedservice.com>",
     "REPLY_TO": "knockemdowndetailing@gmail.com",
-    "SITE_URL": "https://www.kedservice.com"
+    "SITE_URL": "https://www.kedservice.com",
+    // This API's own address, for one-click unsubscribe links in emails.
+    "API_URL": "https://ked-api.ked-api.workers.dev"
   }
   // Secrets (wrangler secret put), both optional:
   //   ADMIN_TOKEN        break-glass bearer token for Brett's scripts and curl.

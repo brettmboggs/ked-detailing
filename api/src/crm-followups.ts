@@ -316,7 +316,7 @@ const everyWords = (days: number) => (days < 50 ? `every ${Math.round(days / 7)}
 const siteUrl = (env: Bindings) => (env.SITE_URL || 'https://www.kedservice.com').replace(/\/$/, '');
 /** The API's own address, for one-click unsubscribe. The site is static, so it can't take the POST. */
 const apiUrl = (env: Bindings) =>
-  ((env as { API_URL?: string }).API_URL || 'https://ked-api.ked-api.workers.dev').replace(/\/$/, '');
+  (env.API_URL || 'https://ked-api.ked-api.workers.dev').replace(/\/$/, '');
 
 /* -------------------------------------------------------------- rules */
 

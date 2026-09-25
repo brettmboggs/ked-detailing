@@ -62,6 +62,14 @@ export async function unsubscribeUrl(env: Bindings, customerId: string): Promise
   return `${(env.SITE_URL || 'https://www.kedservice.com').replace(/\/$/, '')}/unsubscribe/?t=${encodeURIComponent(token)}`;
 }
 
+/** Mail apps POST here for one-click unsubscribe (RFC 8058); the static site can't take a POST. */
+export const oneClickUrl = (env: Bindings, token: string) =>
+  `${(env.API_URL || 'https://ked-api.ked-api.workers.dev').replace(/\/$/, '')}/v1/crm/public/unsubscribe/${encodeURIComponent(token)}`;
+
+/** The footer every marketing email ends with. */
+export const marketingFooter = (link: string) =>
+  `\n\n--\nKnock Em' Down Auto & Marine Detailing, St. Louis\nDon't want these emails? ${link}`;
+
 export type MarketingResult = 'sent' | 'unsubscribed' | 'no_email' | 'not_configured' | 'failed';
 
 /**
@@ -79,12 +87,12 @@ export async function sendMarketingEmail(
   if (!c?.email) return 'no_email';
   if (!c.email_ok) return 'unsubscribed';
   const link = await unsubscribeUrl(env, customerId);
-  const text = `${m.text.trimEnd()}\n\n--\nKnock Em' Down Auto & Marine Detailing, St. Louis\nDon't want these emails? ${link}`;
+  const token = new URL(link).searchParams.get('t')!;
   const ok = await sendEmail(env, {
     to: c.email,
     subject: m.subject,
-    text,
-    headers: { 'List-Unsubscribe': `<${link}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+    text: `${m.text.trimEnd()}${marketingFooter(link)}`,
+    headers: { 'List-Unsubscribe': `<${oneClickUrl(env, token)}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
   });
   if (!ok) return 'failed';
   await logActivity(env.DB, { customerId, kind: 'email', body: `${m.subject}\n\n${m.text}`, meta: m.meta, by: 'system' });
