@@ -1,4 +1,4 @@
-import { jobMinutes, localDate, slotProblem, type BookingRules, type Calendar } from '@ked/scheduling';
+import { driveMinutes, gapMinutes, jobMinutes, localDate, slotProblem, zipOf, type BookingRules, type Calendar } from '@ked/scheduling';
 import { currentRules, loadCalendar } from './booking.ts';
 import { findOrCreateCustomer, getCustomer } from './customers.ts';
 import { readTouch } from './attribution.ts';
@@ -110,7 +110,7 @@ export async function customerJobs(db: D1Database, customerId: string) {
  * its own so one doesn't hide another; the online-only rules (grid, notice,
  * horizon) are relaxed away.
  */
-function ownerWarnings(rules: BookingRules, calendar: Calendar, start: Date, minutes: number): string[] {
+function ownerWarnings(rules: BookingRules, calendar: Calendar, start: Date, minutes: number, zip: string | null): string[] {
   const relaxed: BookingRules = {
     ...rules,
     onlineBooking: true,
@@ -128,12 +128,26 @@ function ownerWarnings(rules: BookingRules, calendar: Calendar, start: Date, min
 
   const s = start.getTime();
   const e = s + minutes * 60_000;
-  const buffer = rules.bufferMinutes * 60_000;
   const ms = (t: string | Date) => new Date(t).getTime();
-  const overlaps =
-    calendar.jobs.some((j) => s < ms(j.end) + buffer && e + buffer > ms(j.start)) ||
-    calendar.timeOff.some((t) => s < ms(t.end) && e > ms(t.start));
-  if (overlaps) warnings.push('This overlaps another job or time off, including travel time.');
+  const clock = (t: string | Date) => new Date(t).toLocaleTimeString('en-US', { timeZone: rules.timezone, hour: 'numeric', minute: '2-digit' });
+  if (calendar.jobs.some((j) => s < ms(j.end) && e > ms(j.start)) || calendar.timeOff.some((t) => s < ms(t.end) && e > ms(t.start))) {
+    warnings.push('This overlaps another job or time off.');
+  } else {
+    // Close enough to overlap once the drive (or the usual gap) is counted.
+    for (const j of calendar.jobs) {
+      const gap = gapMinutes(rules, j.zip, zip);
+      const after = ms(j.end) <= s;
+      const room = Math.round((after ? s - ms(j.end) : ms(j.start) - e) / 60_000);
+      if (room >= gap) continue;
+      const drive = rules.travel?.on ? driveMinutes(j.zip, zip) : null;
+      const which = after ? `the job that ends at ${clock(j.end)}` : `the ${clock(j.start)} job`;
+      warnings.push(
+        drive !== null
+          ? `Only ${room} minutes between this and ${which}, and the drive is about ${drive}.`
+          : `Only ${room} minutes between this and ${which}. You usually leave ${gap}.`,
+      );
+    }
+  }
 
   const day = localDate(start, rules.timezone);
   if (calendar.jobs.filter((j) => localDate(j.start, rules.timezone) === day).length >= rules.maxJobsPerDay) {
@@ -178,7 +192,7 @@ export async function createJob(db: D1Database, body: Record<string, unknown>) {
   const end = new Date(start.getTime() + minutes * 60_000);
 
   const calendar = await loadCalendar(db, new Date(start.getTime() - 864e5), new Date(end.getTime() + 864e5));
-  const warnings = ownerWarnings(rules, calendar, start, minutes);
+  const warnings = ownerWarnings(rules, calendar, start, minutes, zipOf(zip ?? input.zip, address));
 
   const id = ulid();
   const at = now();
@@ -189,7 +203,7 @@ export async function createJob(db: D1Database, body: Record<string, unknown>) {
        VALUES (?, ?, 'scheduled', 'app', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
-      id, customerId, summary.service, text(body.vehicle, 'Vehicle', 120) ?? null, address, zip ?? null,
+      id, customerId, summary.service, text(body.vehicle, 'Vehicle', 120) ?? null, address, zip ?? input.zip ?? null,
       text(body.notes, 'Notes', 5000) ?? null, JSON.stringify(input), JSON.stringify(summary), version,
       start.toISOString(), end.toISOString(), localDate(start, rules.timezone), at, at, randomToken(),
     )

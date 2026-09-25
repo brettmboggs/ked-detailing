@@ -29,6 +29,14 @@ export function validateRules(rules: BookingRules): string[] {
     errors.push('Start times must be a step that divides the day, like 30 or 60 minutes.');
   }
   if (!whole(rules.bufferMinutes, 0)) errors.push('Time between jobs must be whole minutes, zero or more.');
+  if (rules.travel !== undefined) {
+    const t = rules.travel;
+    if (!t || typeof t.on !== 'boolean') errors.push('Drive time must be on or off.');
+    else {
+      if (!/^\d{5}$/.test(t.homeZip)) errors.push('Home ZIP must be 5 digits.');
+      if (!whole(t.packUpMinutes, 0) || t.packUpMinutes > 240) errors.push('Pack-up time must be whole minutes, up to 4 hours.');
+    }
+  }
   if (!whole(rules.maxJobsPerDay, 1)) errors.push('Jobs per day must be at least 1.');
   if (!(rules.minNoticeHours >= 0)) errors.push("Notice can't be negative.");
   if (!whole(rules.horizonDays, 1) || rules.horizonDays > 365) {

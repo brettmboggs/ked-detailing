@@ -2,9 +2,11 @@ import {
   defaultRules,
   jobMinutes,
   localDate,
+  minGapMinutes,
   openSlots,
   slotProblem,
   validateRules,
+  zipOf,
   type BookingRules,
   type Calendar,
   type SlotProblem,
@@ -40,6 +42,9 @@ export async function saveRules(db: D1Database, body: unknown, by: string) {
     week: rules.week.map((d) => (d ? { open: d.open, close: d.close } : null)) as BookingRules['week'],
     slotStepMinutes: rules.slotStepMinutes,
     bufferMinutes: rules.bufferMinutes,
+    ...(rules.travel
+      ? { travel: { on: rules.travel.on, homeZip: rules.travel.homeZip, packUpMinutes: rules.travel.packUpMinutes } }
+      : {}),
     maxJobsPerDay: rules.maxJobsPerDay,
     minNoticeHours: rules.minNoticeHours,
     horizonDays: rules.horizonDays,
@@ -57,16 +62,21 @@ export async function saveRules(db: D1Database, body: unknown, by: string) {
 
 /* --------------------------------------------------------- calendar */
 
-/** Everything that occupies time between two instants: live jobs and time off. */
+/**
+ * Everything that occupies time between two instants: live jobs (with where
+ * they are, for drive times) and time off.
+ */
 export async function loadCalendar(db: D1Database, from: Date, to: Date, exceptJobId = ''): Promise<Calendar> {
-  const [jobs, timeOff] = await db.batch<{ start_at: string; end_at: string }>([
+  const [jobs, timeOff] = await db.batch<{ start_at: string; end_at: string; zip?: string | null; address?: string }>([
     db
-      .prepare("SELECT start_at, end_at FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ? AND id != ?")
+      .prepare("SELECT start_at, end_at, zip, address FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ? AND id != ?")
       .bind(to.toISOString(), from.toISOString(), exceptJobId),
     db.prepare('SELECT start_at, end_at FROM time_off WHERE start_at < ? AND end_at > ?').bind(to.toISOString(), from.toISOString()),
   ]);
-  const span = (r: { start_at: string; end_at: string }) => ({ start: r.start_at, end: r.end_at });
-  return { jobs: jobs!.results.map(span), timeOff: timeOff!.results.map(span) };
+  return {
+    jobs: jobs!.results.map((r) => ({ start: r.start_at, end: r.end_at, zip: zipOf(r.zip, r.address) })),
+    timeOff: timeOff!.results.map((r) => ({ start: r.start_at, end: r.end_at })),
+  };
 }
 
 /**
@@ -100,7 +110,9 @@ export async function availability(db: D1Database, body: Record<string, unknown>
 
   const at = new Date();
   const calendar = await loadCalendar(db, new Date(at.getTime() - 864e5), new Date(at.getTime() + (rules.horizonDays + 2) * 864e5));
-  return { ...base, bookable: true, days: openSlots(rules, calendar, minutes, at) };
+  // The quote's ZIP, so times allow for the drive from Jacob's other jobs.
+  const zip = zipOf((body.input as { zip?: string } | undefined)?.zip ?? (typeof body.zip === 'string' ? body.zip : null));
+  return { ...base, bookable: true, days: openSlots(rules, calendar, minutes, at, zip) };
 }
 
 /* ---------------------------------------------------------- booking */
@@ -153,7 +165,7 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
   const end = new Date(start.getTime() + minutes * 60_000);
   const at = new Date();
   const calendar = await loadCalendar(db, new Date(start.getTime() - 864e5), new Date(end.getTime() + 864e5));
-  const problem = slotProblem(rules, calendar, start, minutes, at);
+  const problem = slotProblem(rules, calendar, start, minutes, at, zipOf(zip ?? input.zip, address));
   if (problem) throw new ApiError(409, problem === 'taken' || problem === 'day_full' ? 'slot_taken' : 'bad_slot', PROBLEMS[problem]);
 
   const touch = readTouch(body);
@@ -161,7 +173,9 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
   const id = ulid();
   const stamp = now();
   const day = localDate(start, rules.timezone);
-  const buffer = rules.bufferMinutes * 60_000;
+  // The drive-based gap was checked above; this last-moment guard only stops a
+  // true double booking, so it uses the smallest gap two jobs could have.
+  const buffer = minGapMinutes(rules) * 60_000;
   const token = randomToken();
   const result = await db
     .prepare(
@@ -175,7 +189,7 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
          AND (SELECT COUNT(*) FROM jobs WHERE status != 'cancelled' AND local_date = ?) < ?`,
     )
     .bind(
-      id, customer.id, summary.service, vehicle ?? null, address, zip ?? null, notes ?? null,
+      id, customer.id, summary.service, vehicle ?? null, address, zip ?? input.zip ?? null, notes ?? null,
       JSON.stringify(input), JSON.stringify(summary), version,
       start.toISOString(), end.toISOString(), day, stamp, stamp, token, touchJson(touch.attribution),
       new Date(end.getTime() + buffer).toISOString(), new Date(start.getTime() - buffer).toISOString(),

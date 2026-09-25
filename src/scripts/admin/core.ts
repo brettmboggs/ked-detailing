@@ -46,6 +46,8 @@ export interface BookingRules {
   week: (DayHours | null)[];
   slotStepMinutes: number;
   bufferMinutes: number;
+  /** Space jobs by the drive between them. Missing on rules saved before it existed. */
+  travel?: { on: boolean; homeZip: string; packUpMinutes: number };
   maxJobsPerDay: number;
   minNoticeHours: number;
   horizonDays: number;

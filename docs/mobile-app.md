@@ -120,7 +120,8 @@ money is **integer cents**.
 
 | Export | Use in the app |
 | --- | --- |
-| `BookingRules` | Jacob's booking settings: on/off, time zone, hours per weekday (Sunday first, `null` = closed), slot step, buffer between jobs, jobs per day, notice, how far ahead. |
+| `BookingRules` | Jacob's booking settings: on/off, time zone, hours per weekday (Sunday first, `null` = closed), slot step, buffer between jobs, jobs per day, notice, how far ahead, and `travel` (`{ on, homeZip, packUpMinutes }`; missing means off). With travel on, the gap between two jobs is the estimated drive plus pack-up, and `bufferMinutes` only applies when a job's ZIP is unknown. |
+| `driveMinutes(zipA, zipB)` / `roadMiles` / `zipOf(zip, address)` | Drive estimates from ZIP code centers, no maps service. Always say "about". `zipOf` finds the ZIP in a job's `zip` or its address. On the Schedule and Today screens, show the drive between consecutive jobs and flag it when it doesn't fit (the admin's `calendar-drives.ts` does this). |
 | `validateRules(rules)` | Run before saving the booking-rules editor. Show its messages as they are. |
 | `defaultRules` | Fallback only. |
 | `jobMinutes(quote.hours, rules)` | How long a job holds the calendar: the high end of the quote, rounded up to the slot step. Show it on the job and when adding one. |
@@ -207,7 +208,7 @@ There are no passwords and no sign-up screen.
 | `POST /v1/leads` | – | Website quote submissions: contact, vehicle, `QuoteInput`, quote snapshot |
 | `GET /v1/leads?status=` | owner | New quote requests |
 | `PATCH /v1/leads/:id` | owner | `status`: `new` → `contacted` → `booked` / `lost` |
-| `POST /v1/availability` | – | `{ input: QuoteInput }` → `{ bookable, reason?, timezone, minutes, quote, days: [{ date, slots: [ISO] }] }`. `reason` is customer-facing text when it can't be booked online |
+| `POST /v1/availability` | – | `{ input: QuoteInput }` → `{ bookable, reason?, timezone, minutes, quote, days: [{ date, slots: [ISO], nearby? }] }`. With `input.zip`, times allow for the drive from Jacob's other jobs that day, and `nearby` is true when he already has one within about 6 miles. `reason` is customer-facing text when it can't be booked online |
 | `POST /v1/bookings` | – | Website booking: `{ input, start, name, phone, address, email?, zip?, vehicle?, notes? }` → `201 { id, start, end, quote, manageUrl }`. `409 slot_taken` means someone else got it, so refetch availability |
 | `GET /v1/manage/:token` | – | The customer's booking page (`/booking/?b=<token>` on the site). First name only |
 | `GET /v1/manage/:token/availability` / `POST …/reschedule` / `POST …/cancel` | – | The customer moves or cancels it, under the same rules as booking online: only while `scheduled` and further off than `minNoticeHours`. Jacob gets a push (`rescheduled` / `cancelled`, id = job) |
@@ -215,7 +216,7 @@ There are no passwords and no sign-up screen.
 | `GET /v1/jobs?from=&to=` | owner | `{ jobs }` overlapping the range (ISO). Defaults to yesterday through two weeks out. Each job embeds `customer: { id, name, phone, email }` |
 | `GET /v1/jobs/:id` | owner | One job |
 | `POST /v1/jobs/:id/confirmation` | owner | `{ url, message }`: the text confirming a booking, with the customer's own link to see, move or cancel it. **Confirm** on a web booking opens the SMS composer with `message`. Works for jobs he adds too |
-| `POST /v1/jobs` | owner | Jacob adds a job: `{ customerId \| customer: { name, phone?, email?, address? }, input, start, address?, zip?, vehicle?, notes?, minutes? }` → `201 { job, warnings: string[] }`. He can book anything. Clashes (overlap, day limit, closed day, outside hours) come back as warnings to show him, not errors |
+| `POST /v1/jobs` | owner | Jacob adds a job: `{ customerId \| customer: { name, phone?, email?, address? }, input, start, address?, zip?, vehicle?, notes?, minutes? }` → `201 { job, warnings: string[] }`. He can book anything. Clashes (overlap, too little time for the drive, day limit, closed day, outside hours) come back as warnings to show him, not errors, e.g. "Only 30 minutes between this and the 10:00 AM job, and the drive is about 45." |
 | `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents). With `status: cancelled`, an optional `cancelReason` (only Jacob sees it) |
 | `GET /v1/customers?q=` | owner | `{ customers }`. Search by name, phone digits or email. Empty `q` lists the newest |
 | `GET /v1/customers/:id` | owner | The customer plus `jobs`, newest first |

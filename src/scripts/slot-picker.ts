@@ -7,6 +7,8 @@
 export interface Day {
   date: string;
   slots: string[];
+  /** Jacob already has a job near this address that day. */
+  nearby?: boolean;
 }
 
 export interface PickerElements {
@@ -35,6 +37,15 @@ export function slotPicker(els: PickerElements, onPick: (day: string | null, slo
   let day: string | null = null;
   let slot: string | null = null;
   const f = formatters(() => timezone);
+  // Says what the gold rule under a date means, only when one is showing.
+  const legend = document.createElement('p');
+  legend.className = 'mt-3 flex items-center gap-3 text-sm text-bone-400';
+  legend.hidden = true;
+  const mark = document.createElement('span');
+  mark.className = 'h-0.5 w-4 shrink-0 bg-gold-500';
+  mark.setAttribute('aria-hidden', 'true');
+  legend.append(mark, "Jacob's already working near you these days.");
+  els.days.after(legend);
 
   /**
    * Show these days. The current pick survives if it's still open; otherwise
@@ -89,18 +100,26 @@ export function slotPicker(els: PickerElements, onPick: (day: string | null, slo
     });
     if (column !== 0) pad(7);
     els.days.replaceChildren(...cells);
+    legend.hidden = !days.some((d) => d.nearby && d.slots.length);
   }
 
   function dayOption(d: Day) {
     const label = cell(
-      'relative cursor-pointer py-3 text-sm font-semibold text-bone-50 transition-colors hover:bg-ink-900 ' +
+      'group relative cursor-pointer py-3 text-sm font-semibold text-bone-50 transition-colors hover:bg-ink-900 ' +
         'has-[:checked]:bg-gold-500 has-[:checked]:text-ink-950 ' +
         'has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold-400',
       String(Number(d.date.slice(8))),
       'label',
     );
-    label.title = f.longDay(d.date);
-    const input = radio('day', d.date, d.date === day, f.longDay(d.date));
+    const name = d.nearby ? `${f.longDay(d.date)}, Jacob's nearby` : f.longDay(d.date);
+    label.title = name;
+    if (d.nearby) {
+      const rule = document.createElement('span');
+      rule.className = 'absolute bottom-1.5 left-1/2 h-0.5 w-4 -translate-x-1/2 bg-gold-500 group-has-[:checked]:bg-ink-950';
+      rule.setAttribute('aria-hidden', 'true');
+      label.append(rule);
+    }
+    const input = radio('day', d.date, d.date === day, name);
     input.addEventListener('change', () => {
       day = d.date;
       slot = null;
@@ -115,7 +134,7 @@ export function slotPicker(els: PickerElements, onPick: (day: string | null, slo
     const d = days.find((x) => x.date === day);
     if (!d) return void (els.timesWrap.hidden = true);
     els.timesWrap.hidden = false;
-    els.timesLabel.textContent = f.longDay(d.date);
+    els.timesLabel.textContent = d.nearby ? `${f.longDay(d.date)}. Jacob's already nearby that day.` : f.longDay(d.date);
     els.times.replaceChildren(
       ...d.slots.map((iso) => {
         const label = cell(

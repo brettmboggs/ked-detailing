@@ -1,4 +1,4 @@
-import { localDate, openSlots, slotProblem } from '@ked/scheduling';
+import { localDate, minGapMinutes, openSlots, slotProblem, zipOf } from '@ked/scheduling';
 import { currentRules, loadCalendar, PROBLEMS } from './booking.ts';
 import { getJob } from './jobs.ts';
 import { ApiError, now, text, type Bindings } from './lib.ts';
@@ -73,7 +73,7 @@ export async function manageAvailability(env: Bindings, token: string) {
   if (locked) return { timezone: rules.timezone, days: [], locked };
   const at = new Date();
   const calendar = await loadCalendar(env.DB, new Date(at.getTime() - 864e5), new Date(at.getTime() + (rules.horizonDays + 2) * 864e5), job.id);
-  return { timezone: rules.timezone, days: openSlots(rules, calendar, minutesOf(job), at), locked: null };
+  return { timezone: rules.timezone, days: openSlots(rules, calendar, minutesOf(job), at, zipOf(job.zip, job.address)), locked: null };
 }
 
 /**
@@ -94,11 +94,11 @@ export async function reschedule(env: Bindings, token: string, body: Record<stri
   const minutes = minutesOf(job);
   const end = new Date(start.getTime() + minutes * 60_000);
   const calendar = await loadCalendar(env.DB, new Date(start.getTime() - 864e5), new Date(end.getTime() + 864e5), job.id);
-  const problem = slotProblem(rules, calendar, start, minutes, new Date());
+  const problem = slotProblem(rules, calendar, start, minutes, new Date(), zipOf(job.zip, job.address));
   if (problem) throw new ApiError(409, problem === 'taken' || problem === 'day_full' ? 'slot_taken' : 'bad_slot', PROBLEMS[problem]);
 
   const day = localDate(start, rules.timezone);
-  const buffer = rules.bufferMinutes * 60_000;
+  const buffer = minGapMinutes(rules) * 60_000; // see createBooking
   const result = await env.DB
     .prepare(
       `UPDATE jobs SET start_at = ?, end_at = ?, local_date = ?, updated_at = ?

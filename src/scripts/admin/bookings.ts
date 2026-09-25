@@ -25,6 +25,7 @@ import {
 import { renderJob } from './calendar-job';
 import { renderNewJob } from './calendar-new';
 import { timeOffSection } from './calendar-timeoff';
+import { dayLegs, duration, legWords, weekDriving } from './calendar-drives';
 
 const PX_PER_HOUR = 52;
 
@@ -96,6 +97,7 @@ async function drawWeek() {
 
   const live = jobs.filter((j) => j.status !== 'cancelled');
   const cancelled = jobs.length - live.length;
+  const driving = weekDriving(days, live, rules);
   const shown = showCancelled ? jobs : live;
   const first = days[0]!;
   const last = days[6]!;
@@ -124,6 +126,14 @@ async function drawWeek() {
           'p',
           { class: 'mt-1 text-sm text-bone-400' },
           live.length ? `${live.length} ${live.length === 1 ? 'job' : 'jobs'} this week.` : 'Nothing booked this week.',
+          driving
+            ? h(
+                'span',
+                { class: 'ml-3' },
+                `About ${duration(driving.minutes)} of driving, ${driving.miles} mi, from home and back.`,
+                driving.tight ? h('span', { class: 'ml-2 text-red-300' }, `${driving.tight} tight ${driving.tight === 1 ? 'gap' : 'gaps'}.`) : null,
+              )
+            : null,
           cancelled
             ? h(
                 'button',
@@ -329,6 +339,24 @@ function grid(days: string[], jobs: CalJob[], offs: TimeOff[], openDay: (date: s
       );
     }
 
+    // The drive after each job to the next, hatched; red if it runs into it.
+    for (const l of dayLegs(date, jobs, rules)) {
+      if (!l.from || !l.to) continue;
+      const top = y(minuteOfDay(l.from.end));
+      const tall = Math.max((l.minutes / 60) * PX_PER_HOUR, 6);
+      col.append(
+        h(
+          'div',
+          {
+            class: `pointer-events-none absolute inset-x-1 overflow-hidden border-l-2 px-1.5 text-[0.65rem] leading-tight ${l.tight ? 'border-red-400 text-red-300' : 'border-gold-500/50 text-bone-400'}`,
+            style: `top:${top + 1}px;height:${tall}px;background-image:repeating-linear-gradient(135deg, ${l.tight ? 'rgb(248 113 113 / 0.12)' : 'rgb(255 255 255 / 0.035)'} 0 4px, transparent 4px 8px)`,
+            title: legWords(l),
+          },
+          tall >= 16 ? `${duration(l.minutes)} drive` : '',
+        ),
+      );
+    }
+
     // The time right now, on today's column.
     if (date === now) {
       const m = minuteOfDay(new Date());
@@ -387,11 +415,30 @@ function list(days: string[], jobs: CalJob[], offs: TimeOff[], openDay: (date: s
           h('button', { type: 'button', class: 'shrink-0 text-sm text-bone-400 hover:text-gold-400', onclick: () => openDay(date) }, '+ Add job'),
         ),
         pieces.length
-          ? h('ul', {}, ...pieces.map((p) => (p.job ? jobRow(p) : offRow(p))))
+          ? h('ul', {}, ...withDrives(date, jobs, pieces))
           : h('p', { class: 'text-sm text-bone-500' }, closed ? 'Closed.' : 'Nothing booked.'),
       );
     }),
   );
+}
+
+/** The day's rows, with the drive between each job and the next. */
+function withDrives(date: string, jobs: CalJob[], pieces: Piece[]) {
+  const after = new Map(dayLegs(date, jobs, rules).filter((l) => l.from && l.to).map((l) => [l.from!.id, l]));
+  return pieces.flatMap((p) => {
+    const row = p.job ? jobRow(p) : offRow(p);
+    const l = p.job && after.get(p.job.id);
+    if (!l) return [row];
+    return [
+      row,
+      h(
+        'li',
+        { class: `ml-[5.5rem] flex items-center gap-3 py-1.5 text-xs ${l.tight ? 'text-red-300' : 'text-bone-500'}` },
+        h('span', { class: `h-px w-4 shrink-0 ${l.tight ? 'bg-red-400' : 'bg-gold-500/60'}`, 'aria-hidden': 'true' }),
+        legWords(l),
+      ),
+    ];
+  });
 }
 
 function jobRow(p: Piece) {

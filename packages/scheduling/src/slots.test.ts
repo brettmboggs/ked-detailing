@@ -9,6 +9,11 @@ import {
   validateRules,
   weekday,
   zonedToUtc,
+  driveMinutes,
+  gapMinutes,
+  minGapMinutes,
+  roadMiles,
+  zipOf,
   type BookingRules,
   type Calendar,
 } from './index.ts';
@@ -105,4 +110,55 @@ test('validation catches hand-edit mistakes', () => {
   bad.slotStepMinutes = 7;
   bad.maxJobsPerDay = 0;
   assert.equal(validateRules(bad).length, 5, validateRules(bad).join('\n'));
+});
+
+test('drive estimates from ZIP codes, and finding the ZIP in an address', () => {
+  assert.equal(driveMinutes('63049', '63049'), 5, 'same ZIP: just getting going');
+  assert.equal(driveMinutes('63049', '63122'), 25, 'High Ridge to Kirkwood');
+  assert.equal(driveMinutes('63049', '62025'), 65, 'across the river to Edwardsville');
+  assert.equal(roadMiles('63049', '63122'), 11);
+  assert.equal(driveMinutes('63049', '99501'), null, 'outside the table');
+  assert.equal(driveMinutes(null, '63049'), null);
+  assert.equal(zipOf(null, '12 Oak St, Fenton MO 63026'), '63026');
+  assert.equal(zipOf('63026-1234'), '63026');
+  assert.equal(zipOf('', '4 Elm St'), null);
+});
+
+test('with travel on, jobs are spaced by the drive plus pack-up; unknown places get the flat buffer', () => {
+  // A 10-12 job in Kirkwood. Travel on, 15 minutes to pack up.
+  const cal: Calendar = { jobs: [{ start: at('2026-07-02', '10:00'), end: at('2026-07-02', '12:00'), zip: '63122' }], timeOff: [] };
+  assert.equal(gapMinutes(rules, '63122', '63122'), 20);
+  assert.equal(gapMinutes(rules, '63122', '62025'), 15 + driveMinutes('63122', '62025')!);
+  assert.equal(gapMinutes(rules, '63122', null), 60);
+
+  // Next door: 12:20 would do, so 13:00 on the hourly grid is the first after it.
+  assert.deepEqual(slotsOn(openSlots(rules, cal, 60, now, '63122'), '2026-07-02'), ['08:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+  // Edwardsville needs about an hour and a half after 12: 14:00 at the earliest,
+  // and has to finish that long before 10, so 8:00 is out.
+  const far = slotsOn(openSlots(rules, cal, 60, now, '62025'), '2026-07-02');
+  assert.equal(far[0], '14:00');
+  // No ZIP: the flat hour either side, as before (8-9 still leaves an hour before 10).
+  assert.deepEqual(slotsOn(openSlots(rules, cal, 60, now), '2026-07-02'), ['08:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+
+  const off: BookingRules = { ...rules, travel: { ...rules.travel!, on: false } };
+  assert.equal(gapMinutes(off, '63122', '63122'), 60);
+  assert.equal(minGapMinutes(rules), 15);
+  assert.equal(minGapMinutes(off), 60);
+});
+
+test('a day with a job nearby says so', () => {
+  const cal: Calendar = { jobs: [{ start: at('2026-07-02', '08:00'), end: at('2026-07-02', '10:00'), zip: '63122' }], timeOff: [] };
+  const near = openSlots(rules, cal, 60, now, '63119'); // Webster Groves, next to Kirkwood
+  assert.equal(near.find((d) => d.date === '2026-07-02')!.nearby, true);
+  assert.equal(near.find((d) => d.date === '2026-07-03')!.nearby, false);
+  assert.equal(openSlots(rules, cal, 60, now, '62025').find((d) => d.date === '2026-07-02')!.nearby, false);
+});
+
+test('travel settings are checked', () => {
+  const bad = structuredClone(rules) as BookingRules;
+  bad.travel = { on: true, homeZip: 'High Ridge', packUpMinutes: -5 };
+  assert.equal(validateRules(bad).length, 2, validateRules(bad).join('\n'));
+  const old = structuredClone(rules) as BookingRules;
+  delete old.travel;
+  assert.deepEqual(validateRules(old), [], 'rules saved before travel existed are still fine');
 });
