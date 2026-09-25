@@ -48,4 +48,4 @@ Staying ahead of it is cheaper than catching up. A maintenance detail every few 
 
 That is the whole argument. It is not glamorous, but it is the reason the cars we have looked after for years still look like they do.
 
-[Book a detail](https://book.housecallpro.com/book/Knock-Em-Down-Auto--Marine-Detailing/18c82a94d510423988a8e7909d38557d?v2=true) or call (314) 223-2988.
+[Book a detail](/quote) or call (314) 223-2988.

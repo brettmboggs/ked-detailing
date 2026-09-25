@@ -58,4 +58,4 @@ If it has been more than a year, start with a reset rather than a maintenance wa
 
 If you are not sure which end of that you are on, call and describe the car. You will get a straight answer, including if the answer is that it does not need much.
 
-[Book a detail](https://book.housecallpro.com/book/Knock-Em-Down-Auto--Marine-Detailing/18c82a94d510423988a8e7909d38557d?v2=true) or call (314) 223-2988.
+[Book a detail](/quote) or call (314) 223-2988.
