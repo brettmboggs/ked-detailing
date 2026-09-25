@@ -15,7 +15,7 @@ import { renderMarketing } from './marketing';
 import { renderPrices } from './prices';
 import { renderToday } from './today';
 import { renderWebsite } from './website';
-import { API, KEY, h, $, token, remember, api, showError, clearError, showSignIn } from './core';
+import { API, KEY, h, $, token, remember, api, showError, clearError, showSignIn, selectTab } from './core';
 
 async function signInFromLink() {
   const match = location.hash.match(/^#login=([A-Za-z0-9_-]+)$/);
@@ -56,8 +56,7 @@ const views: Record<string, () => Promise<void>> = {
 
 async function open(name: string) {
   clearError();
-  for (const t of document.querySelectorAll<HTMLElement>('[data-tab]')) t.setAttribute('aria-selected', String(t.dataset.tab === name));
-  for (const v of document.querySelectorAll<HTMLElement>('[data-view]')) v.hidden = v.dataset.view !== name;
+  selectTab(name);
   const view = $(`[data-view="${name}"]`);
   view.replaceChildren(h('p', { class: 'text-bone-400' }, 'Loading…'));
   try {
@@ -94,6 +93,7 @@ export async function initAdmin() {
   });
 
   for (const t of document.querySelectorAll<HTMLElement>('[data-tab]')) t.addEventListener('click', () => open(t.dataset.tab!));
+  for (const g of document.querySelectorAll<HTMLElement>('[data-group]')) g.addEventListener('click', () => open(g.dataset.first!));
 
   try {
     await signInFromLink();
@@ -111,5 +111,7 @@ export async function initAdmin() {
   } catch {
     // fine
   }
-  await open('today');
+  // A reload stays on the page you were on (the hash holds it; see selectTab).
+  const start = location.hash.slice(1);
+  await open(Object.hasOwn(views, start) ? start : 'today');
 }

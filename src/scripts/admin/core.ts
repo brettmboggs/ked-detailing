@@ -202,11 +202,34 @@ export function saveBar(label: string, save: () => Promise<string>) {
   return h('div', { class: 'sticky bottom-0 mt-10 flex flex-wrap items-center gap-4 border-t border-ink-800 bg-ink-950/95 py-4 backdrop-blur' }, btn, status);
 }
 
+/* ------------------------------------------------------------ nav */
+
+/**
+ * Marks a tab as open without drawing it: its place in the top row, its row
+ * of pages under that, and its view. Remembered in the address so a reload
+ * comes back to the same page.
+ */
+export function selectTab(name: string) {
+  const tab = document.querySelector<HTMLElement>(`[data-tab="${name}"]`);
+  const group = tab?.closest<HTMLElement>('[data-group-tabs]')?.dataset.groupTabs;
+  for (const t of document.querySelectorAll<HTMLElement>('[data-tab]')) t.setAttribute('aria-selected', String(t.dataset.tab === name));
+  for (const g of document.querySelectorAll<HTMLElement>('[data-group]')) g.setAttribute('aria-current', String(g.dataset.group === group));
+  let rows = 0;
+  for (const row of document.querySelectorAll<HTMLElement>('[data-group-tabs]')) {
+    row.hidden = row.dataset.groupTabs !== group || row.children.length < 2;
+    if (!row.hidden) rows++;
+  }
+  $('[data-subtabs]').hidden = rows === 0;
+  for (const v of document.querySelectorAll<HTMLElement>('[data-view]')) v.hidden = v.dataset.view !== name;
+  if (location.hash !== `#${name}`) history.replaceState(null, '', `#${name}`);
+}
+
 /* ------------------------------------------------------------ sign in */
 
 export function showSignIn(message?: string) {
   $('[data-loading]').hidden = true;
   $('[data-tabs]').hidden = true;
+  $('[data-subtabs]').hidden = true;
   $('[data-who]').hidden = true;
   for (const v of document.querySelectorAll<HTMLElement>('[data-view]')) v.hidden = true;
   $('[data-signin]').hidden = false;

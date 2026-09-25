@@ -1,13 +1,22 @@
 import { formatRange } from '@ked/pricing';
 import { type Lead, h, $, when, api, showError, ghost, sectionHead } from './core';
+import { goTab } from './calendar-shared';
 
 export async function renderLeads() {
   const view = $('[data-view="leads"]');
   const { leads } = await api<{ leads: Lead[] }>('/leads');
   const open = leads.filter((l) => l.status === 'new' || l.status === 'contacted');
   view.replaceChildren(
-    sectionHead('Quote requests', 'People who priced a job on the website and asked Jacob to get back to them. Mark each one as you go.'),
-    open.length ? h('ul', { class: 'border-t border-ink-800' }, ...open.map(leadRow)) : h('p', { class: 'text-bone-400' }, 'No open quote requests.'),
+    sectionHead('Quote requests', 'People who priced a job on the website and tapped “Send to Jacob” instead of picking a time. Call or text them, then mark each one.'),
+    open.length
+      ? h('ul', { class: 'border-t border-ink-800' }, ...open.map(leadRow))
+      : h(
+          'p',
+          { class: 'max-w-2xl text-bone-400' },
+          'No one is waiting on you. People who pick a time and book go straight onto the ',
+          h('button', { type: 'button', class: 'text-gold-400 underline underline-offset-4 hover:text-gold-500', onclick: () => goTab('bookings') }, 'Calendar'),
+          '.',
+        ),
   );
 }
 

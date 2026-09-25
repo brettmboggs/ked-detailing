@@ -4,7 +4,7 @@
  * consent, their referral link and who they sent, jobs, invoices, open
  * follow-ups, and the timeline. Jacob books them again from here too.
  */
-import { h, api, input, small, heading, headingStyle, dollars, when, clearError, showError, checkbox } from './core';
+import { h, api, input, small, heading, headingStyle, dollars, when, clearError, showError, checkbox, selectTab } from './core';
 import {
   type CalJob,
   STATUS,
@@ -135,8 +135,7 @@ function openJob(jobId: string) {
 /** The Invoices tab, opened straight to one invoice (without first drawing its list). */
 function showInvoice(invoiceId: string) {
   clearError();
-  for (const t of document.querySelectorAll<HTMLElement>('[data-tab]')) t.setAttribute('aria-selected', String(t.dataset.tab === 'invoices'));
-  for (const v of document.querySelectorAll<HTMLElement>('[data-view]')) v.hidden = v.dataset.view !== 'invoices';
+  selectTab('invoices');
   toTop();
   openInvoice(invoiceId).catch(showError);
 }

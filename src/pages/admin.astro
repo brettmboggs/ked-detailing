@@ -5,17 +5,31 @@ import { withBase } from '../lib/url';
 
 /**
  * The web admin for Jacob and Brett: the whole business from any browser.
- * Calendar, customers, quote requests, invoices, books, inventory, prices,
- * hours and the website's own words and photos. The same API the iPhone app uses, so every rule
+ * Grouped into CRM, Schedule, Money, Supplies and Website (see `groups`). The same API the iPhone app uses, so every rule
  * (price validation, booking rules) is enforced in one place.
  *
  * Sign-in is a one-time link emailed to an owner address (OWNER_EMAILS on
  * the Worker). Never indexed, sends no Referer. Everything renders in the
  * browser from src/scripts/admin.ts; the page itself holds no data.
  */
+/**
+ * Five places, each with its own pages. Twelve tabs in one row scrolled
+ * sideways on every screen; grouped, the top row always fits and the second
+ * row only shows the pages of the place you're in.
+ */
+const groups = [
+  { id: 'crm', label: 'CRM', tabs: [['today', 'Today'], ['customers', 'Customers'], ['leads', 'Quote requests'], ['marketing', 'Marketing'], ['insights', 'Insights']] },
+  { id: 'schedule', label: 'Schedule', tabs: [['bookings', 'Calendar'], ['hours', 'Hours']] },
+  { id: 'money', label: 'Money', tabs: [['invoices', 'Invoices'], ['books', 'Books']] },
+  { id: 'supplies', label: 'Supplies', tabs: [['inventory', 'Inventory']] },
+  { id: 'site', label: 'Website', tabs: [['website', 'Words and photos'], ['prices', 'Prices']] },
+];
+const groupBtn =
+  'whitespace-nowrap border-b-2 border-transparent py-3 font-display text-[0.95rem] uppercase tracking-[0.12em] text-bone-400 transition-colors hover:text-bone-50 ' +
+  'aria-[current=true]:border-gold-500 aria-[current=true]:text-bone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400';
 const tab =
-  'border-b-2 border-transparent px-1 py-3 font-display text-[0.78rem] uppercase tracking-[0.16em] text-bone-400 transition-colors hover:text-bone-50 ' +
-  'aria-selected:border-gold-500 aria-selected:text-bone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400';
+  'whitespace-nowrap py-2.5 text-sm text-bone-400 transition-colors hover:text-bone-50 ' +
+  'aria-selected:text-gold-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400';
 ---
 
 <Base title="Admin | Knock Em' Down Detailing" description="Knock Em' Down admin." noindex noReferrer>
@@ -30,20 +44,22 @@ const tab =
           <button type="button" data-sign-out class="border border-ink-700 px-3 py-1.5 text-bone-200 hover:border-gold-500 hover:text-bone-50">Sign out</button>
         </div>
       </div>
-      <nav data-tabs hidden role="tablist" aria-label="Admin sections" class="mx-auto flex max-w-6xl gap-6 overflow-x-auto px-5 sm:px-8">
-        <button type="button" role="tab" data-tab="today" class={tab}>Today</button>
-        <button type="button" role="tab" data-tab="bookings" class={tab}>Calendar</button>
-        <button type="button" role="tab" data-tab="customers" class={tab}>Customers</button>
-        <button type="button" role="tab" data-tab="leads" class={tab}>Quote requests</button>
-        <button type="button" role="tab" data-tab="insights" class={tab}>Insights</button>
-        <button type="button" role="tab" data-tab="marketing" class={tab}>Marketing</button>
-        <button type="button" role="tab" data-tab="invoices" class={tab}>Invoices</button>
-        <button type="button" role="tab" data-tab="books" class={tab}>Books</button>
-        <button type="button" role="tab" data-tab="inventory" class={tab}>Inventory</button>
-        <button type="button" role="tab" data-tab="prices" class={tab}>Prices</button>
-        <button type="button" role="tab" data-tab="hours" class={tab}>Hours</button>
-        <button type="button" role="tab" data-tab="website" class={tab}>Website</button>
+      <nav data-tabs hidden aria-label="Admin sections" class="mx-auto max-w-6xl px-5 sm:px-8">
+        <div class="flex flex-wrap gap-x-7 gap-y-1">
+          {groups.map((g) => (
+            <button type="button" data-group={g.id} data-first={g.tabs[0]![0]} class={groupBtn}>{g.label}</button>
+          ))}
+        </div>
       </nav>
+      <div data-subtabs hidden class="border-t border-ink-800">
+        {groups.map((g) => (
+          <div role="tablist" aria-label={g.label} data-group-tabs={g.id} hidden={g.tabs.length < 2 || undefined} class="mx-auto flex max-w-6xl flex-wrap gap-x-6 px-5 sm:px-8">
+            {g.tabs.map(([id, label]) => (
+              <button type="button" role="tab" data-tab={id} class={tab}>{label}</button>
+            ))}
+          </div>
+        ))}
+      </div>
     </header>
 
     <div class="mx-auto max-w-6xl px-5 pt-10 sm:px-8">
