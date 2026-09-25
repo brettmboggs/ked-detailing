@@ -95,10 +95,10 @@ export function noteBlock(summaries: Summary[], claude: boolean, reload: () => P
   const by = latest
     ? latest.source === 'claude'
       ? 'Written by Claude from your numbers. Check anything that looks off against the numbers below.'
-      : latest.note ?? 'Built from your numbers and the fixed rules.'
+      : latest.note ?? 'Built from your numbers.'
     : claude
       ? 'A note arrives every Monday morning, by email too.'
-      : 'Every Monday morning a note is built from your numbers and emailed to you. Brett can switch on Claude to write it in plain words.';
+      : 'Every Monday morning a note is built from your numbers and emailed to you.';
 
   return h(
     'section',

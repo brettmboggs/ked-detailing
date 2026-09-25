@@ -1140,7 +1140,7 @@ function facts(week: Insights, trailing: Insights) {
 }
 
 /** The note without Claude: the same three parts, from the numbers and the rules. */
-function rulesNote(week: Insights, trailing: Insights, why: string) {
+function rulesNote(week: Insights, trailing: Insights, why: string | null) {
   const c = week.money.cur;
   const p = week.money.prev;
   const change = p && p.revenue ? ` That's ${c.revenue >= p.revenue ? 'up' : 'down'} from ${usd(p.revenue)} the week before.` : '';
@@ -1151,8 +1151,8 @@ function rulesNote(week: Insights, trailing: Insights, why: string) {
     `How last week went:\nYou finished ${c.jobs} ${c.jobs === 1 ? 'job' : 'jobs'} worth ${usd(c.revenue)}.${change} Over the last 90 days you averaged about ${usd(weekly90)} a week. ${week.customers.new} new ${week.customers.new === 1 ? 'customer' : 'customers'} and ${week.leads.leads} quote ${week.leads.leads === 1 ? 'request' : 'requests'} came in.`,
     `Do these 3 things this week:\n${steps.slice(0, 3).map((a) => `- ${a.title}. ${a.detail}`).join('\n') || '- Keep going. Nothing stands out this week.'}`,
     `Stop doing this:\n- ${stop ? `${stop.title}. ${stop.detail}` : `Stop letting quote requests wait. ${trailing.pipeline.openQuotes.count} are open right now.`}`,
-    `(${why})`,
-  ].join('\n\n');
+    why ? `(${why})` : null,
+  ].filter(Boolean).join('\n\n');
 }
 
 interface Written {
@@ -1255,9 +1255,10 @@ export async function makeSummary(env: Bindings, by: string, at = new Date()) {
     computeInsights(env.DB, readPeriod({ to: addDays(wk.to, 0) }, today), at),
   ]);
   const payload = facts(week, trailing);
-  let written: Written | string = env.ANTHROPIC_API_KEY ? await askClaude(env, payload) : "Claude isn't switched on yet";
-  if (typeof written === 'string') {
-    const why = `${written}, so this was built from your numbers alone.`;
+  // Without a key the rules write it, and nothing mentions Claude: this project runs without AI credits.
+  let written: Written | string | null = env.ANTHROPIC_API_KEY ? await askClaude(env, payload) : null;
+  if (typeof written === 'string' || written === null) {
+    const why = written ? `${written}, so this was built from your numbers alone.` : null;
     written = { body: rulesNote(week, trailing, why), source: 'rules', model: null, note: why, inputTokens: null, outputTokens: null };
   }
   const id = ulid();

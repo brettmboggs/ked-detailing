@@ -128,11 +128,11 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 - **CRM** (live 2026-09-25; plan and ownership in `docs/crm.md`): Today
   (daily follow-ups: reviews, reminders, rebooks, win-backs, quote chases),
   Customers (profiles, timeline, tags, referral links, merge), Insights
-  (every metric with a ranked next step; Monday note from Claude when
-  `ANTHROPIC_API_KEY` is set) and Marketing (campaigns, tracking links and QR
+  (every metric with a ranked next step, and a Monday note built from the
+  numbers by fixed rules; Brett isn't spending AI credits on this project, so
+  leave `ANTHROPIC_API_KEY` unset) and Marketing (campaigns, tracking links and QR
   codes, referrals, reviews, lead playbook). Customer email goes through
-  Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC record not
-  added yet). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
+  Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC `p=none` added 2026-09-25). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
   campaign batches. Migrations through 0016 are applied.
 - **Online booking is live** (`quoteLive = true`, 2026-09-25). Jacob still
   needs to save real prices and hours; until then customers see the samples.
