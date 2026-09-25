@@ -1,6 +1,7 @@
 import { localDate } from '@ked/scheduling';
 import { cents, createIncome, day } from './books.ts';
 import { currentRules } from './booking.ts';
+import { extraLines } from './extras.ts';
 import { getJob } from './jobs.ts';
 import { ApiError, now, randomToken, text, ulid, type Bindings } from './lib.ts';
 import { mailCustomer } from './notify.ts';
@@ -144,15 +145,23 @@ function readDueDate(value: unknown) {
 }
 
 /**
- * The quote's lines, plus one line for any difference Jacob settled on
- * (finalPrice) so the total is what he agreed with the customer.
+ * The quote's lines and the add-ons the customer said yes to, plus one line
+ * for any difference Jacob settled on (finalPrice) so the total is what he
+ * agreed with the customer. An approved add-on raises finalPrice by its own
+ * amount (extras.ts), so it never shows up as an adjustment.
  */
-function linesFromJob(job: Awaited<ReturnType<typeof getJob>>): Line[] {
+function linesFromJob(job: Awaited<ReturnType<typeof getJob>>, extras: Line[]): Line[] {
   const quote = job.quote.lines as Line[];
-  const lines: Line[] = quote.filter((l) => l.amount !== 0).map((l) => ({ label: l.label, amount: l.amount }));
-  const quoted = lines.reduce((s, l) => s + l.amount, 0);
+  let lines: Line[] = quote.filter((l) => l.amount !== 0).map((l) => ({ label: l.label, amount: l.amount }));
+  const extrasTotal = extras.reduce((s, l) => s + l.amount, 0);
   // Inspection-only work quotes at zero: the price he set is the whole service.
-  if (!lines.length && job.finalPrice && quote[0]) return [{ label: quote[0].label, amount: job.finalPrice }];
+  if (!lines.length && job.finalPrice && quote[0]) {
+    const base = job.finalPrice - extrasTotal;
+    lines = base > 0 ? [{ label: quote[0].label, amount: base }] : [];
+    return [...lines, ...extras];
+  }
+  lines.push(...extras);
+  const quoted = lines.reduce((s, l) => s + l.amount, 0);
   if (job.finalPrice !== null && job.finalPrice !== quoted) {
     const diff = job.finalPrice - quoted;
     lines.push({ label: diff < 0 ? 'Discount' : 'Adjustment', amount: diff });
@@ -174,7 +183,7 @@ export async function invoiceForJob(env: Bindings, jobId: string, body: Record<s
   let parsed: { lines: Line[]; total: number };
   if (body.lines !== undefined) parsed = readLines(body.lines);
   else {
-    const lines = linesFromJob(job);
+    const lines = linesFromJob(job, await extraLines(env.DB, jobId));
     if (!lines.length || lines.reduce((s, l) => s + l.amount, 0) <= 0) {
       throw new ApiError(422, 'no_price', 'This job has no price yet. Set its final price, or add the lines yourself.');
     }
@@ -186,6 +195,7 @@ export async function invoiceForJob(env: Bindings, jobId: string, body: Record<s
   try {
     await env.DB.batch([
       // Numbered in the same statement, so two at once can't share a number.
+      // TENANT: numbering (and number UNIQUE) is across the whole database.
       env.DB
         .prepare(
           `INSERT INTO invoices (id, number, job_id, customer_id, lines, total, due_date, notes, token, created_at, updated_at)

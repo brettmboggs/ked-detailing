@@ -1,0 +1,212 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
+
+/**
+ * Add-ons Jacob found at the car, reached only through the private link he
+ * texts: /approve/?a=<token>. Each one has what he found, a photo, a price
+ * and a yes or no. Everything is fetched in the browser from
+ * GET /v1/approve/:token; a yes adds it to the job and its invoice
+ * (api/src/extras.ts).
+ *
+ * Never indexed and sends no Referer, because the URL carries the secret.
+ * Ruled rows like the pay page, no cards.
+ */
+---
+
+<Base
+  title="Before Jacob finishes | Knock Em' Down Detailing"
+  description="Add-ons Jacob found while detailing your vehicle."
+  noindex
+  noReferrer
+>
+  <Header />
+
+  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p data-eyebrow class="eyebrow">Before I finish</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>
+        <span data-subtitle class="block text-gold-500"></span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Loading…</p>
+
+      <div data-missing hidden class="mt-8 max-w-xl">
+        <p data-missing-text class="text-lg leading-relaxed text-bone-200"></p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-gold">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+
+      <div data-page hidden class="mt-10">
+        <p data-intro class="max-w-xl text-lg leading-relaxed text-bone-200"></p>
+        <ul data-list class="mt-10 border-t border-ink-800"></ul>
+
+        <div data-summary hidden class="mt-10 flex items-end justify-between gap-6 border-l-2 border-gold-500 pl-5">
+          <p class="eyebrow">Added to your detail</p>
+          <p
+            data-added
+            class="font-display text-bone-50 tabular-nums"
+            style="font-size:clamp(2rem,5vw,3rem);font-variation-settings:'wdth' 80,'wght' 800;line-height:1"
+          >
+          </p>
+        </div>
+
+        <p class="mt-12 max-w-xl text-sm leading-relaxed text-bone-400">
+          Questions first? Text or call Jacob at <a href={business.phoneHref} class="text-gold-400 underline underline-offset-4">{business.phone}</a>.
+          Anything you add goes on your invoice.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  interface Offer {
+    id: string;
+    label: string;
+    amount: number;
+    note: string | null;
+    photo: string | null;
+    status: 'offered' | 'approved' | 'declined';
+  }
+  interface Page {
+    customerName: string;
+    vehicle: string | null;
+    service: string;
+    date: string;
+    open: boolean;
+    extras: Offer[];
+  }
+
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+  const money = (c: number) =>
+    `$${(c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
+
+  const token = new URLSearchParams(location.search).get('a') ?? '';
+  const BAD_LINK = "This link doesn't match anything. Check you have the whole link from Jacob's text, or ask him to send it again.";
+
+  function missing(text: string) {
+    $('[data-loading]').hidden = true;
+    set('[data-title]', "Can't find it.");
+    set('[data-subtitle]', '');
+    set('[data-missing-text]', text);
+    $('[data-missing]').hidden = false;
+  }
+
+  function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string) {
+    const e = document.createElement(tag);
+    e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function row(o: Offer, open: boolean) {
+    const li = el('li', 'border-b border-ink-800 py-8');
+    if (o.photo) {
+      const img = el('img', 'mb-6 aspect-[4/3] w-full max-w-xl bg-ink-900 object-cover');
+      img.src = `${API}${o.photo}`;
+      img.alt = `What Jacob found: ${o.label}`;
+      img.loading = 'lazy';
+      li.append(img);
+    }
+    const head = el('div', 'flex items-baseline justify-between gap-6');
+    head.append(el('h2', 'text-xl font-semibold text-bone-50', o.label), el('p', 'shrink-0 text-xl text-bone-50 tabular-nums', money(o.amount)));
+    li.append(head);
+    if (o.note) li.append(el('p', 'mt-2 max-w-xl whitespace-pre-line leading-relaxed text-bone-200', o.note));
+
+    if (o.status !== 'offered') {
+      li.append(
+        el(
+          'p',
+          `mt-5 border-l-2 pl-4 text-sm ${o.status === 'approved' ? 'border-gold-500 text-bone-50' : 'border-ink-600 text-bone-400'}`,
+          o.status === 'approved' ? "Added. Jacob's been told." : "No problem, it's not added. Jacob's been told.",
+        ),
+      );
+      return li;
+    }
+    if (!open) return li;
+
+    const buttons = el('div', 'mt-6 flex flex-wrap items-center gap-3');
+    const yes = el('button', 'btn-gold', `Yes, add it for ${money(o.amount)}`) as HTMLButtonElement;
+    const no = el('button', 'btn-ghost', 'No thanks') as HTMLButtonElement;
+    yes.type = no.type = 'button';
+    const error = el('p', 'mt-3 border-l-2 border-red-400 pl-3 text-sm text-red-300');
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+    const answer = (value: boolean) => async () => {
+      yes.disabled = no.disabled = true;
+      error.hidden = true;
+      try {
+        const res = await fetch(`${API}/v1/approve/${token}/${o.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ yes: value }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error?.message ?? 'That didn’t go through.');
+        render(body as Page);
+      } catch (err) {
+        error.textContent = `${(err as Error).message} Try again, or text Jacob.`;
+        error.hidden = false;
+        yes.disabled = no.disabled = false;
+      }
+    };
+    yes.addEventListener('click', answer(true));
+    no.addEventListener('click', answer(false));
+    buttons.append(yes, no);
+    li.append(buttons, error);
+    return li;
+  }
+
+  function render(p: Page) {
+    $('[data-loading]').hidden = true;
+    const waiting = p.extras.filter((e) => e.status === 'offered').length;
+    set('[data-title]', `Hi ${p.customerName}.`);
+    set(
+      '[data-subtitle]',
+      !p.extras.length ? 'Nothing to decide.' : waiting ? (p.extras.length === 1 ? 'I found something.' : 'I found a few things.') : 'All set. Thanks!',
+    );
+    const vehicle = p.vehicle ? `your ${p.vehicle}` : 'your vehicle';
+    set(
+      '[data-intro]',
+      !p.open
+        ? 'This booking was cancelled, so there’s nothing to add. Text Jacob if that’s a surprise.'
+        : !p.extras.length
+          ? 'Jacob hasn’t offered anything here. If he mentioned something, ask him to send the link again.'
+          : waiting
+            ? `While working on ${vehicle}, I spotted ${waiting === 1 ? 'this' : 'these'}. Have a look and tap yes or no. — Jacob`
+            : `Here’s what you decided for ${vehicle}.`,
+    );
+    $('[data-list]').replaceChildren(...p.extras.map((o) => row(o, p.open)));
+    const added = p.extras.filter((e) => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
+    set('[data-added]', money(added));
+    $('[data-summary]').hidden = added === 0;
+    $('[data-page]').hidden = false;
+  }
+
+  if (!API || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    missing(BAD_LINK);
+  } else {
+    fetch(`${API}/v1/approve/${token}`)
+      .then(async (res) => {
+        if (res.status === 404) return missing(BAD_LINK);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render((await res.json()) as Page);
+      })
+      .catch(() => missing("We couldn't load this just now. Try again in a minute, or text Jacob."));
+  }
+</script>

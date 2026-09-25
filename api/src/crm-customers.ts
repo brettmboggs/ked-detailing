@@ -21,6 +21,7 @@ import { ApiError, json, now, text, ulid, type Bindings } from './lib.ts';
 export const customers = new Hono<AppEnv>();
 customers.use('*', requireOwner);
 
+// TENANT: the business's time zone (booking rules already store one).
 const TZ = 'America/Chicago';
 const who = (o: Owner) => o.email ?? o.subject;
 

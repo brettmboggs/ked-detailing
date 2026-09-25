@@ -1,11 +1,12 @@
 /**
  * One job, opened from the calendar or a customer: everything about it, and
- * the things Jacob does to it (start, finish, cancel, move, price, notes,
- * invoice, confirmation text). Photos are owner-only, so they're fetched with
+ * the things Jacob does to it (start, finish, cancel, move, price, add-ons
+ * found at the car, notes, invoice, confirmation text). Photos are owner-only, so they're fetched with
  * the session and shown through object URLs.
  */
 import { zonedToUtc } from '@ked/scheduling';
 import { formatRange } from '@ked/pricing';
+import { type Listing, extrasBlock } from './calendar-extras';
 import { openInvoice } from './invoices';
 import { API, TZ, Failed, h, api, showError, token, dollars, input, ghost, small, heading, headingStyle } from './core';
 import {
@@ -50,9 +51,10 @@ export async function renderJob(
   for (const u of objectUrls) URL.revokeObjectURL(u);
   objectUrls = [];
 
-  const [job, { invoices }] = await Promise.all([
+  const [job, { invoices }, extras] = await Promise.all([
     api<CalJob>(`/jobs/${id}`),
     api<{ invoices: InvoiceLite[] }>(`/invoices?jobId=${id}`).catch(() => ({ invoices: [] as InvoiceLite[] })),
+    api<Listing>(`/jobs/${id}/extras`).catch(() => null),
   ]);
   const redraw = async (warnings: string[] = []) => renderJob(view, id, { ...opts, warnings });
   const j = job;
@@ -190,7 +192,11 @@ export async function renderJob(
 
   /* ---------------------------------------------------------- price */
 
-  const quoted = j.quote.lines.filter((l) => l.amount !== 0);
+  // The quote, then any add-on the customer said yes to at the car.
+  const quoted = [
+    ...j.quote.lines.filter((l) => l.amount !== 0),
+    ...(extras?.extras ?? []).filter((e) => e.status === 'approved').map((e) => ({ label: `${e.label} (added at the car)`, amount: e.amount })),
+  ];
   const final = h('input', {
     type: 'number',
     class: input,
@@ -384,7 +390,7 @@ export async function renderJob(
       'div',
       { class: 'mt-6 grid gap-x-12 lg:grid-cols-2' },
       h('div', {}, customer, when, details),
-      h('div', {}, price, invoice, photos, endBlock),
+      h('div', {}, price, extrasBlock(id, live && !j.history, extras, () => redraw()), invoice, photos, endBlock),
     ),
   );
 }

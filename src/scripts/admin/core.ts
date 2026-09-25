@@ -59,6 +59,7 @@ export class Failed extends Error {
 
 export const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '') ?? '';
 export const KEY = 'ked-admin-session';
+// TENANT: the business's time zone. See docs/multi-tenant.md.
 export const TZ = 'America/Chicago';
 export const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 

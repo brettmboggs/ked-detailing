@@ -255,6 +255,11 @@ There are no passwords and no sign-up screen.
 | `DELETE /v1/devices` | owner | `{ token }` in the body. Call on sign-out → `204` |
 | `GET /v1/alerts` | owner | `{ alerts }`: the last 50, newest first, `{ id, type, refId, title, body, pushed, emailed, createdAt }`. Kept even when a push fails, so show them as a list behind a bell on Today |
 | `POST /v1/jobs/:id/invoice` | owner | The job's live invoice: `200` with the one it has, or `201` with a new one built from its quote (plus a `Discount`/`Adjustment` line if `finalPrice` differs). Optional `{ lines, dueDate, notes }` only apply when creating. `422 no_price` for an inspection job with no `finalPrice`, `409 job_cancelled` for a cancelled one |
+| `GET /v1/jobs/:id/extras` | owner | Add-ons found at the car: `{ extras, suggestions, url }`. `suggestions` are price-list add-ons this job doesn't have, priced for its vehicle (`[{ id, label, amount }]`); `url` is the customer's link once one was sent |
+| `POST /v1/jobs/:id/extras` | owner | Offer one: `{ addOnId }` (priced from the list) or `{ label, amount }`, plus optional `note` (the customer sees it) and `photoId` (one of this job's photos, uploaded first with `POST /photos?kind=job&jobId=`). `amount` overrides the list price. → `201` extra. `409` on a cancelled or Housecall Pro history job |
+| `POST /v1/jobs/:id/extras/send` | owner | `{ url, message, emailed }` for everything still waiting. **Open the SMS composer** with `message`. The link stays the same for the job. `409 nothing_waiting` |
+| `PATCH /v1/extras/:id` | owner | `{ status }`: `approved` or `declined` when the customer answered in person, `withdrawn` to take back one they haven't answered. `409 decided` once answered |
+| `GET /v1/approve/:token` | public | The customer's page (`/approve/?a=<token>`). A yes (`POST /v1/approve/:token/:extraId { yes }`) is final and adds the add-on to the job: `finalPrice` goes up by it if set, the open invoice gets it as a line, and a later invoice includes it. Photos at `/v1/approve/:token/photos/:photoId` |
 | `GET /v1/invoices?status=&jobId=&customerId=` | owner | `{ invoices }`, newest number first. `status`: `draft`, `sent`, `paid`, `void`, or `unpaid` (draft and sent) |
 | `GET /v1/invoices/:id` | owner | One invoice |
 | `PATCH /v1/invoices/:id` | owner | `lines` (`[{ label, amount }]`, cents, negative for a discount, total above zero), `dueDate` (`YYYY-MM-DD` or null for "on receipt"), `notes` (shown to the customer). Changing lines also sets the job's `finalPrice`. `409` once void |
@@ -292,6 +297,11 @@ the job.
 `QuoteInput`, so show `quote.lines[0].label` as the service and don't offer
 to re-price them.
 
+**Extra shape**: `id`, `jobId`, `addOnId`, `label`, `amount`, `note`,
+`photoId`, `status` (`offered` → `approved` / `declined`, or `withdrawn`),
+`decidedBy` (`customer` or `owner`), `sentAt`, `decidedAt`, `createdAt`. After a
+yes, refetch the job and its invoice: their totals changed on the server.
+
 **Invoice shape**: `id`, `number` (1001 up), `jobId`, `customer { id, name,
 phone, email }`, `status` (`draft` → `sent` → `paid`, or `void`), `lines`,
 `total`, `paid`, `balance`, `paidOn`, `dueDate`, `notes`, `payUrl`, `sentAt`,
@@ -312,7 +322,8 @@ e.g. 0.25 gal), `reorderAt`, `reorderUrl`, `cost` (cents per unit), `notes`,
 keys needed) when a customer books online (`type: 'booking'`, `id` = job), a
 website quote request comes in (`'lead'`, lead id), or a customer first opens
 an invoice (`'invoice_opened'`, invoice id), or moves or cancels
-their booking through their link (`'rescheduled'` / `'cancelled'`, job id). Each push carries `data: { type,
+their booking through their link (`'rescheduled'` / `'cancelled'`, job id), or
+answers an add-on (`'extra_approved'` / `'extra_declined'`, job id). Each push carries `data: { type,
 id }`: open that screen on tap. Ask for notification permission right after
 sign-in, with a line on why ("So you hear the moment someone books"). This is
 how Jacob learns about online bookings, so it has to work before `/quote`
@@ -551,7 +562,9 @@ A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. T
   quoted range. Tap an address for directions in Apple Maps (a `Linking` URL,
   no map SDK needed). There's a big "Start" / "Done" action per job.
 - **Job**: the details, notes, before/after photos (`expo-image-picker` with the
-  camera) and the price. **Get paid** runs Tap to Pay, or sends an invoice link.
+  camera) and the price. **Found something?** offers an add-on from the job
+  screen: pick from `suggestions` or type one, snap a photo, write what he
+  found, then text the link. Answers arrive as a push. **Get paid** runs Tap to Pay, or sends an invoice link.
   Marking a job done asks what product was used, pre-filled from the package.
   The next step (Start job / Mark done) is one big button at the top. Once
   it's started, a short **Finish up** checklist follows: get paid (they paid

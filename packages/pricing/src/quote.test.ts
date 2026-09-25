@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultConfig, formatRange, fromPrice, quote, QuoteError, validateConfig } from './index.ts';
+import { defaultConfig, formatRange, fromPrice, offerableAddOns, quote, QuoteError, validateConfig } from './index.ts';
 import type { PricingConfig } from './index.ts';
 
 const config = defaultConfig;
@@ -131,4 +131,15 @@ test('validation catches the mistakes a hand edit makes', () => {
   c.travel.zones[0]!.zips.push('63A');
   const errors = validateConfig(c);
   assert.equal(errors.length, 4, errors.join('\n'));
+});
+
+test('add-ons to offer at the car: priced for the vehicle, minus what the job has or its package includes', () => {
+  const sedan = config.vehicleClasses.find((c) => c.id === 'sedan')!.multiplier;
+  const offers = offerableAddOns(config, { service: 'level-1', vehicleClass: 'sedan', addOns: ['headlights'] });
+  assert.ok(!offers.some((a) => a.id === 'headlights'), 'already on the job');
+  assert.equal(offers.find((a) => a.id === 'engine-bay')?.amount, 6000, 'flat price');
+  assert.equal(offers.find((a) => a.id === 'sealant')?.amount, Math.round(7500 * sedan), 'scales with size');
+  const l3 = offerableAddOns(config, { service: 'level-3', vehicleClass: 'sedan' });
+  assert.ok(!l3.some((a) => a.id === 'engine-bay' || a.id === 'sealant'), 'included in level 3');
+  assert.deepEqual(offerableAddOns(config, { service: 'gone', vehicleClass: 'sedan' }), []);
 });

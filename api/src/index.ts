@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { endSession, requestEmailLogin, requireOwner, signInWithApple, verifyEmailLogin, type Owner } from './auth.ts';
 import { deleteRule, importBank, listBankLines, listRules, resolveBankLine } from './bank.ts';
+import { answerExtra, extraPhotoId, listExtras, offerExtra, publicExtras, sendExtras, updateExtra } from './extras.ts';
 import { importCustomers, importEntries, importJobs } from './imports.ts';
 import { booksInbox } from './inbox.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
@@ -53,6 +54,7 @@ import {
   bookingCancelled,
   bookingMade,
   bookingMoved,
+  extraAnswered,
   invoiceOpened,
   leadMade,
   listAlerts,
@@ -182,6 +184,19 @@ app.get('/pay/:token', async (c) => {
   if (opened) later(c, invoiceOpened(c.env, opened));
   return c.json(view);
 });
+// Add-ons Jacob offered at the car, by the secret in the customer's link.
+app.get('/approve/:token', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await publicExtras(c.env, c.req.param('token')));
+});
+app.post('/approve/:token/:extraId', async (c) => {
+  const { page, extra, customerName, jobId } = await answerExtra(c.env, c.req.param('token'), c.req.param('extraId'), await json(c.req.raw));
+  later(c, extraAnswered(c.env, { jobId, customerName, label: extra.label, amount: extra.amount, yes: extra.status === 'approved' }));
+  return c.json(page);
+});
+app.get('/approve/:token/photos/:photoId', async (c) =>
+  photoResponse(c.env, await extraPhotoId(c.env.DB, c.req.param('token'), c.req.param('photoId'))),
+);
 app.post('/pay/:token/checkout', async (c) => c.json(await startCheckout(c.env, c.req.param('token'))));
 
 // The web admin signs in with a one-time link emailed to an owner address.
@@ -280,6 +295,10 @@ app.delete('/photos/:id', requireOwner, async (c) => {
   await deletePhoto(c.env, c.req.param('id'));
   return c.body(null, 204);
 });
+app.get('/jobs/:id/extras', requireOwner, async (c) => c.json(await listExtras(c.env, c.req.param('id'))));
+app.post('/jobs/:id/extras', requireOwner, async (c) => c.json(await offerExtra(c.env, c.req.param('id'), await json(c.req.raw)), 201));
+app.post('/jobs/:id/extras/send', requireOwner, async (c) => c.json(await sendExtras(c.env, c.req.param('id'))));
+app.patch('/extras/:id', requireOwner, async (c) => c.json(await updateExtra(c.env, c.req.param('id'), await json(c.req.raw))));
 app.get('/jobs/:id/photos', requireOwner, async (c) => c.json({ photos: await jobPhotos(c.env.DB, c.req.param('id')) }));
 
 const who = (o: Owner) => o.email ?? o.subject;
@@ -473,6 +492,7 @@ export default {
   // Cron triggers in wrangler.jsonc: daily follow-ups, the weekly summary on
   // Mondays, and campaign email batches every hour. Each run gets its own
   // 50-query budget, which is why campaigns don't share the daily run.
+  // TENANT: each cron runs once for the one business in the database.
   async scheduled(event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
     const work = event.cron === WEEKLY_CRON ? runWeekly(env) : event.cron === HOURLY_CRON ? runCampaigns(env) : runDaily(env);
     ctx.waitUntil(work.catch((err) => console.error(`cron ${event.cron} failed`, err)));

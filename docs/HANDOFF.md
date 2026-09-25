@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0011 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations through 0017 |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -134,6 +134,16 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   codes, referrals, reviews, lead playbook). Customer email goes through
   Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC `p=none` added 2026-09-25). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
   campaign batches. Migrations through 0016 are applied.
+- **Add-ons found at the car** (2026-09-25): on a job, Jacob offers a fix
+  from his price list or his own ("pet hair, $40") with a note and a photo,
+  then texts the customer a link (`/approve/?a=<token>`,
+  `src/pages/approve.astro`) where they tap yes or no. A yes goes on the job's
+  price and invoice by itself (`api/src/extras.ts`, migration 0017). He can
+  also mark an answer given in person. Admin: the job screen's "Add-ons found
+  at the car" block (`src/scripts/admin/calendar-extras.ts`).
+- **Other detailers, later:** not now, by Brett's choice. Every
+  single-business assumption is tagged `TENANT:` in the code, and
+  `docs/multi-tenant.md` has the plan and the rules to follow meanwhile.
 - **Online booking is live** (`quoteLive = true`, 2026-09-25). Jacob still
   needs to save real prices and hours; until then customers see the samples.
 - **Deploy from a clean copy** while agents are editing the tree:
@@ -161,8 +171,8 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 - **Node 22 is required** (see `.nvmrc`). The shell defaults to 20. Start every
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
-- **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (71), import (6). The API tests
+- **Tests:** `npm test` at the root runs every workspace: pricing (16),
+  scheduling (11), books (18) and API (117), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account

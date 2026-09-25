@@ -13,6 +13,7 @@ import { ApiError, now, text, type Bindings } from './lib.ts';
  * Jacob hears about every change by push.
  */
 
+// TENANT: the business's phone. See docs/multi-tenant.md.
 const PHONE = '(314) 223-2988';
 
 /** Tokens are 43 URL-safe characters, or 48 hex for jobs made before links existed. */

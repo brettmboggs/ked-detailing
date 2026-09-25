@@ -14,11 +14,11 @@ const site = process.env.KED_SITE || 'https://www.kedservice.com';
 export default defineConfig({
   site,
   base,
-  // /pay and /booking are only ever reached through a customer's private
+  // /pay, /booking and /approve are only ever reached through a customer's private
   // link. /quote joins the sitemap when the cutover switch goes on.
   integrations: [
     sitemap({
-      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking|unsubscribe)/?$`).test(new URL(page).pathname),
+      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking|approve|unsubscribe)/?$`).test(new URL(page).pathname),
     }),
   ],
 

@@ -209,6 +209,7 @@ export interface Template {
   segment: Segment;
 }
 
+// TENANT: the sign-off, and the templates below, name Jacob and the business.
 const SIGN = "Jacob\nKnock Em' Down Detailing\n(314) 223-2988";
 
 export const TEMPLATES: Template[] = [

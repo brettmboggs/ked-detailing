@@ -23,7 +23,8 @@ export function photoUrl(ref: PhotoRef): string {
   return withBase(`/site-photos/${ref.replace(/\.jpg$/, '')}-400.webp`);
 }
 
-async function shrink(file: File): Promise<Blob> {
+/** A phone photo resized to 2400px on its longest side, as JPEG. Job photos use it too. */
+export async function shrink(file: File): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);

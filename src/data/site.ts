@@ -63,6 +63,7 @@ export const quoteLive = true;
 
 /* --------------------------------------------------------------- business */
 
+// TENANT: everything about the business itself. See docs/multi-tenant.md.
 export const business = {
   name: "Knock Em' Down Detailing",
   /** Registered LLC name. The business genuinely covers boats as well as cars. */

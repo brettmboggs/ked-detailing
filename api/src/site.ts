@@ -359,6 +359,8 @@ async function uploadedIds(env: Bindings): Promise<Set<string>> {
   if (!store) return ids;
   let cursor: string | undefined;
   do {
+    // TENANT: this sweeps every site/ photo in the namespace. With more than one
+    // business it would delete theirs: prefix keys by business first.
     const page: KVNamespaceListResult<unknown, string> = await store.list({ prefix: 'site/', cursor });
     for (const k of page.keys) ids.add(k.name.slice('site/'.length));
     cursor = page.list_complete ? undefined : page.cursor;

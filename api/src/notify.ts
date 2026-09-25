@@ -21,11 +21,12 @@ import { ApiError, list, now, text, ulid, type Bindings } from './lib.ts';
  */
 
 const PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+// TENANT: name and phone belong to the business, not the code. See docs/multi-tenant.md.
 const BUSINESS = "Knock Em' Down Detailing";
 const PHONE = '(314) 223-2988';
 
 interface Alert {
-  type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled';
+  type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled' | 'extra_approved' | 'extra_declined';
   refId: string;
   title: string;
   body: string;
@@ -241,5 +242,17 @@ export async function bookingCancelled(env: Bindings, jobId: string, reason: str
     env,
     { type: 'cancelled', refId: job.id, title: `${job.customer.name} cancelled`, body: `${at}${reason ? `: "${reason}"` : ''}. That time is open again.` },
     { to: '', subject: `Cancelled: ${job.customer.name}, ${at}`, text: `${job.customer.name} cancelled ${at}.${reason ? `\nReason: ${reason}` : ''}` },
+  );
+}
+
+/** The customer answered an add-on on their link. A yes is emailed too: it's money. */
+export async function extraAnswered(env: Bindings, a: { jobId: string; customerName: string; label: string; amount: number; yes: boolean }) {
+  const price = dollars(a.amount);
+  await alert(
+    env,
+    a.yes
+      ? { type: 'extra_approved', refId: a.jobId, title: `${a.customerName} said yes to ${a.label}`, body: `${price} added to the job.` }
+      : { type: 'extra_declined', refId: a.jobId, title: `${a.customerName} said no to ${a.label}`, body: `${price}. Nothing changed on the job.` },
+    a.yes ? { to: '', subject: `Yes: ${a.customerName} added ${a.label} (${price})`, text: `${a.customerName} said yes to ${a.label} for ${price}. It's on the job and its invoice.` } : undefined,
   );
 }

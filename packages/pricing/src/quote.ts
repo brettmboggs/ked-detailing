@@ -150,6 +150,30 @@ export function applicableConditions(config: PricingConfig, service: Service): C
   );
 }
 
+/**
+ * The add-ons Jacob could offer on a booked job, priced for its vehicle or
+ * boat the same way the quote prices them. Add-ons the job already has, or
+ * that its package includes, are left out. Empty if the job's service is no
+ * longer in the price list.
+ */
+export function offerableAddOns(config: PricingConfig, input: QuoteInput): { id: string; label: string; amount: number }[] {
+  const service = config.services.find((s) => s.id === input.service);
+  if (!service) return [];
+  let size: number;
+  if (service.craft === 'vehicle') {
+    const cls = config.vehicleClasses.find((c) => c.id === input.vehicleClass);
+    if (!cls) return [];
+    size = cls.multiplier;
+  } else {
+    if (input.boatFeet === undefined || !(input.boatFeet > 0)) return [];
+    size = input.boatFeet;
+  }
+  const have = new Set(input.addOns ?? []);
+  return applicableAddOns(config, service)
+    .filter((a) => !have.has(a.id))
+    .map((a) => ({ id: a.id, label: a.label, amount: Math.round(a.price * (a.scalesWithSize ? size : 1)) }));
+}
+
 export function applicableAddOns(config: PricingConfig, service: Service): AddOn[] {
   return config.addOns.filter((a) => a.craft === service.craft && !a.includedIn?.includes(service.id));
 }

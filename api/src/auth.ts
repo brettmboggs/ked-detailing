@@ -109,6 +109,7 @@ export async function endSession(env: Bindings, authorization: string | undefine
 }
 
 /** Owner-only routes: a live session token, or the break-glass admin token. */
+// TENANT: an owner is anyone on the allowlist; sessions carry no business.
 export const requireOwner = createMiddleware<{ Bindings: Bindings; Variables: { owner: Owner } }>(
   async (c, next) => {
     const token = c.req.header('Authorization')?.match(/^Bearer (.+)$/)?.[1];

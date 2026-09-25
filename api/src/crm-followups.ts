@@ -72,6 +72,7 @@ export interface FollowUpSettings {
 
 /** The site's review page (src/data/site.ts `reviewsUrl`), until Jacob saves his Google link. */
 export const FALLBACK_REVIEW_URL = 'https://reviews.birdeye.com/knock-em-down-auto-marine-detailing-167601558157721';
+// TENANT: phone, review link and the default templates below are this business's.
 const PHONE = '(314) 223-2988';
 
 export const DEFAULT_SETTINGS: FollowUpSettings = {

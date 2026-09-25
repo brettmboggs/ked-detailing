@@ -20,6 +20,7 @@ import { ApiError, json, list, now, text, ulid, type Bindings } from './lib.ts';
 export const insights = new Hono<AppEnv>();
 insights.use('*', requireOwner);
 
+// TENANT: time zone, and the St. Louis ZIP table and home base below, are this business's.
 const TZ = 'America/Chicago';
 const who = (o: Owner) => o.email ?? o.subject;
 
