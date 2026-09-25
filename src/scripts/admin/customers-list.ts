@@ -57,6 +57,8 @@ function segment(): Record<string, unknown> {
   const zips = state.zip.split(/[\s,]+/).map((z) => z.replace(/\D/g, '')).filter(Boolean);
   return {
     ...v.seg,
+    // On the server too, so the CSV export matches the list.
+    createdAfter: state.view === 'new' ? monthStart() : undefined,
     sort: state.sort ?? v.sort,
     q: state.q || undefined,
     sources: state.source ? [state.source] : undefined,
