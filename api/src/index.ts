@@ -106,6 +106,14 @@ app.get('/pricing', async (c) => {
   return c.json(pricing);
 });
 
+// Working days and hours, for the website's footer and search listing. The
+// limits (jobs a day, notice) stay private.
+app.get('/hours', async (c) => {
+  const { rules, updatedAt } = await currentRules(c.env.DB);
+  c.header('Cache-Control', 'public, max-age=60');
+  return c.json({ timezone: rules.timezone, week: rules.week, updatedAt });
+});
+
 /** Alerts run after the response, so a slow push never holds up the customer. */
 const later = (c: { executionCtx: { waitUntil(p: Promise<unknown>): void } }, work: Promise<unknown>) =>
   c.executionCtx.waitUntil(work.catch((err) => console.error('alert failed', err)));
@@ -176,20 +184,26 @@ app.post('/auth/apple', async (c) => {
 
 /* -------------------------------------------------------------- owner */
 
+/**
+ * The website bakes prices and hours in at build time, so a save rebuilds it
+ * through the Pages deploy hook. No git involved: the build reads them from
+ * here. Best effort, since the save has already succeeded.
+ */
+function rebuildSite(c: { env: Bindings; executionCtx: { waitUntil(p: Promise<unknown>): void } }) {
+  const hook = c.env.PAGES_DEPLOY_HOOK;
+  if (!hook) return;
+  c.executionCtx.waitUntil(
+    fetch(hook, { method: 'POST' }).then(
+      (r) => { if (!r.ok) console.error(`deploy hook: HTTP ${r.status}`); },
+      (err) => console.error('deploy hook failed', err),
+    ),
+  );
+}
+
 app.put('/pricing', requireOwner, async (c) => {
   const owner = c.get('owner');
   const saved = await savePricing(c.env.DB, await json(c.req.raw), owner.email ?? owner.subject);
-  // The website bakes prices in at build time, so rebuild it. Best effort: the
-  // save has already succeeded, and leads are re-priced here either way.
-  const hook = c.env.PAGES_DEPLOY_HOOK;
-  if (hook) {
-    c.executionCtx.waitUntil(
-      fetch(hook, { method: 'POST' }).then(
-        (r) => { if (!r.ok) console.error(`deploy hook: HTTP ${r.status}`); },
-        (err) => console.error('deploy hook failed', err),
-      ),
-    );
-  }
+  rebuildSite(c); // leads are re-priced here either way
   return c.json(saved);
 });
 
@@ -202,7 +216,9 @@ app.patch('/leads/:id', requireOwner, async (c) =>
 app.get('/settings/booking', requireOwner, async (c) => c.json(await currentRules(c.env.DB)));
 app.put('/settings/booking', requireOwner, async (c) => {
   const owner = c.get('owner');
-  return c.json(await saveRules(c.env.DB, await json(c.req.raw), owner.email ?? owner.subject));
+  const saved = await saveRules(c.env.DB, await json(c.req.raw), owner.email ?? owner.subject);
+  rebuildSite(c);
+  return c.json(saved);
 });
 
 app.get('/jobs', requireOwner, async (c) => c.json({ jobs: await listJobs(c.env.DB, c.req.query('from'), c.req.query('to')) }));

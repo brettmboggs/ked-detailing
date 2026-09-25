@@ -109,6 +109,12 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   emailed to an address in `OWNER_EMAILS` (`POST /v1/auth/email`, then
   `/verify`). Sends go through Email Routing, so each owner address must be
   a verified destination in Cloudflare → Email → Destination addresses.
+- **Jacob's edits go live without git.** Everything he changes (prices,
+  hours, bookings) is saved in D1. Online booking reads it on every request.
+  The pieces the site bakes in at build time (prices, and the hours line in
+  the footer, intro and search listing via `GET /v1/hours`) are refreshed by
+  a Pages rebuild that each pricing or hours save triggers through the
+  `PAGES_DEPLOY_HOOK` secret. Only code changes need a commit and push.
 - **Email:** Email Routing is on for kedservice.com. Alerts go from
   `alerts@kedservice.com` to `ALERT_EMAIL`, and verified destinations are
   Brett's Gmail, Jacob's Gmail and his Yahoo.

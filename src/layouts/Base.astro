@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { alsoAvailable, business, faqs, quoteLive, services } from '../data/site';
 import { withBase } from '../lib/url';
+import { loadHours } from '../lib/hours';
 
 interface Props {
   title: string;
@@ -24,6 +25,8 @@ const {
   noindex: pageNoindex = false,
   noReferrer = false,
 } = Astro.props;
+
+const hours = await loadHours();
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
 
@@ -83,22 +86,7 @@ const schema = {
         { '@type': 'AdministrativeArea', name: 'Jefferson County' },
         { '@type': 'AdministrativeArea', name: 'Greater St. Louis' },
       ],
-      openingHoursSpecification: [
-        {
-          '@type': 'OpeningHoursSpecification',
-          dayOfWeek: [
-            'Monday',
-            'Tuesday',
-            'Wednesday',
-            'Thursday',
-            'Friday',
-            'Saturday',
-            'Sunday',
-          ],
-          opens: '09:00',
-          closes: '17:00',
-        },
-      ],
+      openingHoursSpecification: hours.spec,
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
         name: 'Detailing packages',

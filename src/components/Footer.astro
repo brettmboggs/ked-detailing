@@ -4,6 +4,9 @@ import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 import { business, footerNav } from '../data/site';
 import { withBase } from '../lib/url';
+import { loadHours } from '../lib/hours';
+
+const hours = await loadHours();
 
 const year = new Date().getFullYear();
 ---
@@ -15,7 +18,7 @@ const year = new Date().getFullYear();
         <Image src={logo} alt={business.name} widths={[220, 440]} sizes="200px" class="h-14 w-auto" />
         <p class="mt-6 max-w-sm text-sm leading-relaxed text-bone-500">
           Mobile auto and marine detailing across the greater St. Louis metro, based in {business.baseCity}.
-          We come to your home or office. {business.hours}.
+          We come to your home or office. {hours.line}.
         </p>
       </div>
 

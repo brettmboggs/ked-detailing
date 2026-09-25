@@ -198,6 +198,7 @@ There are no passwords and no sign-up screen.
 | --- | --- | --- |
 | `POST /v1/auth/apple` | – | Exchange an Apple identity token for a session |
 | `GET /v1/pricing` | – | `{ config, version, updatedAt }`. The website reads this too |
+| `GET /v1/hours` | – | `{ timezone, week, updatedAt }`. The working days only, for the website's footer and search listing |
 | `PUT /v1/pricing` | owner | Save a config. The server re-runs `validateConfig` and bumps `version`, and old versions are kept |
 | `POST /v1/leads` | – | Website quote submissions: contact, vehicle, `QuoteInput`, quote snapshot |
 | `GET /v1/leads?status=` | owner | New quote requests |
@@ -206,7 +207,7 @@ There are no passwords and no sign-up screen.
 | `POST /v1/bookings` | – | Website booking: `{ input, start, name, phone, address, email?, zip?, vehicle?, notes? }` → `201 { id, start, end, quote, manageUrl }`. `409 slot_taken` means someone else got it, so refetch availability |
 | `GET /v1/manage/:token` | – | The customer's booking page (`/booking/?b=<token>` on the site). First name only |
 | `GET /v1/manage/:token/availability` / `POST …/reschedule` / `POST …/cancel` | – | The customer moves or cancels it, under the same rules as booking online: only while `scheduled` and further off than `minNoticeHours`. Jacob gets a push (`rescheduled` / `cancelled`, id = job) |
-| `GET/PUT /v1/settings/booking` | owner | `{ rules: BookingRules, updatedAt }`. PUT runs `validateRules` (`422` with `details`) |
+| `GET/PUT /v1/settings/booking` | owner | `{ rules: BookingRules, updatedAt }`. PUT runs `validateRules` (`422` with `details`) and rebuilds the website, like a pricing save |
 | `GET /v1/jobs?from=&to=` | owner | `{ jobs }` overlapping the range (ISO). Defaults to yesterday through two weeks out. Each job embeds `customer: { id, name, phone, email }` |
 | `GET /v1/jobs/:id` | owner | One job |
 | `POST /v1/jobs/:id/confirmation` | owner | `{ url, message }`: the text confirming a booking, with the customer's own link to see, move or cancel it. **Confirm** on a web booking opens the SMS composer with `message`. Works for jobs he adds too |

@@ -526,7 +526,7 @@ async function renderHours() {
     ),
     saveBar('Save hours', async () => {
       await api('/settings/booking', { method: 'PUT', body: r });
-      return 'Saved. Online booking uses these now.';
+      return 'Saved. Online booking uses these now, and the website shows them in a few minutes.';
     }),
   );
 }

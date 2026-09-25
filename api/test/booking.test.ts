@@ -163,6 +163,16 @@ test('booking rules: validated, saved, and switching booking off stops it', asyn
   assert.equal((await slots()).bookable, true);
 });
 
+test('hours are public for the website, without the private limits', async () => {
+  const week = [null, ...defaultRules.week.slice(1, 6), null];
+  assert.equal((await call('PUT', '/settings/booking', { ...defaultRules, week }, admin)).status, 200);
+  const r = await call('GET', '/hours');
+  assert.equal(r.status, 200);
+  assert.deepEqual(Object.keys(r.body).sort(), ['timezone', 'updatedAt', 'week']);
+  assert.deepEqual(r.body.week, week);
+  assert.equal((await call('PUT', '/settings/booking', defaultRules, admin)).status, 200);
+});
+
 test('owner booking endpoints refuse strangers', async () => {
   for (const [m, p] of [['GET', '/jobs'], ['GET', '/customers'], ['GET', '/time-off'], ['GET', '/settings/booking']] as const) {
     assert.equal((await call(m, p)).status, 401, p);
