@@ -7,10 +7,12 @@ import Footer from '../components/Footer.astro';
 import Marquee from '../components/Marquee.astro';
 import hoodie from '../assets/photos/ked-hoodie.jpg';
 import vanLogo from '../assets/photos/van-logo.jpg';
-import { business } from '../data/site';
+import { loadSite } from '../lib/live-site';
 import { getCollection } from 'astro:content';
 import { storeMeta } from '../data/store';
 import { withBase } from '../lib/url';
+
+const { business } = await loadSite();
 
 const merch = import.meta.glob<{ default: ImageMetadata }>('../assets/merch/*.{jpg,jpeg,png,webp}', {
   eager: true,

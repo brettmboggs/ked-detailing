@@ -1,0 +1,53 @@
+---
+/**
+ * One editable photo: a built-in one goes through astro:assets exactly as
+ * before; one Jacob uploaded in the admin uses the WebP copies the build wrote
+ * out (src/pages/site-photos/[file].ts). Takes the same props the pages
+ * already pass to <Image>, and passes anything else (class, data-*) through.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { isUpload, type PhotoRef } from '../lib/site-content';
+import { loadLiveSite, UPLOAD_WIDTHS } from '../lib/live-site';
+import { withBase } from '../lib/url';
+
+interface Props {
+  src: PhotoRef;
+  alt: string;
+  widths: number[];
+  sizes: string;
+  loading?: 'eager' | 'lazy';
+  class?: string;
+  [attr: string]: unknown;
+}
+
+const { src, alt, widths, sizes, loading = 'lazy', ...rest } = Astro.props;
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', { eager: true });
+const upload = isUpload(src) ? (await loadLiveSite()).uploads.get(src) : undefined;
+const builtIn = upload ? undefined : photos[`../assets/photos/${src}`]?.default;
+
+const file = (w: number) => withBase(`/site-photos/${src}-${w}.webp`);
+// Small uploads aren't enlarged, so each width is capped at the photo's own.
+const srcset = upload
+  ? [...new Map(UPLOAD_WIDTHS.map((w) => [Math.min(w, upload.width), file(w)])).entries()].map(([w, url]) => `${url} ${w}w`).join(', ')
+  : '';
+---
+
+{
+  upload ? (
+    <img
+      src={file(960)}
+      srcset={srcset}
+      sizes={sizes}
+      width={upload.width}
+      height={upload.height}
+      alt={alt}
+      loading={loading}
+      decoding="async"
+      {...rest}
+    />
+  ) : (
+    builtIn && <Image src={builtIn} alt={alt} widths={widths} sizes={sizes} loading={loading} {...rest} />
+  )
+}

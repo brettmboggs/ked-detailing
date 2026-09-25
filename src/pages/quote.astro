@@ -2,7 +2,8 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { business, quoteLive } from '../data/site';
+import { quoteLive } from '../data/site';
+import { loadSite } from '../lib/live-site';
 import { withBase } from '../lib/url';
 import { formatHours, formatMoney, fromPrice } from '@ked/pricing';
 import { apiUrl, loadPricing } from '../lib/pricing';
@@ -19,6 +20,7 @@ import { apiUrl, loadPricing } from '../lib/pricing';
  * segmented controls. No chips, no card grids, no numbered steps.
  */
 // Sample prices until the cutover switch in src/data/site.ts goes on.
+const { business } = await loadSite();
 const PLACEHOLDER_PRICING = !quoteLive;
 
 const config = await loadPricing();

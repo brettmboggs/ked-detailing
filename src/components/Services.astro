@@ -2,14 +2,11 @@
 import { bookLink, serviceIdFor } from '../lib/book';
 import { formatMoney, fromPrice } from '@ked/pricing';
 import { loadPricing } from '../lib/pricing';
-import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
-import { alsoAvailable, quoteLive, services } from '../data/site';
+import SitePhoto from './SitePhoto.astro';
+import { quoteLive } from '../data/site';
+import { loadSite } from '../lib/live-site';
 
-const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', {
-  eager: true,
-});
-const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
+const { alsoAvailable, services } = await loadSite();
 
 const numeral = (level: string) => level.replace('Level ', '');
 
@@ -154,8 +151,8 @@ const priceText = (level: string) => {
                   class="relative aspect-[16/10] overflow-hidden bg-ink-850 lg:col-span-5 lg:aspect-auto lg:min-h-[16rem]"
                   style="clip-path: inset(0 0 0 100%)"
                 >
-                  <Image
-                    src={photoFor(s.photo)}
+                  <SitePhoto
+                    src={s.photo}
                     alt={`${s.level} — ${s.name}`}
                     widths={[520, 900, 1200]}
                     sizes="(min-width: 1024px) 40vw, 92vw"
@@ -177,7 +174,7 @@ const priceText = (level: string) => {
     </div>
 
     {/* Bookable on Housecall Pro but never surfaced on the old site. */}
-    <div data-stagger class="mt-16 lg:mt-20">
+    {alsoAvailable.length > 0 && <div data-stagger class="mt-16 lg:mt-20">
       <p class="eyebrow rise mb-7">Also available</p>
       <div class="grid gap-px overflow-hidden border border-ink-800 bg-ink-800 md:grid-cols-2">
         {
@@ -199,7 +196,7 @@ const priceText = (level: string) => {
           ))
         }
       </div>
-    </div>
+    </div>}
   </div>
 </section>
 

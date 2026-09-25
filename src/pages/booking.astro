@@ -2,7 +2,9 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { business } from '../data/site';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
 
 /**
  * A customer's booking, reached through the private link from their

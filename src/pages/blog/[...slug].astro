@@ -6,8 +6,10 @@ import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { business } from '../../data/site';
+import { loadSite } from '../../lib/live-site';
 import { withBase } from '../../lib/url';
+
+const { business } = await loadSite();
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => !data.draft);

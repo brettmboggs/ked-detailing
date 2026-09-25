@@ -1,7 +1,8 @@
 ---
-import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
-import { business, recent } from '../data/site';
+import SitePhoto from './SitePhoto.astro';
+import { loadSite } from '../lib/live-site';
+
+const { business, recent } = await loadSite();
 
 /**
  * The one part of the old gallery worth keeping on the home page.
@@ -11,11 +12,6 @@ import { business, recent } from '../data/site';
  * because that is where current jobs actually land. This keeps a taste of the
  * work so the section is not just a bare call to action.
  */
-
-const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', {
-  eager: true,
-});
-const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
 ---
 
 <section class="relative overflow-hidden bg-ink-950 py-16 lg:py-24">
@@ -74,8 +70,8 @@ const photoFor = (file: string) => photos[`../assets/photos/${file}`].default;
               rel="noopener"
               class="group block overflow-hidden bg-ink-850"
             >
-              <Image
-                src={photoFor(item.src)}
+              <SitePhoto
+                src={item.src}
                 alt={item.alt}
                 widths={[360, 720]}
                 sizes="(min-width: 640px) 24vw, 62vw"

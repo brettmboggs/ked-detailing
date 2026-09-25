@@ -199,6 +199,10 @@ There are no passwords and no sign-up screen.
 | `POST /v1/auth/apple` | – | Exchange an Apple identity token for a session |
 | `GET /v1/pricing` | – | `{ config, version, updatedAt }`. The website reads this too |
 | `GET /v1/hours` | – | `{ timezone, week, updatedAt }`. The working days only, for the website's footer and search listing |
+| `GET /v1/site` | – | `{ content, updatedAt }`: the website's words and photos as Jacob changed them in the web admin's Website tab. `content` holds only the changed fields (`hero`, `intro`, `area`, `contact`, `reviews`, `packages['level-1'…'level-4']`, `also`, `faqs`, `marquee`, `recent`) and is `{}` until the first save. The site's build lays it over `src/data/site.ts` (`src/lib/site-content.ts` has the shape). The app doesn't need it |
+| `PUT /v1/site` | owner | Replace the document. Strict: unknown fields, over-long text and `<` `>` are refused (`422 invalid_site` with `details`). Photos are a built-in file name or a site upload's id. Rebuilds the website, like a pricing save, and deletes site uploads no longer used (after an hour) |
+| `POST /v1/site/photos` | owner | Raw image bytes, JPEG, PNG or WebP (convert HEIC first), up to 5 MB → `201 { id, contentType, bytes, url }`. Kept apart from job photos and receipts. Private until a `PUT /v1/site` uses it |
+| `GET /v1/site/photos/:id` | – | A website photo, only while the saved site uses it (else `404`). Cached for a year. The build copies these into the site, so pages never load them from here |
 | `PUT /v1/pricing` | owner | Save a config. The server re-runs `validateConfig` and bumps `version`, and old versions are kept |
 | `POST /v1/leads` | – | Website quote submissions: contact, vehicle, `QuoteInput`, quote snapshot |
 | `GET /v1/leads?status=` | owner | New quote requests |

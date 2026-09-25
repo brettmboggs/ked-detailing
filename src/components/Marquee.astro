@@ -1,5 +1,5 @@
 ---
-import { marque } from '../data/site';
+import { loadSite } from '../lib/live-site';
 
 interface Props {
   dir?: 'left' | 'right';
@@ -10,6 +10,7 @@ interface Props {
   variant?: 'dark' | 'gold';
 }
 const { dir = 'left', speed = 55, angle = 0, variant = 'dark' } = Astro.props;
+const { marque } = await loadSite();
 
 const gold = variant === 'gold';
 const tilted = angle !== 0;

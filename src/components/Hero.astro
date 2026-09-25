@@ -1,7 +1,9 @@
 ---
 import { bookLink } from '../lib/book';
-import { business, hero } from '../data/site';
+import { loadSite } from '../lib/live-site';
 import { withBase } from '../lib/url';
+
+const { business, hero } = await loadSite();
 ---
 
 <section id="top" class="relative min-h-[100svh] w-full overflow-hidden bg-ink-950 grain">

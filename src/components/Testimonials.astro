@@ -1,5 +1,7 @@
 ---
-import { business, testimonials } from '../data/site';
+import { loadSite } from '../lib/live-site';
+
+const { business, testimonials } = await loadSite();
 ---
 
 <section id="reviews" class="relative overflow-hidden bg-ink-900 py-24 lg:py-32">

@@ -2,7 +2,9 @@
 import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import ctaPhoto from '../assets/photos/porsche-targa.jpg';
-import { business } from '../data/site';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
 ---
 
 <section id="contact" class="relative isolate overflow-hidden bg-ink-900 grain">

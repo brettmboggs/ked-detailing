@@ -1,8 +1,9 @@
 ---
 import '../styles/global.css';
-import { alsoAvailable, business, faqs, quoteLive, services } from '../data/site';
+import { quoteLive } from '../data/site';
 import { withBase } from '../lib/url';
 import { loadHours } from '../lib/hours';
+import { loadSite } from '../lib/live-site';
 
 interface Props {
   title: string;
@@ -27,6 +28,7 @@ const {
 } = Astro.props;
 
 const hours = await loadHours();
+const { alsoAvailable, business, faqs, services } = await loadSite();
 
 const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://www.kedservice.com');
 
@@ -66,7 +68,7 @@ const schema = {
       description:
         'Mobile auto and marine detailing across the greater St. Louis area. Maintenance washes, paint decontamination, one-step machine polishing, interior restoration and paint protection, carried out at your home or workplace.',
       url: site,
-      telephone: '+13142232988',
+      telephone: business.phoneHref.replace('tel:', ''),
       email: business.email,
       image: ogUrl.href,
       logo: new URL('/apple-touch-icon.png', site).href,
@@ -172,7 +174,7 @@ const schema = {
     />
 
     <!-- set:html is a directive on the element, not a standalone tag. -->
-    <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />
+    <script type="application/ld+json" set:html={JSON.stringify(schema).replace(/</g, '\\u003c')} is:inline />
 
     <!--
       Reveal-on-scroll starts elements at opacity 0, so if the motion bundle

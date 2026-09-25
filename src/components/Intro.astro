@@ -2,8 +2,10 @@
 import { Image } from 'astro:assets';
 import vanPhoto from '../assets/photos/van-on-site.jpg';
 import wheelPhoto from '../assets/photos/panamera-foam-side.jpg';
-import { business, intro } from '../data/site';
 import { loadHours } from '../lib/hours';
+import { loadSite } from '../lib/live-site';
+
+const { business, intro } = await loadSite();
 
 const hours = await loadHours();
 

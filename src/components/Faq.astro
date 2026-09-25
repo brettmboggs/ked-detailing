@@ -1,5 +1,7 @@
 ---
-import { faqs } from '../data/site';
+import { loadSite } from '../lib/live-site';
+
+const { faqs } = await loadSite();
 ---
 
 <section id="faqs" class="relative bg-ink-950 py-24 lg:py-36">

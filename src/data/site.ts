@@ -76,6 +76,8 @@ export const business = {
    * a home address, and this is a service-area business.
    */
   baseCity: 'High Ridge',
+  /** Finishes "Mobile auto and marine detailing across …" in the footer. */
+  serviceArea: 'the greater St. Louis metro',
   city: 'St. Louis',
   region: 'MO',
   hours: 'Seven days a week',

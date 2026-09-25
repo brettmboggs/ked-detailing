@@ -105,15 +105,28 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   set the Worker's `ADMIN_TOKEN` secret for the day, and delete it after.
 - **Web admin:** `kedservice.com/admin` (`src/pages/admin.astro`,
   `src/scripts/admin.ts`). Bookings, quote requests, a prices editor with a
-  live preview of what customers see, and hours. Sign-in is a one-time link
+  live preview of what customers see, hours, and **Website**
+  (`src/scripts/admin/website*.ts`): Jacob changes the site's words (top of
+  the page, about, each package's name, text and what's included, also
+  available, reviews, questions, contact, service area, scrolling names) and
+  photos (each package's, and the recent-work row). Saved in D1 as only what
+  differs from `src/data/site.ts` (`PUT /v1/site`, validated in
+  `api/src/site.ts`), then the site rebuilds. The build reads `GET /v1/site`
+  in `src/lib/live-site.ts` and merges it field by field
+  (`src/lib/site-content.ts`), falling back to the built-in value for
+  anything missing or bad. Uploaded photos (KV, `site/<id>`) are downloaded
+  at build and written out as resized WebP at `/site-photos/<id>-<w>.webp`
+  (`src/pages/site-photos/[file].ts`, rendered by `SitePhoto.astro`); built-in
+  photos still go through astro:assets. Prices stay on the Prices tab. Sign-in is a one-time link
   emailed to an address in `OWNER_EMAILS` (`POST /v1/auth/email`, then
   `/verify`). Sends go through Email Routing, so each owner address must be
   a verified destination in Cloudflare → Email → Destination addresses.
 - **Jacob's edits go live without git.** Everything he changes (prices,
   hours, bookings) is saved in D1. Online booking reads it on every request.
   The pieces the site bakes in at build time (prices, and the hours line in
-  the footer, intro and search listing via `GET /v1/hours`) are refreshed by
-  a Pages rebuild that each pricing or hours save triggers through the
+  the footer, intro and search listing via `GET /v1/hours`, and his website
+  words and photos via `GET /v1/site`) are refreshed by a Pages rebuild that
+  each pricing, hours or website save triggers through the
   `PAGES_DEPLOY_HOOK` secret. Only code changes need a commit and push.
 - **Email:** Email Routing is on for kedservice.com. Alerts go from
   `alerts@kedservice.com` to `ALERT_EMAIL`, and verified destinations are

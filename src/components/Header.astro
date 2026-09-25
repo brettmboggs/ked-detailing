@@ -2,8 +2,11 @@
 import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
-import { business, nav } from '../data/site';
+import { nav } from '../data/site';
 import { withBase } from '../lib/url';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
 ---
 
 <header
