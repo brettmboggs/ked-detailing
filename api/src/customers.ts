@@ -1,7 +1,7 @@
-import { touchJson, type Touch } from './attribution.ts';
+import { SOURCES, touchJson, type Touch } from './attribution.ts';
 import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 
-interface CustomerRow {
+export interface CustomerRow {
   id: string;
   name: string;
   phone: string | null;
@@ -12,6 +12,7 @@ interface CustomerRow {
   updated_at: string;
   source: string | null;
   source_detail: string | null;
+  attribution: string | null;
   tags: string;
   referred_by: string | null;
   referral_code: string | null;
@@ -94,6 +95,8 @@ export function toCustomer(row: CustomerRow) {
     updatedAt: row.updated_at,
     source: row.source,
     sourceDetail: row.source_detail,
+    /** What the browser saw on their first visit (attribution.ts), when they came through the website. */
+    attribution: row.attribution ? (JSON.parse(row.attribution) as Record<string, string>) : null,
     tags: JSON.parse(row.tags || '[]') as string[],
     referredBy: row.referred_by,
     referralCode: row.referral_code,
@@ -142,6 +145,23 @@ export async function updateCustomer(db: D1Database, id: string, body: Record<st
   if ('email' in body) fields.push(['email', text(body.email, 'Email', 200)?.toLowerCase() ?? null]);
   if ('address' in body) fields.push(['address', text(body.address, 'Address', 200) ?? null]);
   if ('notes' in body) fields.push(['notes', text(body.notes, 'Notes', 5000) ?? null]);
+
+  // CRM fields (docs/crm.md): tags, where they came from, consent, who sent them.
+  if ('tags' in body) fields.push(['tags', JSON.stringify(readTags(body.tags))]);
+  if ('source' in body) {
+    const source = body.source === null || body.source === '' ? null : body.source;
+    if (source !== null && !(SOURCES as readonly unknown[]).includes(source)) {
+      throw new ApiError(422, 'invalid', `Where they heard about us must be one of ${SOURCES.join(', ')}.`);
+    }
+    fields.push(['source', source]);
+  }
+  if ('sourceDetail' in body) fields.push(['source_detail', text(body.sourceDetail, 'Where they heard about us', 120) ?? null]);
+  for (const [key, col, label] of [['emailOk', 'email_ok', 'Email OK'], ['textOk', 'text_ok', 'Text OK']] as const) {
+    if (!(key in body)) continue;
+    if (typeof body[key] !== 'boolean') throw new ApiError(422, 'invalid', `${label} must be true or false.`);
+    fields.push([col, body[key] ? 1 : 0]);
+  }
+  if ('referredBy' in body) fields.push(['referred_by', await readReferrer(db, id, body.referredBy)]);
   if (!fields.length) return getCustomer(db, id);
 
   const row = await db
@@ -150,4 +170,48 @@ export async function updateCustomer(db: D1Database, id: string, body: Record<st
     .first<CustomerRow>();
   if (!row) throw new ApiError(404, 'not_found', 'No customer with that ID.');
   return toCustomer(row);
+}
+
+export const MAX_TAGS = 12;
+
+/**
+ * Tags: a short list of short words. Lower-cased, spaces squeezed, duplicates
+ * dropped, so "VIP", " vip " and "Vip" are one tag.
+ */
+export function readTags(value: unknown): string[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new ApiError(422, 'invalid', 'Tags must be a list.');
+  const tags: string[] = [];
+  for (const raw of value) {
+    if (typeof raw !== 'string') throw new ApiError(422, 'invalid', 'Each tag must be a word or two.');
+    const tag = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!tag) continue;
+    if (tag.length > 24) throw new ApiError(422, 'invalid', `"${raw.trim().slice(0, 30)}" is too long for a tag. Keep tags under 25 letters.`);
+    if (!/^[\p{L}\p{N}][\p{L}\p{N} &'+./-]*$/u.test(tag)) throw new ApiError(422, 'invalid', `"${raw.trim()}" has characters a tag can't use.`);
+    if (!tags.includes(tag)) tags.push(tag);
+  }
+  if (tags.length > MAX_TAGS) throw new ApiError(422, 'invalid', `Up to ${MAX_TAGS} tags per customer.`);
+  return tags;
+}
+
+/** Who sent them: another customer, never themselves or anyone they sent (no loops). */
+async function readReferrer(db: D1Database, id: string, value: unknown): Promise<string | null> {
+  if (value === null || value === '') return null;
+  if (typeof value !== 'string' || value.length > 40) throw new ApiError(422, 'invalid', 'Referred by must be a customer.');
+  if (value === id) throw new ApiError(422, 'invalid', "A customer can't refer themselves.");
+  // Walk up from the chosen referrer; meeting this customer means a loop.
+  const row = await db
+    .prepare(
+      `WITH RECURSIVE up(id, depth) AS (
+         SELECT id, 0 FROM customers WHERE id = ?1
+         UNION SELECT c.referred_by, up.depth + 1 FROM customers c JOIN up ON c.id = up.id
+         WHERE c.referred_by IS NOT NULL AND up.depth < 50
+       )
+       SELECT (SELECT COUNT(*) FROM customers WHERE id = ?1) AS found, EXISTS (SELECT 1 FROM up WHERE id = ?2) AS loop`,
+    )
+    .bind(value, id)
+    .first<{ found: number; loop: number }>();
+  if (!row?.found) throw new ApiError(422, 'invalid', 'Referred by must be a customer.');
+  if (row.loop) throw new ApiError(422, 'invalid', 'That would make them referred by someone they referred.');
+  return value;
 }
