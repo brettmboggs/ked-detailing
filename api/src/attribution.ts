@@ -70,6 +70,8 @@ export function inferSource(a: Attribution): Source | null {
   if (/instagram|ig\b/.test(s)) return 'instagram';
   if (/facebook|fb\b|messenger/.test(s)) return 'facebook';
   if (/nextdoor/.test(s)) return 'nextdoor';
+  // Printed things: the tracking links in the Marketing tab tag them this way.
+  if (/\b(van|doorhanger|door-hanger|flyer|card|magnet)\b/.test(s)) return 'van';
   if (/maps\.google|gbp|business ?profile|google.*maps/.test(s)) return 'maps';
   if (/google|bing|duckduckgo|yahoo/.test(s)) return 'google';
   return null;

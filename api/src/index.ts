@@ -63,7 +63,7 @@ import { ApiError, countingDb, json, list, text, type Bindings } from './lib.ts'
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import { currentSite, saveSite, sitePhotoResponse, uploadSitePhoto } from './site.ts';
-import { campaigns } from './crm-campaigns.ts';
+import { campaigns, runCampaigns } from './crm-campaigns.ts';
 import { customers as crmCustomers } from './crm-customers.ts';
 import { followups, runDaily } from './crm-followups.ts';
 import { insights, runWeekly } from './crm-insights.ts';
@@ -470,12 +470,15 @@ app.onError((err, c) => {
 
 export default {
   fetch: app.fetch,
-  // Cron triggers in wrangler.jsonc: daily follow-ups, and the weekly summary on Mondays.
+  // Cron triggers in wrangler.jsonc: daily follow-ups, the weekly summary on
+  // Mondays, and campaign email batches every hour. Each run gets its own
+  // 50-query budget, which is why campaigns don't share the daily run.
   async scheduled(event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    const work = event.cron === WEEKLY_CRON ? runWeekly(env) : runDaily(env);
+    const work = event.cron === WEEKLY_CRON ? runWeekly(env) : event.cron === HOURLY_CRON ? runCampaigns(env) : runDaily(env);
     ctx.waitUntil(work.catch((err) => console.error(`cron ${event.cron} failed`, err)));
   },
 } satisfies ExportedHandler<Bindings>;
 
-/** Must match the weekly entry in wrangler.jsonc's triggers.crons. */
+/** Must match the weekly and hourly entries in wrangler.jsonc's triggers.crons. */
 const WEEKLY_CRON = '0 13 * * 1';
+const HOURLY_CRON = '30 * * * *';
