@@ -557,7 +557,9 @@ back to the rules), `inputTokens`, `outputTokens`, `emailed`, `createdBy`
 
 ## Screens (v1)
 
-A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. Today is the home screen: today's jobs with one big next-step button each, then a **Needs you** list (online bookings in the next week not yet texted a confirmation, which the phone remembers since the server doesn't track it; new leads, finished jobs not yet paid, things for the books, products running low), each a tap from being dealt with, and a look at tomorrow.
+A tab bar with five tabs: **Today · Schedule · Customers · Books · More**. Today is the home screen: today's jobs with one big next-step button each, then one ranked **Do this** list (online bookings in the next week not yet texted a confirmation, which the phone remembers since the server doesn't track it; due follow-ups, new leads, finished jobs not yet paid, reviews to ask for, things for the books, products running low, the top Insights action, a campaign that's in season), each a tap from being dealt with, and a look at tomorrow. A search on Today finds customers, jobs, invoices and products.
+
+The app points him where he needs to go rather than hiding features: each area feeds Today's list, shows up where it's used (ask for a review in a job's Finish up, the referral link on a customer), and every row under More shows a live line ("2 reviews to ask", "Saved Tuesday"). More has three groups: **Grow** (Marketing, Insights, Website), **Run** (Inventory) and **Set up** (Pricing, Booking, Follow-up rules, Settings).
 
 - **Today**: today's jobs in order. Each shows the customer, vehicle, address and
   quoted range. Tap an address for directions in Apple Maps (a `Linking` URL,
@@ -581,7 +583,7 @@ A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. T
 - **Customers**: search, history, vehicles, total spend.
 - **Quote**: the same formula as the website, for pricing a job in the
   driveway. It can become a job directly.
-- **Inventory**: a list sorted by what's low. **Scan** uses `expo-camera`'s
+- **Inventory** (More → Inventory): a list sorted by what's low. **Scan** uses `expo-camera`'s
   barcode scanning. A known code opens the item, where he taps + or − to change
   the count. An unknown code asks him to name it once, and it's remembered.
   Includes a reorder link per item.
@@ -641,7 +643,7 @@ business from the van. The CRM screens use the CRM endpoints above:
   then calls `/texted`. Call, done, skip, snooze and reopen are one tap each.
   More → Follow-ups has upcoming, sent and done, "Check now", his own
   reminders, and the rules' settings in his words.
-- **Customers** (More → Customers): the CRM list with a segment filter (who,
+- **Customers** (its own tab): the CRM list, opening on short one-tap groups (due for a rebook, new this month, haven't been back) with a segment filter (who,
   spend, visits, last visit, source, tags, can email or text) and sort, CSV
   export through the share sheet, and duplicates to merge. A customer's page
   is the CRM profile: their numbers, open follow-ups, referral link to share,
