@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { alsoAvailable, business, faqs, services } from '../data/site';
+import { alsoAvailable, business, faqs, quoteLive, services } from '../data/site';
 import { withBase } from '../lib/url';
 
 interface Props {
@@ -126,7 +126,7 @@ const schema = {
         '@type': 'ReserveAction',
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: business.bookingUrl,
+          urlTemplate: quoteLive ? new URL('/quote', Astro.site ?? 'https://www.kedservice.com').href : business.bookingUrl,
           inLanguage: 'en-US',
           actionPlatform: [
             'https://schema.org/DesktopWebPlatform',

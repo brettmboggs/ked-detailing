@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../../lib/book';
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { getCollection, render } from 'astro:content';
@@ -105,7 +106,7 @@ const fmt = (d: Date) =>
             products to your driveway.
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold">
+            <a {...bookLink()} class="btn-gold">
               Book your detail
             </a>
             <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>

@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { business } from '../data/site';
+import { business, quoteLive } from '../data/site';
 import { withBase } from '../lib/url';
 import { formatHours, formatMoney, fromPrice } from '@ked/pricing';
 import { apiUrl, loadPricing } from '../lib/pricing';
@@ -18,7 +18,8 @@ import { apiUrl, loadPricing } from '../lib/pricing';
  * Styled as a work order, not a component kit: ruled rows, square selectors and
  * segmented controls. No chips, no card grids, no numbered steps.
  */
-const PLACEHOLDER_PRICING = true;
+// Sample prices until the cutover switch in src/data/site.ts goes on.
+const PLACEHOLDER_PRICING = !quoteLive;
 
 const config = await loadPricing();
 // Handed to the browser script so it prices with exactly what was rendered.
@@ -534,6 +535,11 @@ const input =
   // Calendar, details and submit live in their own module; it only runs when
   // the API is configured, because the markup it drives only exists then.
   const booking = API ? initBooking({ api: API, form, readInput, phone: PHONE }) : null;
+
+  // A package's "Book" button links here with ?service=level-2: start on it.
+  const wanted = new URLSearchParams(location.search).get('service');
+  const pick = wanted && form.querySelector<HTMLInputElement>(`input[name="service"][value="${CSS.escape(wanted)}"]`);
+  if (pick) pick.checked = true;
 
   form.addEventListener('input', render);
   form.addEventListener('change', render);

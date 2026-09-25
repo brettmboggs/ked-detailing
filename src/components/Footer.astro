@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 import { business, footerNav } from '../data/site';
@@ -70,9 +71,7 @@ const year = new Date().getFullYear();
         </ul>
 
         <a
-          href={business.bookingUrl}
-          target="_blank"
-          rel="noopener"
+          {...bookLink()}
           class="btn-gold mt-7 !px-6 !py-3.5 !text-[0.72rem]"
         >
           Book Now

@@ -46,9 +46,9 @@ async function send(path: string, key: string, items: unknown[], size: number) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
       body: JSON.stringify({ [key]: items.slice(i, i + size) }),
     });
-    const body = (await res.json()) as Record<string, number> & { error?: { message: string } };
+    const body = (await res.json()) as { error?: { message: string } } & Record<string, unknown>;
     if (!res.ok) throw new Error(`Rows ${i + 1}–${i + size}: ${body.error?.message ?? res.status}. Everything before this went in; re-run to continue.`);
-    for (const [k, v] of Object.entries(body)) totals[k] = (totals[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(body)) if (typeof v === 'number') totals[k] = (totals[k] ?? 0) + v;
     process.stdout.write(`\r${Math.min(i + size, items.length)} / ${items.length}`);
   }
   console.log(`\nDone: ${Object.entries(totals).map(([k, v]) => `${v} ${k}`).join(', ')}.`);

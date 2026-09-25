@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../../lib/book';
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { getCollection } from 'astro:content';
@@ -6,7 +7,6 @@ import Base from '../../layouts/Base.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import Marquee from '../../components/Marquee.astro';
-import { business } from '../../data/site';
 import { withBase } from '../../lib/url';
 
 const heroes = import.meta.glob<{ default: ImageMetadata }>('../../assets/blog/*.{jpg,jpeg,png,webp}', {
@@ -102,9 +102,7 @@ const fmt = (d: Date) =>
         <div class="rise mt-14 border-t border-ink-800 pt-10 text-center">
           <p class="text-bone-400">Rather just get it booked?</p>
           <a
-            href={business.bookingUrl}
-            target="_blank"
-            rel="noopener"
+            {...bookLink()}
             class="btn-gold mt-5"
           >
             Book your detail

@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../lib/book';
 import { band, business } from '../data/site';
 import { withBase } from '../lib/url';
 
@@ -79,9 +80,7 @@ const BASELINES = [146, 300];
         reflection in. Every vehicle, every time.
       </p>
       <a
-        href={business.bookingUrl}
-        target="_blank"
-        rel="noopener"
+        {...bookLink()}
         class="rise inline-flex shrink-0 items-center gap-2 font-display text-[0.78rem] uppercase tracking-[0.18em] text-gold-400 transition-colors hover:text-gold-500"
         style="font-variation-settings:'wdth' 100,'wght' 650"
       >

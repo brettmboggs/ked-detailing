@@ -50,6 +50,17 @@ export interface NavItem {
   href: string;
 }
 
+/* ---------------------------------------------------------------- cutover */
+
+/**
+ * The one switch for online quotes and booking. Off: every Book button goes
+ * to Housecall Pro, and /quote stays hidden (noindex, out of the sitemap, with
+ * a sample-prices banner). On: the buttons go to /quote, the packages show
+ * "from $X", and /quote is public. Turn it on only once Jacob's real prices
+ * and hours are saved, and push; the site rebuilds with them.
+ */
+export const quoteLive = false;
+
 /* --------------------------------------------------------------- business */
 
 export const business = {

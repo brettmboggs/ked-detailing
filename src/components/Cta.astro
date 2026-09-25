@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import ctaPhoto from '../assets/photos/porsche-targa.jpg';
 import { business } from '../data/site';
@@ -30,7 +31,7 @@ import { business } from '../data/site';
     </p>
 
     <div class="rise mt-11 flex flex-wrap items-center gap-4" data-delay="0.2">
-      <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold !px-9 !py-5 !text-base">
+      <a {...bookLink()} class="btn-gold !px-9 !py-5 !text-base">
         Book online
         <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
           <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />

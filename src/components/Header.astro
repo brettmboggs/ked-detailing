@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 import { business, nav } from '../data/site';
@@ -51,9 +52,7 @@ import { withBase } from '../lib/url';
       </a>
 
       <a
-        href={business.bookingUrl}
-        target="_blank"
-        rel="noopener"
+        {...bookLink()}
         class="btn-gold shrink-0 whitespace-nowrap !px-5 !py-3 !text-[0.72rem] sm:!px-6"
       >
         Book Now

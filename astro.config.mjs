@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
+import { quoteLive } from './src/data/site.ts';
 
 // The production build serves from the root of kedservice.com. Setting
 // KED_BASE (and KED_SITE) produces the staging copy that lives at a sub-path of
@@ -13,10 +14,13 @@ const site = process.env.KED_SITE || 'https://www.kedservice.com';
 export default defineConfig({
   site,
   base,
-  // /quote shows placeholder prices until Jacob's real numbers are in, so it
-  // stays out of the sitemap as well as noindexed. /pay and /booking are only
-  // ever reached through a customer's private link.
-  integrations: [sitemap({ filter: (page) => !/\/(quote|pay|booking)\/?$/.test(new URL(page).pathname) })],
+  // /pay and /booking are only ever reached through a customer's private
+  // link. /quote joins the sitemap when the cutover switch goes on.
+  integrations: [
+    sitemap({
+      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking)/?$`).test(new URL(page).pathname),
+    }),
+  ],
 
   // Mirrors public/_redirects, from which Cloudflare serves the real 301s.
   // These are the meta-refresh fallback for any host that ignores that file.

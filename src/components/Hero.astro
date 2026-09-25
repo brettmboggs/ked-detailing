@@ -1,4 +1,5 @@
 ---
+import { bookLink } from '../lib/book';
 import { business, hero } from '../data/site';
 import { withBase } from '../lib/url';
 ---
@@ -75,7 +76,7 @@ import { withBase } from '../lib/url';
       </p>
 
       <div data-hero-fade class="flex w-full translate-y-4 flex-col gap-3 opacity-0 sm:w-auto sm:flex-row sm:flex-wrap">
-        <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold w-full sm:w-auto">
+        <a {...bookLink()} class="btn-gold w-full sm:w-auto">
           Book your detail
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
