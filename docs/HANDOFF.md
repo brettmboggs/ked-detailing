@@ -104,7 +104,11 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   **check the preview on Jacob's real exports first.** It needs `KED_TOKEN`:
   set the Worker's `ADMIN_TOKEN` secret for the day, and delete it after.
 - **Web admin:** `kedservice.com/admin` (`src/pages/admin.astro`,
-  `src/scripts/admin.ts`). Bookings, quote requests, a prices editor with a
+  `src/scripts/admin/`, one file per tab over `core.ts`). Jacob's main tool
+  for running the business: **Calendar** (week view, jobs, new job by phone,
+  time off), **Customers**, quote requests, **Invoices** (send, record
+  payments, void), **Books** (weekly to-do, bank files, entries, reports),
+  **Inventory** (barcodes, stock, package usage), a prices editor with a
   live preview of what customers see, hours, and **Website**
   (`src/scripts/admin/website*.ts`): Jacob changes the site's words (top of
   the page, about, each package's name, text and what's included, also
