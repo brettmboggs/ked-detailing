@@ -8,8 +8,16 @@ export type Bindings = Env & {
   PAGES_DEPLOY_HOOK?: string;
   /** R2 for photos, if the account ever enables it. KV (PHOTO_KV) otherwise. */
   PHOTOS?: R2Bucket;
-  /** "on" to email customers. Needs the Workers Paid plan. */
+  /** "on" to email customers through Cloudflare. Needs the Workers Paid plan; RESEND_API_KEY is the free route. */
   CUSTOMER_EMAIL?: string;
+  /** Resend (free: 3,000 emails a month) for all customer email. See crm-email.ts. */
+  RESEND_API_KEY?: string;
+  /** Tests point this away from Resend. */
+  RESEND_URL?: string;
+  /** Claude API, for the weekly insights summary (crm-insights.ts). */
+  ANTHROPIC_API_KEY?: string;
+  /** Tests point this away from the Claude API. */
+  ANTHROPIC_URL?: string;
   /** Tests point this away from Expo. */
   EXPO_PUSH_URL?: string;
   /** Tests set "1" to get the sign-in link in the response instead of only by email. */

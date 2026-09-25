@@ -1,4 +1,5 @@
 import { currentRules } from './booking.ts';
+import { sendEmail } from './crm-email.ts';
 import { getJob } from './jobs.ts';
 import { ApiError, list, now, text, ulid, type Bindings } from './lib.ts';
 
@@ -121,8 +122,9 @@ async function alert(env: Bindings, a: Alert, email?: Mail) {
   await env.DB.prepare('UPDATE alerts SET pushed = ?, emailed = ? WHERE id = ?').bind(pushed, emailed ? 1 : 0, id).run();
 }
 
-/** Customer email, only when switched on. Returns whether it went. */
+/** Customer email: through Resend when it's set up (free), else Cloudflare if switched on. Returns whether it went. */
 export async function mailCustomer(env: Bindings, m: Mail): Promise<boolean> {
+  if (env.RESEND_API_KEY) return sendEmail(env, { to: m.to, subject: m.subject, text: m.text });
   if (env.CUSTOMER_EMAIL !== 'on') return false;
   return mail(env, m).catch((err) => (console.error('customer email failed', err), false));
 }

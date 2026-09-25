@@ -1,6 +1,7 @@
 import { jobMinutes, localDate, slotProblem, type BookingRules, type Calendar } from '@ked/scheduling';
 import { currentRules, loadCalendar } from './booking.ts';
 import { findOrCreateCustomer, getCustomer } from './customers.ts';
+import { readTouch } from './attribution.ts';
 import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 import { priceRequest } from './pricing.ts';
 
@@ -164,7 +165,7 @@ export async function createJob(db: D1Database, body: Record<string, unknown>) {
         phone: text(c.phone, 'Phone', 30),
         email: text(c.email, 'Email', 200),
         address: text(c.address, 'Address', 200),
-      })
+      }, readTouch(body))
     ).id;
   }
   const address = text(body.address, 'Address', 200) ?? (await getCustomer(db, customerId)).address;

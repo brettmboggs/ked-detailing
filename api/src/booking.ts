@@ -12,6 +12,7 @@ import {
 import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 import { priceRequest, type QuoteSummary } from './pricing.ts';
 import { findOrCreateCustomer } from './customers.ts';
+import { readTouch, touchJson } from './attribution.ts';
 
 /* ------------------------------------------------------------ rules */
 
@@ -155,7 +156,8 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
   const problem = slotProblem(rules, calendar, start, minutes, at);
   if (problem) throw new ApiError(409, problem === 'taken' || problem === 'day_full' ? 'slot_taken' : 'bad_slot', PROBLEMS[problem]);
 
-  const customer = await findOrCreateCustomer(db, { name, phone, email, address });
+  const touch = readTouch(body);
+  const customer = await findOrCreateCustomer(db, { name, phone, email, address }, touch);
   const id = ulid();
   const stamp = now();
   const day = localDate(start, rules.timezone);
@@ -164,8 +166,8 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
   const result = await db
     .prepare(
       `INSERT INTO jobs (id, customer_id, status, source, service, vehicle, address, zip, notes, input, quote,
-                         config_version, start_at, end_at, local_date, created_at, updated_at, manage_token)
-       SELECT ?, ?, 'scheduled', 'web', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                         config_version, start_at, end_at, local_date, created_at, updated_at, manage_token, attribution)
+       SELECT ?, ?, 'scheduled', 'web', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (
                SELECT 1 FROM jobs WHERE status != 'cancelled' AND start_at < ? AND end_at > ?)
          AND NOT EXISTS (
@@ -175,7 +177,7 @@ export async function createBooking(db: D1Database, body: Record<string, unknown
     .bind(
       id, customer.id, summary.service, vehicle ?? null, address, zip ?? null, notes ?? null,
       JSON.stringify(input), JSON.stringify(summary), version,
-      start.toISOString(), end.toISOString(), day, stamp, stamp, token,
+      start.toISOString(), end.toISOString(), day, stamp, stamp, token, touchJson(touch.attribution),
       new Date(end.getTime() + buffer).toISOString(), new Date(start.getTime() - buffer).toISOString(),
       end.toISOString(), start.toISOString(),
       day, rules.maxJobsPerDay,

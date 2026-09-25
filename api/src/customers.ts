@@ -1,4 +1,5 @@
-import { ApiError, now, text, ulid } from './lib.ts';
+import { touchJson, type Touch } from './attribution.ts';
+import { ApiError, now, randomToken, text, ulid } from './lib.ts';
 
 interface CustomerRow {
   id: string;
@@ -9,6 +10,23 @@ interface CustomerRow {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  source: string | null;
+  source_detail: string | null;
+  tags: string;
+  referred_by: string | null;
+  referral_code: string | null;
+  email_ok: number;
+  text_ok: number;
+}
+
+/**
+ * A customer's code to share (kedservice.com/?ref=CODE). No 0/O or 1/I, so it
+ * reads out loud. Older customers get one lazily (see crm-customers.ts).
+ */
+export function referralCode(): string {
+  const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  return Array.from(bytes, (b) => abc[b % abc.length]).join('');
 }
 
 /** Last ten digits, so "(314) 555-0100" and "+1 314 555 0100" are the same person. */
@@ -25,6 +43,7 @@ export const phoneKey = (phone: string | undefined) => {
 export async function findOrCreateCustomer(
   db: D1Database,
   c: { name: string; phone?: string; email?: string; address?: string },
+  touch?: Touch,
 ) {
   const key = phoneKey(c.phone);
   const email = c.email?.toLowerCase();
@@ -37,21 +56,30 @@ export async function findOrCreateCustomer(
     await db
       .prepare(
         `UPDATE customers SET phone = COALESCE(phone, ?), phone_key = COALESCE(phone_key, ?),
-           email = COALESCE(email, ?), address = COALESCE(address, ?), updated_at = ? WHERE id = ?`,
+           email = COALESCE(email, ?), address = COALESCE(address, ?),
+           source = COALESCE(source, ?), source_detail = COALESCE(source_detail, ?),
+           attribution = COALESCE(attribution, ?), updated_at = ? WHERE id = ?`,
       )
-      .bind(c.phone ?? null, key, email ?? null, c.address ?? null, at, existing.id)
+      .bind(c.phone ?? null, key, email ?? null, c.address ?? null,
+        touch?.source ?? null, touch?.sourceDetail ?? null, touchJson(touch?.attribution ?? null), at, existing.id)
       .run();
-    return { id: existing.id };
+    return { id: existing.id, isNew: false };
   }
   const id = ulid();
+  // A referral code from ?ref= links them to whoever shared it (first touch only).
+  const ref = touch?.attribution?.ref;
   await db
     .prepare(
-      `INSERT INTO customers (id, name, phone, phone_key, email, address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO customers (id, name, phone, phone_key, email, address, source, source_detail, attribution,
+                              referred_by, referral_code, unsubscribe_token, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+               (SELECT id FROM customers WHERE referral_code = ?), ?, ?, ?, ?)`,
     )
-    .bind(id, c.name, c.phone ?? null, key, email ?? null, c.address ?? null, at, at)
+    .bind(id, c.name, c.phone ?? null, key, email ?? null, c.address ?? null,
+      touch?.source ?? null, touch?.sourceDetail ?? null, touchJson(touch?.attribution ?? null),
+      ref ?? null, referralCode(), randomToken(), at, at)
     .run();
-  return { id };
+  return { id, isNew: true };
 }
 
 export function toCustomer(row: CustomerRow) {
@@ -64,6 +92,13 @@ export function toCustomer(row: CustomerRow) {
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    source: row.source,
+    sourceDetail: row.source_detail,
+    tags: JSON.parse(row.tags || '[]') as string[],
+    referredBy: row.referred_by,
+    referralCode: row.referral_code,
+    emailOk: row.email_ok !== 0,
+    textOk: row.text_ok !== 0,
   };
 }
 

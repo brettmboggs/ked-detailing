@@ -24,6 +24,10 @@
   // verified under Email → Destination addresses: Jacob's and Brett's. Customer
   // email needs the Workers Paid plan, so CUSTOMER_EMAIL stays unset.
   "send_email": [{ "name": "EMAIL" }],
+  // CRM (docs/crm.md): follow-ups every morning at 9 AM Central (14:00 UTC in
+  // summer, 8 AM in winter), and the weekly summary on Monday mornings. The
+  // weekly one must match WEEKLY_CRON in src/index.ts.
+  "triggers": { "crons": ["0 14 * * *", "0 13 * * 1"] },
   "vars": {
     // Browsers allowed to call the public endpoints. The app is native and
     // doesn't need CORS.
@@ -45,10 +49,18 @@
     // The web admin. Sign-in links are this plus #login=<token>.
     "ADMIN_URL": "https://www.kedservice.com/admin/",
     // Booking and quote alerts. Comma-separated; each must be a verified destination.
-    "ALERT_EMAIL": "knockemdowndetailing@gmail.com"
+    "ALERT_EMAIL": "knockemdowndetailing@gmail.com",
+    // Customer email (confirmations, follow-ups, campaigns) goes out through
+    // Resend once RESEND_API_KEY is set; kedservice.com must be verified there.
+    // Replies land in Jacob's inbox. The site's address builds unsubscribe links.
+    "CUSTOMER_MAIL_FROM": "Jacob at Knock Em' Down <jacob@kedservice.com>",
+    "REPLY_TO": "knockemdowndetailing@gmail.com",
+    "SITE_URL": "https://www.kedservice.com"
   }
   // Secrets (wrangler secret put), both optional:
   //   ADMIN_TOKEN        break-glass bearer token for Brett's scripts and curl.
   //   PAGES_DEPLOY_HOOK  the ked-detailing Pages deploy hook URL; a pricing save
   //                      POSTs it so the site rebuilds with the new prices.
+  //   RESEND_API_KEY     customer email through Resend's free plan (docs/crm.md).
+  //   ANTHROPIC_API_KEY  the weekly plain-English insights summary (docs/crm.md).
 }

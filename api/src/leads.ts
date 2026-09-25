@@ -1,6 +1,8 @@
 import type { QuoteInput } from '@ked/pricing';
 import { ApiError, now, text, ulid } from './lib.ts';
 import { priceRequest } from './pricing.ts';
+import { readTouch, touchJson } from './attribution.ts';
+import { findOrCreateCustomer } from './customers.ts';
 
 export const LEAD_STATUSES = ['new', 'contacted', 'booked', 'lost'] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
@@ -19,6 +21,9 @@ interface LeadRow {
   config_version: number;
   created_at: string;
   updated_at: string;
+  source: string | null;
+  source_detail: string | null;
+  customer_id: string | null;
 }
 
 /**
@@ -44,15 +49,20 @@ export async function createLead(db: D1Database, body: Record<string, unknown>) 
 
   const { input, summary, version } = await priceRequest(db, body.input, zip);
 
+  // Every quote request is a person in the CRM, even before they book.
+  const touch = readTouch(body);
+  const customer = await findOrCreateCustomer(db, { name, phone, email }, touch);
   const id = ulid();
   const at = now();
   await db
     .prepare(
-      `INSERT INTO leads (id, status, name, phone, email, vehicle, zip, notes, input, quote, config_version, created_at, updated_at)
-       VALUES (?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO leads (id, status, name, phone, email, vehicle, zip, notes, input, quote, config_version, created_at, updated_at,
+                          source, source_detail, attribution, customer_id)
+       VALUES (?, 'new', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(id, name, phone ?? null, email ?? null, vehicle ?? null, zip ?? null, notes ?? null,
-      JSON.stringify(input), JSON.stringify(summary), version, at, at)
+      JSON.stringify(input), JSON.stringify(summary), version, at, at,
+      touch.source, touch.sourceDetail, touchJson(touch.attribution), customer.id)
     .run();
   return { id, quote: summary };
 }
@@ -97,5 +107,8 @@ function toLead(row: LeadRow) {
     configVersion: row.config_version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    source: row.source,
+    sourceDetail: row.source_detail,
+    customerId: row.customer_id,
   };
 }

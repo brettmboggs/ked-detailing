@@ -305,6 +305,21 @@ const input =
                     <span>Anything Jacob should know? <span class="text-bone-500">(optional)</span></span>
                     <input name="notes" autocomplete="off" maxlength="500" placeholder="Gate code, where to park…" class={input} />
                   </label>
+                  <label class={`${fieldLabel} sm:col-span-2`}>
+                    <span>How did you hear about us? <span class="text-bone-500">(optional)</span></span>
+                    <select name="source" class={input}>
+                      <option value="">Pick one</option>
+                      <option value="google">Google search</option>
+                      <option value="maps">Google Maps</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="nextdoor">Nextdoor</option>
+                      <option value="referral">A friend or family member</option>
+                      <option value="van">Saw the van</option>
+                      <option value="repeat">I've used Jacob before</option>
+                      <option value="other">Somewhere else</option>
+                    </select>
+                  </label>
                   {/* Honeypot. Hidden from people and screen readers; bots fill it in. */}
                   <label class="hidden" aria-hidden="true">
                     Website <input name="website" tabindex="-1" autocomplete="off" />

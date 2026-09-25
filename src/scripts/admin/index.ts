@@ -8,9 +8,12 @@ import { renderBookings } from './bookings';
 import { renderCustomers } from './customers';
 import { renderHours } from './hours';
 import { renderInventory } from './inventory';
+import { renderInsights } from './insights';
 import { renderInvoices } from './invoices';
 import { renderLeads } from './leads';
+import { renderMarketing } from './marketing';
 import { renderPrices } from './prices';
+import { renderToday } from './today';
 import { renderWebsite } from './website';
 import { API, KEY, h, $, token, remember, api, showError, clearError, showSignIn } from './core';
 
@@ -37,9 +40,12 @@ async function signInFromLink() {
 
 /** Each tab's renderer, keyed by the tab's data-tab / data-view name. */
 const views: Record<string, () => Promise<void>> = {
+  today: renderToday,
   bookings: renderBookings,
   customers: renderCustomers,
   leads: renderLeads,
+  insights: renderInsights,
+  marketing: renderMarketing,
   invoices: renderInvoices,
   books: renderBooks,
   inventory: renderInventory,
@@ -105,5 +111,5 @@ export async function initAdmin() {
   } catch {
     // fine
   }
-  await open('bookings');
+  await open('today');
 }

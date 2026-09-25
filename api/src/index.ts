@@ -63,6 +63,11 @@ import { ApiError, countingDb, json, list, text, type Bindings } from './lib.ts'
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import { currentSite, saveSite, sitePhotoResponse, uploadSitePhoto } from './site.ts';
+import { campaigns } from './crm-campaigns.ts';
+import { customers as crmCustomers } from './crm-customers.ts';
+import { followups, runDaily } from './crm-followups.ts';
+import { insights, runWeekly } from './crm-insights.ts';
+import { crmPublic } from './crm-public.ts';
 import {
   addTrip,
   balancesReport,
@@ -435,6 +440,16 @@ app.put('/settings/books', requireOwner, async (c) =>
   c.json(await saveBooksSettings(c.env.DB, await json(c.req.raw), who(c.get('owner')))),
 );
 
+/* ---------------------------------------------------------------- crm */
+
+// Each CRM area is its own router in crm-*.ts (docs/crm.md). The owner ones
+// check the session themselves.
+app.route('/crm/public', crmPublic);
+app.route('/crm/customers', crmCustomers);
+app.route('/crm/follow-ups', followups);
+app.route('/crm/insights', insights);
+app.route('/crm/campaigns', campaigns);
+
 /* ------------------------------------------------------------- errors */
 
 app.notFound((c) => c.json({ error: { code: 'not_found', message: 'No such endpoint.' } }, 404));
@@ -453,4 +468,14 @@ app.onError((err, c) => {
   return c.json({ error: { code: 'server_error', message: 'Something went wrong on our side.' } }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // Cron triggers in wrangler.jsonc: daily follow-ups, and the weekly summary on Mondays.
+  async scheduled(event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
+    const work = event.cron === WEEKLY_CRON ? runWeekly(env) : runDaily(env);
+    ctx.waitUntil(work.catch((err) => console.error(`cron ${event.cron} failed`, err)));
+  },
+} satisfies ExportedHandler<Bindings>;
+
+/** Must match the weekly entry in wrangler.jsonc's triggers.crons. */
+const WEEKLY_CRON = '0 13 * * 1';

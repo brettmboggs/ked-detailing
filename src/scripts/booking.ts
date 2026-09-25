@@ -1,4 +1,5 @@
 import type { Quote, QuoteInput } from '@ked/pricing';
+import { firstTouch } from './attribution';
 import { slotPicker, type Day } from './slot-picker';
 
 /**
@@ -160,6 +161,9 @@ export function initBooking({ api, form, readInput, phone }: Options) {
     done.focus();
   }
 
+  /** Where they heard about Jacob, plus what the browser saw on their first visit. */
+  const touch = () => ({ source: field('source') || undefined, attribution: firstTouch() ?? undefined });
+
   async function post(path: string, body: unknown) {
     const res = await fetch(`${api}/v1/${path}`, {
       method: 'POST',
@@ -212,6 +216,7 @@ export function initBooking({ api, form, readInput, phone }: Options) {
         zip: input.zip,
         input,
         start,
+        ...touch(),
       });
       if (res.status === 201) {
         finish(
@@ -247,6 +252,7 @@ export function initBooking({ api, form, readInput, phone }: Options) {
         zip: input.zip,
         notes,
         input,
+        ...touch(),
       });
       if (res.ok) {
         finish('Sent to Jacob', `He has your quote and will get back to you with a firm price and a time. If it's urgent, call ${formatPhone(phone)}.`);
