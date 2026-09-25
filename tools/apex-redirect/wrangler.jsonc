@@ -1,0 +1,8 @@
+// Deploy: npx --no-install wrangler deploy --config tools/apex-redirect/wrangler.jsonc
+{
+  "name": "ked-apex-redirect",
+  "main": "index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "routes": [{ "pattern": "kedservice.com/*", "zone_name": "kedservice.com" }]
+}

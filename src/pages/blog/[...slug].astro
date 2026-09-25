@@ -54,12 +54,17 @@ const schema = [
   },
 ];
 
+// Google cuts titles off at around 60 characters. Long post titles go out bare
+// so the words that rank are the ones that show.
+const fullTitle = `${post.data.title} | Knock Em' Down Detailing`;
+const title = fullTitle.length > 60 ? post.data.title : fullTitle;
+
 const fmt = (d: Date) =>
   d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
 <Base
-  title={`${post.data.title} | Knock Em' Down Detailing`}
+  title={title}
   description={post.data.description}
   ogType="article"
   ogImage={hero?.src}

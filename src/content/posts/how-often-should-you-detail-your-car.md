@@ -1,6 +1,6 @@
 ---
 title: "How Often Should You Detail Your Car?"
-description: "How often to detail a car in St. Louis, by how you actually use it — daily drivers, family cars, collector cars and work trucks — and why the local weather moves the number."
+description: "How often to detail a car in St. Louis, by how you use it: daily drivers, family cars, collector cars and work trucks, and why the weather moves the number."
 pubDate: 2025-09-10
 hero: "how-often-should-you-detail-your-car.jpg"
 heroAlt: "Jacob washing the side of a foam-covered white Porsche Panamera in a driveway"

@@ -2,7 +2,16 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
+import { readdirSync, readFileSync } from 'node:fs';
 import { quoteLive } from './src/data/site.ts';
+
+// The store is noindex until it has a published product (see store.astro), so it
+// stays out of the sitemap until then too. Same rule as the content loader:
+// underscore files are examples, and drafts do not count.
+const productsDir = './src/content/products';
+const storeLive = readdirSync(productsDir).some(
+  (f) => /^[^_].*\.ya?ml$/.test(f) && !/^draft:\s*true/m.test(readFileSync(`${productsDir}/${f}`, 'utf8')),
+);
 
 // The production build serves from the root of kedservice.com. Setting
 // KED_BASE (and KED_SITE) produces the staging copy that lives at a sub-path of
@@ -16,10 +25,10 @@ export default defineConfig({
   base,
   // /pay, /booking and /approve are only ever reached through a customer's private
   // link. /admin and /launch are noindex. /quote joins the sitemap when the
-  // cutover switch goes on.
+  // cutover switch goes on, /store when it has something to sell.
   integrations: [
     sitemap({
-      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}pay|booking|approve|unsubscribe|admin|launch)/?$`).test(new URL(page).pathname),
+      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}${storeLive ? '' : 'store|'}pay|booking|approve|unsubscribe|admin|launch)/?$`).test(new URL(page).pathname),
     }),
   ],
 

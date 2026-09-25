@@ -35,6 +35,7 @@ const isLive = products.length > 0;
 <Base
   title="Merch | Knock Em' Down Detailing"
   description="Knock Em' Down Detailing merch — hoodies, tees, and caps, printed and shipped on demand."
+  noindex={!isLive}
 >
   <Header />
 
@@ -47,7 +48,7 @@ const isLive = products.length > 0;
         </div>
 
         <h1 class="display-lg max-w-3xl text-bone-50">
-          <span class="rise block">{storeMeta.heading[0]}</span>
+          <span class="rise block">{storeMeta.heading[0]}</span>{' '}
           <span class="rise block text-gold-500" data-delay="0.08">{storeMeta.heading[1]}</span>
         </h1>
 

@@ -71,7 +71,7 @@ const priceText = (level: string) => {
                   style="font-variation-settings:'wdth' 70,'wght' 800"
                 >
                   {numeral(s.level)}
-                </span>
+                </span>{' '}
 
                 <span class="min-w-0 flex-1">
                   <span
@@ -79,11 +79,11 @@ const priceText = (level: string) => {
                     style="font-variation-settings:'wdth' 76,'wght' 800; font-size: clamp(1.6rem, 4.6vw, 3.75rem); letter-spacing:-0.02em"
                   >
                     {s.name}
-                  </span>
+                  </span>{' '}
                   <span class="mt-1.5 block text-xs text-bone-500 lg:hidden">
                     {priceText(s.level)} · {s.duration}
                   </span>
-                </span>
+                </span>{' '}
 
                 <span class="hidden shrink-0 text-right lg:block">
                   <span
@@ -91,7 +91,7 @@ const priceText = (level: string) => {
                     style="font-variation-settings:'wdth' 92,'wght' 700"
                   >
                     {priceText(s.level)}
-                  </span>
+                  </span>{' '}
                   <span class="mt-1 block text-[0.7rem] uppercase tracking-[0.14em] text-bone-500">
                     {s.duration}
                   </span>
