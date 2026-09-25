@@ -125,6 +125,20 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   emailed to an address in `OWNER_EMAILS` (`POST /v1/auth/email`, then
   `/verify`). Sends go through Email Routing, so each owner address must be
   a verified destination in Cloudflare → Email → Destination addresses.
+- **CRM** (live 2026-09-25; plan and ownership in `docs/crm.md`): Today
+  (daily follow-ups: reviews, reminders, rebooks, win-backs, quote chases),
+  Customers (profiles, timeline, tags, referral links, merge), Insights
+  (every metric with a ranked next step; Monday note from Claude when
+  `ANTHROPIC_API_KEY` is set) and Marketing (campaigns, tracking links and QR
+  codes, referrals, reviews, lead playbook). Customer email goes through
+  Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC record not
+  added yet). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
+  campaign batches. Migrations through 0016 are applied.
+- **Online booking is live** (`quoteLive = true`, 2026-09-25). Jacob still
+  needs to save real prices and hours; until then customers see the samples.
+- **Deploy from a clean copy** while agents are editing the tree:
+  `git worktree add /tmp/ked-deploy HEAD && cd /tmp/ked-deploy && npm ci`,
+  then migrate and deploy from its `api/`.
 - **Jacob's edits go live without git.** Everything he changes (prices,
   hours, bookings) is saved in D1. Online booking reads it on every request.
   The pieces the site bakes in at build time (prices, and the hours line in
