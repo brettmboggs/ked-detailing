@@ -143,6 +143,25 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   follow the site document Jacob edits. The logo is `public/email/logo.png`.
   Paying an invoice in full emails a receipt (only if it was sent). The
   invoice page prints, or saves as a PDF, as a letterhead invoice.
+- **After-care** (2026-09-25, `api/src/care.ts`, `api/src/weather.ts`,
+  migration 0018). A cron at 14:15 and 23:15 UTC (about 9am and 6pm) runs:
+  - **Rain nudge:** the National Weather Service's free hourly forecast for
+    each job in the next 72 hours, by ZIP center. Rain 50%+ during a job puts
+    a follow-up on Jacob's list with a ready text offering the customer their
+    reschedule link, plus one push. Nothing moves on its own. The nudge comes
+    off his list if the forecast drops under 30% or the job moves.
+  - **Coating upkeep:** a follow-up two weeks before a coating's maintenance
+    is due, once per due date, for Jacob to send.
+  - **Done page** `/done/?d=`: before/after photos, invoice, review button.
+    The next-day thank-you carries it for jobs with photos
+    (`{photos link}`; a template line whose link is empty is dropped). The
+    link expires after 30 days; photos stay.
+  - **Coatings and stickers:** certificate page `/car/?c=` (emailed, prints
+    as a PDF) and door-jamb QR stickers `/c/<CODE>` (`public/_redirects` →
+    `/car/?t=`), linked by scanning in the app. Codes are 4 to 16 letters or
+    digits; use random ones so nobody can walk the list.
+    `node tools/sticker-codes.mjs 250` makes a CSV of codes and URLs for a
+    printer that does numbered/variable QR labels.
 - **Add-ons found at the car** (2026-09-25): on a job, Jacob offers a fix
   from his price list or his own ("pet hair, $40") with a note and a photo,
   then texts the customer a link (`/approve/?a=<token>`,
@@ -190,7 +209,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (16),
-  scheduling (15), books (18) and API (121), import (6). The API tests
+  scheduling (15), books (18) and API (125), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account

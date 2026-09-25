@@ -28,7 +28,7 @@
   // summer, 8 AM in winter), the weekly summary on Monday mornings, and
   // campaign email batches at half past every hour. The weekly and hourly
   // ones must match WEEKLY_CRON and HOURLY_CRON in src/index.ts.
-  "triggers": { "crons": ["0 14 * * *", "0 13 * * 1", "30 * * * *"] },
+  "triggers": { "crons": ["0 14 * * *", "0 13 * * 1", "30 * * * *", "15 14,23 * * *"] },
   // TENANT: every var below (owners, URLs, addresses) belongs to one business.
   "vars": {
     // Browsers allowed to call the public endpoints. The app is native and

@@ -261,6 +261,18 @@ There are no passwords and no sign-up screen.
 | `POST /v1/jobs/:id/extras/send` | owner | `{ url, message, emailed }` for everything still waiting. **Open the SMS composer** with `message`. The link stays the same for the job. `409 nothing_waiting` |
 | `PATCH /v1/extras/:id` | owner | `{ status }`: `approved` or `declined` when the customer answered in person, `withdrawn` to take back one they haven't answered. `409 decided` once answered |
 | `GET /v1/approve/:token` | public | The customer's page (`/approve/?a=<token>`). A yes (`POST /v1/approve/:token/:extraId { yes }`) is final and adds the add-on to the job: `finalPrice` goes up by it if set, the open invoice gets it as a line, and a later invoice includes it. Photos at `/v1/approve/:token/photos/:photoId` |
+| `POST /v1/jobs/:id/done-link` | owner | The customer's "your car's done" page (`/done/?d=<token>`: before/after photos, invoice, review button) → `{ url, message, expiresAt, photos }`. **Open the SMS composer** with `message`. The link works 30 days from now (asking again extends it); the photos stay in the app. The next-day thank-you follow-up carries the link on its own when the job has photos |
+| `GET /v1/done/:token` | public | The done page's data. First name only, no address. `410 expired` after 30 days. Photos at `/v1/done/:token/photos/:photoId` |
+| `GET /v1/coatings?customerId=&jobId=` | owner | `{ coatings }`, void ones included. Coating: `{ id, customerId, jobId, vehicle, product, appliedOn, warrantyMonths, maintenanceMonths, warrantyUntil, nextMaintenance, status, maintained: [{ date, jobId }], notes, url, tags, createdAt }`. `status`: `active`, `due` (upkeep within 30 days), `lapsed` (upkeep 60+ days late), `expired`, `void`. `url` is the certificate page (`/car/?c=<token>`) |
+| `POST /v1/coatings` | owner | `{ jobId, product, warrantyMonths, maintenanceMonths?, appliedOn?, vehicle?, notes? }` → `201 { coating, message, emailed }`. Defaults: the job's date and vehicle, upkeep every 12 months (0 for none). Emails the certificate when the customer has an email; `message` is a text with the link |
+| `PATCH /v1/coatings/:id` | owner | Any of the fields above → coating |
+| `POST /v1/coatings/:id/maintenance` | owner | `{ date?, jobId? }` logs an upkeep visit and restarts the clock → coating |
+| `POST /v1/coatings/:id/void` | owner | → coating |
+| `POST /v1/tags` | owner | A door-jamb QR sticker (`<site>/c/<CODE>`) onto a job's car: `{ code, jobId, coatingId? }`. `code` may be the whole scanned URL → `201 { tag }` (`200` if it was already on this car). `409 taken` if it's on another car, `422` if it isn't one of ours. Tag: `{ code, url, customerId, vehicle, coatingId, jobId, linkedAt }` |
+| `GET /v1/tags?customerId=` | owner | `{ tags }` |
+| `DELETE /v1/tags/:code` | owner | Takes a sticker off → `204` |
+| `GET /v1/car/:code`, `GET /v1/coating/:token` | public | A car's page (`/car/`), by sticker or certificate: `{ vehicle, coating, history: [{ date, service }], bookUrl }`. No names or prices: the car may have been sold |
+| `POST /v1/care/run` | owner | Runs the rain check and coating reminders now → `{ weather, coatings }`. They run on their own at about 9am and 6pm |
 | `GET /v1/invoices?status=&jobId=&customerId=` | owner | `{ invoices }`, newest number first. `status`: `draft`, `sent`, `paid`, `void`, or `unpaid` (draft and sent) |
 | `GET /v1/invoices/:id` | owner | One invoice |
 | `PATCH /v1/invoices/:id` | owner | `lines` (`[{ label, amount }]`, cents, negative for a discount, total above zero), `dueDate` (`YYYY-MM-DD` or null for "on receipt"), `notes` (shown to the customer). Changing lines also sets the job's `finalPrice`. `409` once void |
@@ -324,7 +336,9 @@ keys needed) when a customer books online (`type: 'booking'`, `id` = job), a
 website quote request comes in (`'lead'`, lead id), or a customer first opens
 an invoice (`'invoice_opened'`, invoice id), or moves or cancels
 their booking through their link (`'rescheduled'` / `'cancelled'`, job id), or
-answers an add-on (`'extra_approved'` / `'extra_declined'`, job id). Each push carries `data: { type,
+answers an add-on (`'extra_approved'` / `'extra_declined'`, job id), or rain is
+likely during a booked job (`'weather'`, the first job's id; each one is also a
+follow-up with a ready text, and nothing is moved without Jacob). Each push carries `data: { type,
 id }`: open that screen on tap. Ask for notification permission right after
 sign-in, with a line on why ("So you hear the moment someone books"). This is
 how Jacob learns about online bookings, so it has to work before `/quote`

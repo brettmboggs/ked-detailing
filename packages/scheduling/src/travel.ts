@@ -39,6 +39,12 @@ function point(zip: string): [number, number] | null {
   return points.get(zip) ?? null;
 }
 
+/** A ZIP's center as { lat, lng }, or null outside the covered area. */
+export function zipPoint(zip: string | null | undefined): { lat: number; lng: number } | null {
+  const p = zip ? point(zip) : null;
+  return p ? { lat: p[0], lng: p[1] } : null;
+}
+
 /**
  * The job's ZIP: the one it was booked with, or the last 5-digit number in
  * its address ("12 Oak St, Fenton MO 63026"). Null if neither has one.

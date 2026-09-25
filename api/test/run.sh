@@ -14,7 +14,8 @@ npx wrangler d1 migrations apply ked --local --persist-to "$STATE" >/dev/null
 setsid npx wrangler dev --port "$PORT" --inspector-port "$((PORT + 1))" --persist-to "$STATE" \
   --var ADMIN_TOKEN:test-admin --var COUNT_QUERIES:1 --var TEST_LOGIN_LINKS:1 --var "EXPO_PUSH_URL:http://localhost:$((PORT + 2))/push" \
   --var RESEND_API_KEY:test --var "RESEND_URL:http://localhost:$((PORT + 3))/resend" \
-  --var ANTHROPIC_API_KEY:test --var "ANTHROPIC_URL:http://localhost:$((PORT + 4))/v1/messages" --show-interactive-dev-session=false >"$STATE/worker.log" 2>&1 &
+  --var ANTHROPIC_API_KEY:test --var "ANTHROPIC_URL:http://localhost:$((PORT + 4))/v1/messages" \
+  --var "WEATHER_URL:http://localhost:$((PORT + 5))" --show-interactive-dev-session=false >"$STATE/worker.log" 2>&1 &
 WORKER=$!
 
 ready=
@@ -24,6 +25,6 @@ for _ in $(seq 60); do
 done
 [ -n "$ready" ] || { echo 'Worker did not start:'; tail -40 "$STATE/worker.log"; exit 1; }
 
-API="http://localhost:$PORT" ADMIN_TOKEN=test-admin PUSH_PORT=$((PORT + 2)) RESEND_PORT=$((PORT + 3)) ANTHROPIC_PORT=$((PORT + 4)) \
+API="http://localhost:$PORT" ADMIN_TOKEN=test-admin PUSH_PORT=$((PORT + 2)) RESEND_PORT=$((PORT + 3)) ANTHROPIC_PORT=$((PORT + 4)) WEATHER_PORT=$((PORT + 5)) \
   node --experimental-strip-types --no-warnings --test --test-concurrency=1 'test/**/*.test.ts' \
   || { echo '--- worker log ---'; tail -40 "$STATE/worker.log"; exit 1; }

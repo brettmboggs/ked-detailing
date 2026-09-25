@@ -38,6 +38,8 @@ const PAGES: [RegExp, string][] = [
   [/\/pay\/?\?/, 'View your invoice'],
   [/\/approve\/?\?/, 'See the add-ons'],
   [/\/booking\/?\?/, 'View your booking'],
+  [/\/done\/?\?/, 'See your car'],
+  [/\/car\/?\?/, 'View your certificate'],
   [/\/quote\/?/, 'Get a quote'],
 ];
 

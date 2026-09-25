@@ -29,7 +29,7 @@ const PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const BUSINESS = "Knock Em' Down Detailing";
 
 interface Alert {
-  type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled' | 'extra_approved' | 'extra_declined';
+  type: 'booking' | 'lead' | 'invoice_opened' | 'rescheduled' | 'cancelled' | 'extra_approved' | 'extra_declined' | 'weather';
   refId: string;
   title: string;
   body: string;
@@ -262,5 +262,21 @@ export async function extraAnswered(env: Bindings, a: { jobId: string; customerN
       ? { type: 'extra_approved', refId: a.jobId, title: `${a.customerName} said yes to ${a.label}`, body: `${price} added to the job.` }
       : { type: 'extra_declined', refId: a.jobId, title: `${a.customerName} said no to ${a.label}`, body: `${price}. Nothing changed on the job.` },
     a.yes ? { to: '', subject: `Yes: ${a.customerName} added ${a.label} (${price})`, text: `${a.customerName} said yes to ${a.label} for ${price}. It's on the job and its invoice.` } : undefined,
+  );
+}
+
+/** The rain check found jobs at risk. One alert for the lot; each is a follow-up on his list. */
+export async function weatherWarned(env: Bindings, jobs: { jobId: string; title: string }[]) {
+  if (!jobs.length) return;
+  const one = jobs.length === 1;
+  await alert(
+    env,
+    {
+      type: 'weather',
+      refId: jobs[0]!.jobId,
+      title: one ? 'Rain in the forecast' : `Rain in the forecast for ${jobs.length} jobs`,
+      body: one ? `${jobs[0]!.title}. A text to offer a new time is ready on your list.` : 'Texts to offer new times are ready on your list. Nothing moves unless you do it.',
+    },
+    { to: '', subject: one ? jobs[0]!.title : `Rain likely for ${jobs.length} jobs`, text: jobs.map((j) => j.title).join('\n') },
   );
 }

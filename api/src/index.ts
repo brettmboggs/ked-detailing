@@ -5,6 +5,23 @@ import { endSession, requestEmailLogin, requireOwner, signInWithApple, verifyEma
 import { deleteRule, importBank, listBankLines, listRules, resolveBankLine } from './bank.ts';
 import { answerExtra, extraPhotoId, listExtras, offerExtra, publicExtras, sendExtras, updateExtra } from './extras.ts';
 import { importCustomers, importEntries, importJobs } from './imports.ts';
+import {
+  createCoating,
+  doneLink,
+  donePhotoId,
+  getCoating,
+  linkTag,
+  listCoatings,
+  listTags,
+  logMaintenance,
+  publicCar,
+  publicDone,
+  runCoatingReminders,
+  unlinkTag,
+  updateCoating,
+  voidCoating,
+} from './care.ts';
+import { runWeather } from './weather.ts';
 import { booksInbox } from './inbox.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
 import {
@@ -197,6 +214,17 @@ app.post('/approve/:token/:extraId', async (c) => {
 app.get('/approve/:token/photos/:photoId', async (c) =>
   photoResponse(c.env, await extraPhotoId(c.env.DB, c.req.param('token'), c.req.param('photoId'))),
 );
+// The customer's finished job: photos, invoice, review button. Expires.
+app.get('/done/:token', async (c) => {
+  c.header('Cache-Control', 'no-store');
+  return c.json(await publicDone(c.env, c.req.param('token')));
+});
+app.get('/done/:token/photos/:photoId', async (c) =>
+  photoResponse(c.env, await donePhotoId(c.env.DB, c.req.param('token'), c.req.param('photoId'))),
+);
+// A car's page, from its door sticker or its coating certificate link.
+app.get('/car/:code', async (c) => c.json(await publicCar(c.env, { code: c.req.param('code') })));
+app.get('/coating/:token', async (c) => c.json(await publicCar(c.env, { token: c.req.param('token') })));
 app.post('/pay/:token/checkout', async (c) => c.json(await startCheckout(c.env, c.req.param('token'))));
 
 // The web admin signs in with a one-time link emailed to an owner address.
@@ -299,6 +327,31 @@ app.get('/jobs/:id/extras', requireOwner, async (c) => c.json(await listExtras(c
 app.post('/jobs/:id/extras', requireOwner, async (c) => c.json(await offerExtra(c.env, c.req.param('id'), await json(c.req.raw)), 201));
 app.post('/jobs/:id/extras/send', requireOwner, async (c) => c.json(await sendExtras(c.env, c.req.param('id'))));
 app.patch('/extras/:id', requireOwner, async (c) => c.json(await updateExtra(c.env, c.req.param('id'), await json(c.req.raw))));
+app.post('/jobs/:id/done-link', requireOwner, async (c) => c.json(await doneLink(c.env, c.req.param('id'))));
+app.get('/coatings', requireOwner, async (c) =>
+  c.json({ coatings: await listCoatings(c.env, { customerId: c.req.query('customerId'), jobId: c.req.query('jobId') }) }),
+);
+app.post('/coatings', requireOwner, async (c) => c.json(await createCoating(c.env, await json(c.req.raw)), 201));
+app.get('/coatings/:id', requireOwner, async (c) => c.json(await getCoating(c.env, c.req.param('id'))));
+app.patch('/coatings/:id', requireOwner, async (c) => c.json(await updateCoating(c.env, c.req.param('id'), await json(c.req.raw))));
+app.post('/coatings/:id/maintenance', requireOwner, async (c) =>
+  c.json(await logMaintenance(c.env, c.req.param('id'), await json(c.req.raw).catch(() => ({})))),
+);
+app.post('/coatings/:id/void', requireOwner, async (c) => c.json(await voidCoating(c.env, c.req.param('id'))));
+app.get('/tags', requireOwner, async (c) => c.json({ tags: await listTags(c.env, c.req.query('customerId')) }));
+app.post('/tags', requireOwner, async (c) => {
+  const { tag, created } = await linkTag(c.env, await json(c.req.raw), who(c.get('owner')));
+  return c.json({ tag }, created ? 201 : 200);
+});
+app.delete('/tags/:code', requireOwner, async (c) => {
+  await unlinkTag(c.env, c.req.param('code'));
+  return c.body(null, 204);
+});
+// Runs the rain check and coating reminders now, as the twice-daily cron does.
+app.post('/care/run', requireOwner, async (c) => {
+  const [weather, coatings] = await Promise.all([runWeather(c.env), runCoatingReminders(c.env)]);
+  return c.json({ weather, coatings });
+});
 app.get('/jobs/:id/photos', requireOwner, async (c) => c.json({ photos: await jobPhotos(c.env.DB, c.req.param('id')) }));
 
 const who = (o: Owner) => o.email ?? o.subject;
@@ -494,11 +547,20 @@ export default {
   // 50-query budget, which is why campaigns don't share the daily run.
   // TENANT: each cron runs once for the one business in the database.
   async scheduled(event: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    const work = event.cron === WEEKLY_CRON ? runWeekly(env) : event.cron === HOURLY_CRON ? runCampaigns(env) : runDaily(env);
+    const work =
+      event.cron === WEEKLY_CRON
+        ? runWeekly(env)
+        : event.cron === HOURLY_CRON
+          ? runCampaigns(env)
+          : event.cron === CARE_CRON
+            ? Promise.all([runWeather(env), runCoatingReminders(env)])
+            : runDaily(env);
     ctx.waitUntil(work.catch((err) => console.error(`cron ${event.cron} failed`, err)));
   },
 } satisfies ExportedHandler<Bindings>;
 
-/** Must match the weekly and hourly entries in wrangler.jsonc's triggers.crons. */
+/** Must match the weekly, hourly and care entries in wrangler.jsonc's triggers.crons. */
 const WEEKLY_CRON = '0 13 * * 1';
 const HOURLY_CRON = '30 * * * *';
+/** The rain check and coating reminders: about 9am and 6pm in St. Louis. */
+const CARE_CRON = '15 14,23 * * *';

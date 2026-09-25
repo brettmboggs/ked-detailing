@@ -28,7 +28,7 @@ export default defineConfig({
   // cutover switch goes on, /store when it has something to sell.
   integrations: [
     sitemap({
-      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}${storeLive ? '' : 'store|'}pay|booking|approve|unsubscribe|admin|launch)/?$`).test(new URL(page).pathname),
+      filter: (page) => !new RegExp(`/(${quoteLive ? '' : 'quote|'}${storeLive ? '' : 'store|'}pay|booking|approve|unsubscribe|admin|launch|done|car)/?$`).test(new URL(page).pathname),
     }),
   ],
 

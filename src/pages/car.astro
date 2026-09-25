@@ -1,0 +1,299 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { loadSite } from '../lib/live-site';
+import { withBase } from '../lib/url';
+
+const { business } = await loadSite();
+
+/**
+ * A car's page. Two ways in:
+ *  - the QR sticker in the door jamb, <site>/c/<CODE>, which public/_redirects
+ *    sends here as /car/?t=<CODE>;
+ *  - the coating certificate link emailed to the owner, /car/?c=<token>.
+ *
+ * It shows the coating's certificate (product, warranty, upkeep), how to look
+ * after it, and the dates of work done on the car. No names, addresses or
+ * prices: the car may have been sold. Fetched in the browser from
+ * GET /v1/car/:code or /v1/coating/:token (api/src/care.ts).
+ *
+ * The certificate prints, or saves as a PDF, on a plain letterhead.
+ */
+const row = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
+const rowLabel = 'text-sm text-bone-400';
+const care = [
+  'Give it a week to cure before the first wash, and keep it out of the rain the first day if you can.',
+  'Hand wash with a pH-neutral car soap, two buckets and a clean mitt. Skip automatic washes with brushes.',
+  'Dry with a clean microfiber towel or a blower. No squeegees or old bath towels.',
+  'Get bird droppings, bugs and tree sap off within a day or two. They etch even coated paint.',
+  'No wax or polish needed on top. A coating-safe spray sealant every few months keeps it slick.',
+  "Keep up the maintenance visits. They decontaminate the surface and top it up, and they keep the warranty going.",
+];
+---
+
+<Base title="Your car | Knock Em' Down Detailing" description="A car's coating certificate and care guide." noindex noReferrer>
+  <Header />
+
+  <main id="main" class="car-doc min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-3xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="print-only letterhead">
+        <img src={withBase('/email/logo.png')} alt={business.name} width="200" height="113" />
+        <div>
+          <p class="letterhead-name">{business.legalName}</p>
+          <p>{business.city}, {business.region}</p>
+          <p>{business.phone} · {business.email}</p>
+        </div>
+      </div>
+
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p data-eyebrow class="eyebrow">Your car</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>{' '}
+        <span data-subtitle class="block text-gold-500"></span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Loading…</p>
+
+      <div data-missing hidden class="mt-8 max-w-xl">
+        <p data-missing-text class="text-lg leading-relaxed text-bone-200"></p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={withBase('/quote')} class="btn-gold">Get a quote</a>
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+        </div>
+      </div>
+
+      <div data-page hidden class="mt-12">
+        <section data-coating hidden>
+          <h2 class="eyebrow mb-3">Coating certificate</h2>
+          <dl class="border-t border-ink-800">
+            <div class={row}><dt class={rowLabel}>Certificate</dt><dd data-cert class="text-bone-50 tabular-nums"></dd></div>
+            <div class={row}><dt class={rowLabel}>Coating</dt><dd data-product class="text-right text-bone-50"></dd></div>
+            <div class={row}><dt class={rowLabel}>Applied</dt><dd data-applied class="text-bone-50"></dd></div>
+            <div class={row}><dt class={rowLabel}>Warranty until</dt><dd data-until class="text-bone-50"></dd></div>
+            <div data-upkeep-row class={row}><dt class={rowLabel}>Maintenance</dt><dd data-upkeep class="text-right text-bone-50"></dd></div>
+            <div data-maintained-row class={row}><dt class={rowLabel}>Maintained</dt><dd data-maintained class="text-right text-bone-50"></dd></div>
+          </dl>
+
+          <div class="mt-8 flex items-end justify-between gap-6 border-l-2 border-gold-500 pl-5">
+            <p class="eyebrow">Status</p>
+            <p data-status class="text-right text-xl font-semibold text-bone-50"></p>
+          </div>
+          <p data-status-note class="mt-4 max-w-xl leading-relaxed text-bone-200"></p>
+
+          <div class="no-print mt-8">
+            <button type="button" data-print class="btn-ghost">Save certificate as PDF</button>
+          </div>
+        </section>
+
+        <section data-care hidden class="mt-14">
+          <h2 class="eyebrow mb-4">Looking after it</h2>
+          <ol class="max-w-2xl space-y-3 text-bone-200">
+            {care.map((c, i) => (
+              <li class="flex gap-4 leading-relaxed">
+                <span class="w-5 shrink-0 text-gold-500 tabular-nums">{i + 1}</span>
+                <span>{c}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section data-history-block hidden class="mt-14">
+          <h2 class="eyebrow mb-3">Work done</h2>
+          <ul data-history class="border-t border-ink-800"></ul>
+        </section>
+
+        <div class="no-print mt-12 flex flex-wrap gap-3">
+          <a data-book class="btn-gold">Book a detail</a>
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<style is:global>
+  .print-only {
+    display: none;
+  }
+  @media print {
+    @page {
+      margin: 14mm;
+    }
+    body > header,
+    body > footer,
+    body > a[href='#main'],
+    .no-print,
+    [data-history-block] {
+      display: none !important;
+    }
+    html,
+    body,
+    .car-doc {
+      background: #fff !important;
+    }
+    .car-doc > div {
+      padding-top: 0 !important;
+      max-width: none !important;
+    }
+    .car-doc,
+    .car-doc * {
+      color: #111 !important;
+      border-color: #d6d6d6 !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .car-doc .border-gold-500 {
+      border-color: #e8b14c !important;
+    }
+    .car-doc h1 {
+      font-size: 22pt !important;
+      margin-top: 18pt;
+    }
+    .car-doc h1 .text-gold-500 {
+      color: #555 !important;
+    }
+    .print-only.letterhead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24pt;
+      padding-bottom: 14pt;
+      border-bottom: 2pt solid #e8b14c !important;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      text-align: right;
+    }
+    .letterhead img {
+      width: 150px;
+      height: auto;
+      filter: invert(1);
+    }
+    .letterhead-name {
+      font-weight: 700;
+      font-size: 11pt;
+    }
+  }
+</style>
+
+<script>
+  interface Car {
+    vehicle: string | null;
+    coating: {
+      product: string;
+      appliedOn: string;
+      warrantyMonths: number;
+      warrantyUntil: string;
+      maintenanceMonths: number;
+      nextMaintenance: string | null;
+      maintained: string[];
+      status: 'active' | 'due' | 'lapsed' | 'expired' | 'void';
+      certificate: string;
+    } | null;
+    history: { date: string; service: string }[];
+    bookUrl: string;
+  }
+
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+  const day = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const every = (m: number) => (m === 12 ? 'Every year' : m % 12 === 0 ? `Every ${m / 12} years` : `Every ${m} months`);
+
+  const q = new URLSearchParams(location.search);
+  const code = (q.get('t') ?? '').toUpperCase();
+  const cert = q.get('c') ?? '';
+
+  function missing(text: string, title = "Can't find it.") {
+    $('[data-loading]').hidden = true;
+    set('[data-title]', title);
+    set('[data-subtitle]', '');
+    set('[data-missing-text]', text);
+    $('[data-missing]').hidden = false;
+  }
+
+  const STATUS: Record<string, [string, (c: NonNullable<Car['coating']>) => string]> = {
+    active: ['Protected', (c) => (c.nextMaintenance ? `Next maintenance visit due around ${day(c.nextMaintenance)}.` : 'No maintenance visits needed.')],
+    due: ['Maintenance due', (c) => `A maintenance visit is due around ${day(c.nextMaintenance!)}. Book it to keep the warranty going.`],
+    lapsed: ['Warranty lapsed', () => 'A maintenance visit was missed, so the warranty has lapsed. Book one and Jacob can look at getting it back on track.'],
+    expired: ['Warranty ended', (c) => `The warranty ran until ${day(c.warrantyUntil)}. The coating can be topped up or redone.`],
+    void: ['Not active', () => 'This certificate is no longer active.'],
+  };
+
+  function render(c: Car) {
+    $('[data-loading]').hidden = true;
+    set('[data-title]', c.vehicle ? `${c.vehicle}.` : 'This car.');
+    set('[data-subtitle]', c.coating ? 'Coated by Knock Em’ Down.' : 'Detailed by Knock Em’ Down.');
+    document.title = c.coating ? `Coating certificate ${c.coating.certificate} | Knock Em' Down Detailing` : document.title;
+
+    if (c.coating) {
+      const k = c.coating;
+      set('[data-cert]', k.certificate.toUpperCase());
+      set('[data-product]', k.product);
+      set('[data-applied]', day(k.appliedOn));
+      set('[data-until]', day(k.warrantyUntil));
+      if (k.maintenanceMonths) set('[data-upkeep]', every(k.maintenanceMonths));
+      else $('[data-upkeep-row]').hidden = true;
+      if (k.maintained.length) set('[data-maintained]', k.maintained.map(day).join(', '));
+      else $('[data-maintained-row]').hidden = true;
+      const [label, note] = STATUS[k.status] ?? STATUS.active!;
+      set('[data-status]', label);
+      set('[data-status-note]', note(k));
+      $('[data-coating]').hidden = false;
+      $('[data-care]').hidden = false;
+      set('[data-book]', k.status === 'due' || k.status === 'lapsed' ? 'Book maintenance' : 'Book a detail');
+    }
+
+    if (c.history.length) {
+      $('[data-history]').replaceChildren(
+        ...c.history.map((h) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-baseline justify-between gap-6 border-b border-ink-800 py-3';
+          const s = document.createElement('span');
+          s.className = 'text-bone-50';
+          s.textContent = h.service;
+          const d = document.createElement('span');
+          d.className = 'text-sm text-bone-400';
+          d.textContent = day(h.date);
+          li.append(s, d);
+          return li;
+        }),
+      );
+      $('[data-history-block]').hidden = false;
+    }
+    $<HTMLAnchorElement>('[data-book]').href = c.bookUrl;
+    $('[data-page]').hidden = false;
+  }
+
+  $('[data-print]').addEventListener('click', () => window.print());
+
+  const url = !API
+    ? null
+    : /^[A-Z0-9]{4,16}$/.test(code)
+      ? `${API}/v1/car/${code}`
+      : /^[A-Za-z0-9_-]{40,64}$/.test(cert)
+        ? `${API}/v1/coating/${cert}`
+        : null;
+
+  if (!url) {
+    missing("This link doesn't match a car. Check you have the whole link, or text Jacob.");
+  } else {
+    fetch(url)
+      .then(async (res) => {
+        if (res.status === 404) {
+          return code
+            ? missing("This sticker hasn't been set up yet. If it's on your car, text Jacob and he'll sort it out.", 'Not set up yet.')
+            : missing("This link doesn't match a certificate. Text Jacob and he'll send it again.");
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render((await res.json()) as Car);
+      })
+      .catch(() => missing("We couldn't load this just now. Try again in a minute, or text Jacob."));
+  }
+</script>

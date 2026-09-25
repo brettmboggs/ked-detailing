@@ -5,6 +5,7 @@ import type { AppEnv } from './app-env.ts';
 import { requireOwner, type Owner } from './auth.ts';
 import { activityStatement } from './crm-activity.ts';
 import { getBrand } from './brand.ts';
+import { doneTokensStatement, doneUrl } from './care.ts';
 import { sendEmail, unsubscribeFooter } from './crm-email.ts';
 import { STATS_CTE } from './crm-segments.ts';
 import { ApiError, json, now, text, ulid, type Bindings } from './lib.ts';
@@ -44,7 +45,7 @@ type Channel = (typeof CHANNELS)[number];
 /** What a template may say. Unknown {words} are refused on save, so a typo shows up before it goes out. */
 export const PLACEHOLDERS = [
   'first name', 'service', 'last visit', 'since', 'date', 'time', 'address',
-  'review link', 'quote link', 'manage link', 'offer',
+  'review link', 'quote link', 'manage link', 'photos link', 'offer',
 ] as const;
 
 export interface FollowUpSettings {
@@ -98,12 +99,15 @@ export const DEFAULT_SETTINGS: FollowUpSettings = {
       subject: 'Thanks from Knock Em\' Down',
       body:
         "Hi {first name}, thanks for having me out for the {service}. Hope you're loving how it turned out.\n\n" +
+        'Before and after photos of your car: {photos link}\n\n' +
         'If you have a minute, a quick Google review helps a small local business like mine more than you know: {review link}\n\n' +
         'Thanks again,\nJacob',
     },
     thank_you: {
       subject: 'Thanks again, {first name}',
-      body: 'Hi {first name}, thanks again for having me out for the {service}. Always good to see you. Text me anytime you need anything.\n\nJacob',
+      body:
+        'Hi {first name}, thanks again for having me out for the {service}. Always good to see you.\n\n' +
+        'Before and after photos of your car: {photos link}\n\nText me anytime you need anything.\n\nJacob',
     },
     reminder: {
       subject: 'See you tomorrow, {first name}',
@@ -220,6 +224,21 @@ export function validateSettings(body: Record<string, unknown>): FollowUpSetting
 }
 
 /** Everything the rules need from settings, in one query. */
+/** Where "leave a review" goes: Jacob's own link, else the website's, else the old review page. */
+export async function reviewLink(db: D1Database) {
+  const [{ settings }, site] = await Promise.all([
+    loadSettings(db),
+    db.prepare("SELECT value FROM settings WHERE key = 'site'").first<{ value: string }>(),
+  ]);
+  let fromSite: unknown;
+  try {
+    fromSite = site ? (JSON.parse(site.value) as { reviews?: { url?: string } }).reviews?.url : undefined;
+  } catch {
+    fromSite = undefined;
+  }
+  return settings.reviewUrl || (typeof fromSite === 'string' && fromSite) || FALLBACK_REVIEW_URL;
+}
+
 async function loadSettings(db: D1Database) {
   const { results } = await db
     .prepare("SELECT key, value, updated_at FROM settings WHERE key IN ('crm', 'booking')")
@@ -261,7 +280,12 @@ async function saveSettings(db: D1Database, s: FollowUpSettings, by: string) {
 
 /** Fills {placeholders}; a line left empty (no offer) disappears. */
 export function fill(template: string, values: Partial<Record<(typeof PLACEHOLDERS)[number], string>>) {
+  const value = (name: string) => values[name.trim().toLowerCase() as keyof typeof values];
   return template
+    // A line built around a link there isn't one for ("Photos: {photos link}" on a job with none) goes.
+    .split('\n')
+    .filter((line) => ![...line.matchAll(/\{([^{}]*link)\}/gi)].some((m) => !value(m[1]!)))
+    .join('\n')
     .replace(/\{([^{}]*)\}/g, (all, name: string) => {
       const v = values[name.trim().toLowerCase() as keyof typeof values];
       return v ?? '';
@@ -401,7 +425,8 @@ export async function runDaily(env: Bindings, at = new Date()): Promise<RunResul
     db
       .prepare(
         `SELECT j.id, j.service, j.local_date, j.quote, ${PERSON},
-                EXISTS (SELECT 1 FROM follow_ups r WHERE r.customer_id = c.id AND r.kind = 'review') AS asked
+                EXISTS (SELECT 1 FROM follow_ups r WHERE r.customer_id = c.id AND r.kind = 'review') AS asked,
+                EXISTS (SELECT 1 FROM photos p WHERE p.job_id = j.id AND p.kind = 'job') AS has_photos
          FROM jobs j JOIN customers c ON c.id = j.customer_id
          WHERE j.status = 'done' AND j.history = 0 AND j.local_date BETWEEN ?1 AND ?2
            AND NOT EXISTS (SELECT 1 FROM follow_ups f WHERE f.rule_key = 'thanks:' || j.id)
@@ -482,8 +507,17 @@ export async function runDaily(env: Bindings, at = new Date()): Promise<RunResul
   };
 
   if (s.rules.thank_you.on) {
+    type T = P & { id: string; service: string; local_date: string; quote: string; asked: number; has_photos: number };
+    const rows = thanks!.results as T[];
+    // Jobs with photos get their done page link, made here in one statement.
+    const withPhotos = rows.filter((r) => r.has_photos).map((r) => r.id);
+    const doneLinks = new Map<string, string>();
+    if (withPhotos.length) {
+      const { results: made } = await doneTokensStatement(db, withPhotos).all<{ id: string; done_token: string }>();
+      for (const m of made) doneLinks.set(m.id, doneUrl(env, m.done_token));
+    }
     const seen = new Set<string>();
-    for (const row of thanks!.results as (P & { id: string; service: string; local_date: string; quote: string; asked: number })[]) {
+    for (const row of rows) {
       if (seen.has(row.cid)) continue; // two jobs in a row: one thank-you
       seen.add(row.cid);
       const first = !row.asked;
@@ -494,7 +528,7 @@ export async function runDaily(env: Bindings, at = new Date()): Promise<RunResul
           ? `Finished a ${levelName(row.service)} on ${shortDay(row.local_date, today)}: thank them and ask for a review`
           : `Finished a ${levelName(row.service)} on ${shortDay(row.local_date, today)}: say thanks`,
         template: first ? 'review' : 'thank_you',
-        values: { service: serviceWords(pricing, row.service, label(row.quote)) },
+        values: { service: serviceWords(pricing, row.service, label(row.quote)), 'photos link': doneLinks.get(row.id) ?? '' },
         rule: 'thank_you',
         marketing: true,
         jobId: row.id,

@@ -1,0 +1,174 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { loadSite } from '../lib/live-site';
+
+const { business } = await loadSite();
+
+/**
+ * "Your car's done": the before and after photos of a finished job, its
+ * invoice and a review button, reached through the link in the thank-you
+ * Jacob's list sends the day after (or texts himself): /done/?d=<token>.
+ * Everything is fetched in the browser from GET /v1/done/:token
+ * (api/src/care.ts). The link stops working after 30 days; the photos stay in
+ * Jacob's app.
+ *
+ * Never indexed and sends no Referer, because the URL carries the secret.
+ */
+---
+
+<Base
+  title="Your car is done | Knock Em' Down Detailing"
+  description="Before and after photos of your detail."
+  noindex
+  noReferrer
+>
+  <Header />
+
+  <main id="main" class="min-h-[70svh] bg-ink-950 pb-24">
+    <div class="mx-auto max-w-5xl px-5 pt-32 sm:px-8 lg:pt-40">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p data-eyebrow class="eyebrow">All done</p>
+      </div>
+      <h1 class="display-lg text-bone-50">
+        <span data-title class="block">One moment.</span>{' '}
+        <span data-subtitle class="block text-gold-500"></span>
+      </h1>
+
+      <p data-loading class="mt-8 text-bone-400">Loading…</p>
+
+      <div data-missing hidden class="mt-8 max-w-xl">
+        <p data-missing-text class="text-lg leading-relaxed text-bone-200"></p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-gold">Text Jacob</a>
+          <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+        </div>
+      </div>
+
+      <div data-page hidden class="mt-10">
+        <p data-intro class="max-w-2xl text-lg leading-relaxed text-bone-200"></p>
+
+        <section data-after-block hidden class="mt-12">
+          <h2 class="eyebrow mb-4">After</h2>
+          <div data-after class="grid gap-3 sm:grid-cols-2"></div>
+        </section>
+        <section data-before-block hidden class="mt-12">
+          <h2 class="eyebrow mb-4">Before</h2>
+          <div data-before class="grid gap-3 sm:grid-cols-2"></div>
+        </section>
+
+        <!-- The ask, set apart with the gold rule. -->
+        <section class="mt-14 max-w-2xl border-l-2 border-gold-500 pl-5">
+          <h2 class="text-2xl font-semibold text-bone-50">Happy with it?</h2>
+          <p class="mt-3 leading-relaxed text-bone-200">
+            A quick Google review is the biggest help a small local business can get. It takes a minute.
+          </p>
+          <a data-review class="btn-gold mt-6 inline-flex" target="_blank" rel="noopener">Leave a review</a>
+        </section>
+
+        <div class="mt-12 flex flex-wrap gap-3">
+          <a data-invoice hidden class="btn-ghost"></a>
+          <a data-book class="btn-ghost">Book your next detail</a>
+          <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+        </div>
+
+        <p data-expires class="mt-14 text-xs text-bone-500"></p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<script>
+  interface Page {
+    firstName: string;
+    service: string;
+    vehicle: string | null;
+    date: string;
+    photos: { id: string; stage: 'before' | 'after' | null }[];
+    invoice: { number: number; status: string; balance: number; url: string } | null;
+    reviewUrl: string;
+    bookUrl: string;
+    expiresAt: string | null;
+  }
+
+  const API = import.meta.env.PUBLIC_KED_API_URL?.replace(/\/$/, '');
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const set = (sel: string, text: string) => ($(sel).textContent = text);
+  const money = (c: number) =>
+    `$${(c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 })}`;
+  const day = (iso: string) =>
+    new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
+  const token = new URLSearchParams(location.search).get('d') ?? '';
+  const BAD_LINK = "This link doesn't match anything. Check you have the whole link, or ask Jacob to send it again.";
+
+  function missing(text: string, title = "Can't find it.") {
+    $('[data-loading]').hidden = true;
+    set('[data-title]', title);
+    set('[data-subtitle]', '');
+    set('[data-missing-text]', text);
+    $('[data-missing]').hidden = false;
+  }
+
+  function photo(id: string, alt: string) {
+    const a = document.createElement('a');
+    a.href = `${API}/v1/done/${token}/photos/${id}`;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    const img = document.createElement('img');
+    img.src = a.href;
+    img.alt = alt;
+    img.loading = 'lazy';
+    img.className = 'aspect-[4/3] w-full bg-ink-900 object-cover';
+    a.append(img);
+    return a;
+  }
+
+  function render(p: Page) {
+    $('[data-loading]').hidden = true;
+    const car = p.vehicle ? `your ${p.vehicle}` : 'your car';
+    set('[data-title]', `Hi ${p.firstName}.`);
+    set('[data-subtitle]', `Here's ${car}.`);
+    set(
+      '[data-intro]',
+      p.photos.length
+        ? `Your ${p.service} from ${day(p.date)}. Tap any photo to see it full size, and save the ones you like.`
+        : `Your ${p.service} from ${day(p.date)}. Thanks for having me out. — Jacob`,
+    );
+    const after = p.photos.filter((x) => x.stage !== 'before');
+    const before = p.photos.filter((x) => x.stage === 'before');
+    $('[data-after]').replaceChildren(...after.map((x) => photo(x.id, `${car} after the detail`)));
+    $('[data-before]').replaceChildren(...before.map((x) => photo(x.id, `${car} before the detail`)));
+    $('[data-after-block]').hidden = !after.length;
+    $('[data-before-block]').hidden = !before.length;
+
+    $<HTMLAnchorElement>('[data-review]').href = p.reviewUrl;
+    $<HTMLAnchorElement>('[data-book]').href = p.bookUrl;
+    if (p.invoice) {
+      const a = $<HTMLAnchorElement>('[data-invoice]');
+      a.href = p.invoice.url;
+      a.textContent = p.invoice.status === 'paid' ? 'Your receipt' : `Pay your invoice (${money(p.invoice.balance)})`;
+      if (p.invoice.status !== 'paid') a.className = 'btn-gold';
+      a.hidden = false;
+    }
+    if (p.expiresAt) set('[data-expires]', `This page is here until ${day(p.expiresAt)}.`);
+    $('[data-page]').hidden = false;
+  }
+
+  if (!API || !/^[A-Za-z0-9_-]{40,64}$/.test(token)) {
+    missing(BAD_LINK);
+  } else {
+    fetch(`${API}/v1/done/${token}`)
+      .then(async (res) => {
+        if (res.status === 404) return missing(BAD_LINK);
+        if (res.status === 410) return missing('This link has expired. Text Jacob and he’ll send you a fresh one.', 'This one’s expired.');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render((await res.json()) as Page);
+      })
+      .catch(() => missing("We couldn't load this just now. Try again in a minute, or text Jacob."));
+  }
+</script>

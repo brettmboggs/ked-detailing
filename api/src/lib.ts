@@ -18,6 +18,8 @@ export type Bindings = Env & {
   ANTHROPIC_API_KEY?: string;
   /** Tests point this away from the Claude API. */
   ANTHROPIC_URL?: string;
+  /** Tests point this away from the National Weather Service (weather.ts). */
+  WEATHER_URL?: string;
   /** Tests point this away from Expo. */
   EXPO_PUSH_URL?: string;
   /** Tests set "1" to get the sign-in link in the response instead of only by email. */

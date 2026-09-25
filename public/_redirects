@@ -30,3 +30,6 @@
 /blog/tag/*  /blog  301
 /blog/category/*  /blog  301
 /store/p/*  /#services  301
+
+# The QR stickers in customers' door jambs: /c/<CODE> is the car's page.
+/c/:code  /car/?t=:code  302
