@@ -38,7 +38,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Pricing engine | `packages/pricing` | Pure TS. The site, API and app all use it |
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
-| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0010 applied |
+| API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations 0001–0011 applied |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
@@ -103,6 +103,18 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   source, so re-running is safe. Written against the files' likely shape:
   **check the preview on Jacob's real exports first.** It needs `KED_TOKEN`:
   set the Worker's `ADMIN_TOKEN` secret for the day, and delete it after.
+- **Web admin:** `kedservice.com/admin` (`src/pages/admin.astro`,
+  `src/scripts/admin.ts`). Bookings, quote requests, a prices editor with a
+  live preview of what customers see, and hours. Sign-in is a one-time link
+  emailed to an address in `OWNER_EMAILS` (`POST /v1/auth/email`, then
+  `/verify`). Sends go through Email Routing, so each owner address must be
+  a verified destination in Cloudflare → Email → Destination addresses.
+- **Email:** Email Routing is on for kedservice.com. Alerts go from
+  `alerts@kedservice.com` to `ALERT_EMAIL`, and verified destinations are
+  Brett's Gmail, Jacob's Gmail and his Yahoo.
+- **The cutover switch:** `quoteLive` in `src/data/site.ts`. On sends every
+  Book button to /quote and makes /quote public. **Turn it on once Jacob's
+  prices and hours are saved in the admin.**
 - **Photos:** receipts and before/after job photos, stored in **KV**, not R2.
   R2 requires a credit card on the account, and Brett won't put his own card
   on Jacob's business. The storage interface prefers R2 if it's ever bound.
@@ -113,7 +125,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (15),
-  scheduling (11), books (18) and API (68), import (6). The API tests
+  scheduling (11), books (18) and API (71), import (6). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
@@ -218,9 +230,7 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 
 ## What to build next (none of it needs Jacob)
 
-1. **Wire the website into the navigation** behind one switch (`quoteLive` in
-   `src/data/site.ts`): header "Get a quote", "from $X" on the packages, the
-   CTA. It stays off until cutover.
+1. Flip `quoteLive` once the prices and hours are in.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.

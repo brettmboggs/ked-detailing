@@ -12,7 +12,7 @@ trap 'kill -- -$WORKER 2>/dev/null || true; rm -rf "$STATE"' EXIT
 npx wrangler d1 migrations apply ked --local --persist-to "$STATE" >/dev/null
 # Own inspector port too, so this runs alongside a `wrangler dev` already open.
 setsid npx wrangler dev --port "$PORT" --inspector-port "$((PORT + 1))" --persist-to "$STATE" \
-  --var ADMIN_TOKEN:test-admin --var COUNT_QUERIES:1 --var "EXPO_PUSH_URL:http://localhost:$((PORT + 2))/push" --show-interactive-dev-session=false >"$STATE/worker.log" 2>&1 &
+  --var ADMIN_TOKEN:test-admin --var COUNT_QUERIES:1 --var TEST_LOGIN_LINKS:1 --var "EXPO_PUSH_URL:http://localhost:$((PORT + 2))/push" --show-interactive-dev-session=false >"$STATE/worker.log" 2>&1 &
 WORKER=$!
 
 ready=

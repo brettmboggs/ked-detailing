@@ -12,6 +12,8 @@ export type Bindings = Env & {
   CUSTOMER_EMAIL?: string;
   /** Tests point this away from Expo. */
   EXPO_PUSH_URL?: string;
+  /** Tests set "1" to get the sign-in link in the response instead of only by email. */
+  TEST_LOGIN_LINKS?: string;
   /** Tests set "1" to get each response's query count in X-D1-Queries. */
   COUNT_QUERIES?: string;
 };

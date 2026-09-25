@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
-import { requireOwner, signInWithApple, type Owner } from './auth.ts';
+import { endSession, requestEmailLogin, requireOwner, signInWithApple, verifyEmailLogin, type Owner } from './auth.ts';
 import { deleteRule, importBank, listBankLines, listRules, resolveBankLine } from './bank.ts';
 import { importCustomers, importEntries, importJobs } from './imports.ts';
 import { booksInbox } from './inbox.ts';
@@ -159,6 +159,14 @@ app.get('/pay/:token', async (c) => {
   return c.json(view);
 });
 app.post('/pay/:token/checkout', async (c) => c.json(await startCheckout(c.env, c.req.param('token'))));
+
+// The web admin signs in with a one-time link emailed to an owner address.
+app.post('/auth/email', async (c) => c.json(await requestEmailLogin(c.env, await json(c.req.raw))));
+app.post('/auth/email/verify', async (c) => c.json(await verifyEmailLogin(c.env, await json(c.req.raw))));
+app.delete('/auth/session', async (c) => {
+  await endSession(c.env, c.req.header('Authorization'));
+  return c.body(null, 204);
+});
 
 app.post('/auth/apple', async (c) => {
   const identityToken = text((await json(c.req.raw)).identityToken, 'identityToken', 5000);

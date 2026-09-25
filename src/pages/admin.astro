@@ -1,0 +1,72 @@
+---
+import Base from '../layouts/Base.astro';
+import { business } from '../data/site';
+import { withBase } from '../lib/url';
+
+/**
+ * The web admin for Jacob and Brett: bookings, quote requests, prices and
+ * hours, from any browser. The same API the iPhone app uses, so every rule
+ * (price validation, booking rules) is enforced in one place.
+ *
+ * Sign-in is a one-time link emailed to an owner address (OWNER_EMAILS on
+ * the Worker). Never indexed, sends no Referer. Everything renders in the
+ * browser from src/scripts/admin.ts; the page itself holds no data.
+ */
+const tab =
+  'border-b-2 border-transparent px-1 py-3 font-display text-[0.78rem] uppercase tracking-[0.16em] text-bone-400 transition-colors hover:text-bone-50 ' +
+  'aria-selected:border-gold-500 aria-selected:text-bone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-400';
+---
+
+<Base title="Admin | Knock Em' Down Detailing" description="Knock Em' Down admin." noindex noReferrer>
+  <main id="main" class="min-h-svh bg-ink-950 pb-24 text-bone-200">
+    <header class="border-b border-ink-800">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <a href={withBase('/')} class="font-display uppercase text-bone-50" style="font-variation-settings:'wdth' 80,'wght' 800;letter-spacing:-0.01em;font-size:1.35rem">
+          Knock Em' Down <span class="text-gold-500">Admin</span>
+        </a>
+        <div data-who hidden class="flex items-center gap-4 text-sm text-bone-400">
+          <span data-who-email></span>
+          <button type="button" data-sign-out class="border border-ink-700 px-3 py-1.5 text-bone-200 hover:border-gold-500 hover:text-bone-50">Sign out</button>
+        </div>
+      </div>
+      <nav data-tabs hidden role="tablist" aria-label="Admin sections" class="mx-auto flex max-w-6xl gap-6 overflow-x-auto px-5 sm:px-8">
+        <button type="button" role="tab" data-tab="bookings" class={tab}>Bookings</button>
+        <button type="button" role="tab" data-tab="leads" class={tab}>Quote requests</button>
+        <button type="button" role="tab" data-tab="prices" class={tab}>Prices</button>
+        <button type="button" role="tab" data-tab="hours" class={tab}>Hours</button>
+      </nav>
+    </header>
+
+    <div class="mx-auto max-w-6xl px-5 pt-10 sm:px-8">
+      <!-- Signed out: ask for an email, send a link. -->
+      <section data-signin hidden class="max-w-md">
+        <h1 class="display-lg text-bone-50" style="font-size:clamp(2rem,6vw,3rem)">Sign in</h1>
+        <p class="mt-4 text-bone-200">We'll email you a link. It works once, for 15 minutes.</p>
+        <form data-signin-form class="mt-8 flex flex-col gap-4" novalidate>
+          <label class="flex flex-col gap-1.5 text-sm text-bone-200">
+            Email
+            <input id="admin-email" name="email" type="email" autocomplete="email" required
+              class="w-full rounded-sm border border-ink-700 bg-ink-900 px-4 py-3 text-bone-50 focus:border-gold-500 focus:outline-none" />
+          </label>
+          <button type="submit" class="btn-gold self-start">Email me a link</button>
+        </form>
+        <p data-signin-status role="status" hidden class="mt-6 border-l-2 border-gold-500 pl-4 text-bone-200"></p>
+      </section>
+
+      <p data-loading class="text-bone-400">Loading…</p>
+      <p data-error role="alert" hidden class="mb-6 border-l-2 border-red-400 pl-4 text-red-300"></p>
+
+      <section data-view="bookings" hidden></section>
+      <section data-view="leads" hidden></section>
+      <section data-view="prices" hidden></section>
+      <section data-view="hours" hidden></section>
+
+      <p class="mt-16 text-xs text-bone-500">Something wrong? Text Brett. {business.name}</p>
+    </div>
+  </main>
+</Base>
+
+<script>
+  import { initAdmin } from '../scripts/admin';
+  initAdmin();
+</script>

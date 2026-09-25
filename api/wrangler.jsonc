@@ -42,6 +42,8 @@
     // Also switches to kedservice.com at cutover.
     "MANAGE_URL": "https://www.kedservice.com/booking/",
     "MAIL_FROM": "alerts@kedservice.com",
+    // The web admin. Sign-in links are this plus #login=<token>.
+    "ADMIN_URL": "https://www.kedservice.com/admin/",
     // Booking and quote alerts. Comma-separated; each must be a verified destination.
     "ALERT_EMAIL": "knockemdowndetailing@gmail.com"
   }
