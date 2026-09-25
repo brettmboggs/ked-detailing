@@ -59,7 +59,7 @@ export interface NavItem {
  * "from $X", and /quote is public. Turn it on only once Jacob's real prices
  * and hours are saved, and push; the site rebuilds with them.
  */
-export const quoteLive = false;
+export const quoteLive = true;
 
 /* --------------------------------------------------------------- business */
 
