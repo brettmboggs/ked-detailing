@@ -633,8 +633,34 @@ A tab bar with five tabs: **Today · Schedule · Books · Inventory · More**. T
   in his words: "Time between jobs", not "bufferMinutes".
 - **More → Settings**: sign out, app version, pricing version.
 
-Out of scope for v1: multiple staff, recurring maintenance plans, marketing
-email, Android. **Payroll is deliberately never built here.** When Jacob hires
+The app does everything the web admin does, so Jacob can run the whole
+business from the van. The CRM screens use the CRM endpoints above:
+
+- **Follow-ups** (Today and More → Follow-ups): the due list sits in Today's
+  **Needs you**. A text follow-up opens the Messages composer with `message`,
+  then calls `/texted`. Call, done, skip, snooze and reopen are one tap each.
+  More → Follow-ups has upcoming, sent and done, "Check now", his own
+  reminders, and the rules' settings in his words.
+- **Customers** (More → Customers): the CRM list with a segment filter (who,
+  spend, visits, last visit, source, tags, can email or text) and sort, CSV
+  export through the share sheet, and duplicates to merge. A customer's page
+  is the CRM profile: their numbers, open follow-ups, referral link to share,
+  tags, source, consent and who referred them, and the timeline, where he
+  adds a note, call or text and edits or removes his own.
+- **Marketing** (More → Marketing): campaigns from a template or scratch,
+  with the preview and who gets it. An email campaign sends in batches while
+  the screen is open. A text campaign is a list to work through in Messages,
+  each marked texted. Also tracking links with their QR code and results,
+  referrals (rewards and leaders), reviews to ask for, and the playbook.
+- **Insights** (More → Insights): the period's numbers with the previous
+  period, the ranked **Do this** list (each opens the screen it's about),
+  marketing spend by month and channel, and the Monday notes with "Make one
+  now".
+- **Website** (More → Website): the site's words and photos, as in the web
+  admin's Website tab. Photos come from the camera roll, shrunk to JPEG and
+  sent to `POST /v1/site/photos`. Saving rebuilds the site.
+
+Out of scope for v1: multiple staff, recurring maintenance plans, Android. **Payroll is deliberately never built here.** When Jacob hires
 an employee, he connects a payroll service (Gusto or similar), and its totals
 get recorded in the books as expenses. Contractors are covered: payees with
 `kind: 'contractor'`, and the 1099 report.
