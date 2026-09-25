@@ -95,6 +95,15 @@ test('the importers stay under the cap at full chunks', async () => {
   assert.ok(e.queries < CAP, `10 entries: ${e.queries} queries`);
 });
 
+test('insights read every number in one batch, and the weekly note stays under the cap', async () => {
+  const all = await call('GET', '/crm/insights?from=2037-01-01&to=2039-12-31');
+  assert.equal(all.status, 200, JSON.stringify(all.body));
+  assert.ok(all.queries <= 10, `insights: ${all.queries} queries`);
+  const note = await call('POST', '/crm/insights/summary');
+  assert.equal(note.status, 201, JSON.stringify(note.body));
+  assert.ok(note.queries < CAP, `weekly note: ${note.queries} queries`);
+});
+
 test('the daily follow-up rules and the list stay under the cap with a crowd to contact', async () => {
   // 30 people who've gone quiet, all with email: win-backs for every one, and a full batch of sends.
   const { settings } = (await call('GET', '/crm/follow-ups/settings')).body;

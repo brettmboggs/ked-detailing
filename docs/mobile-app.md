@@ -219,7 +219,7 @@ There are no passwords and no sign-up screen.
 | `PATCH /v1/jobs/:id` | owner | Any of `status` (`scheduled` → `in_progress` → `done` / `cancelled`), `start` (moving the start keeps the length), `end`, `notes`, `address`, `vehicle`, `finalPrice` (cents). With `status: cancelled`, an optional `cancelReason` (only Jacob sees it) |
 | `GET /v1/customers?q=` | owner | `{ customers }`. Search by name, phone digits or email. Empty `q` lists the newest |
 | `GET /v1/customers/:id` | owner | The customer plus `jobs`, newest first |
-| `PATCH /v1/customers/:id` | owner | `name`, `phone`, `email`, `address`, `notes` |
+| `PATCH /v1/customers/:id` | owner | `name`, `phone`, `email`, `address`, `notes`, plus the CRM fields (see CRM: customers) |
 | `GET /v1/time-off?from=&to=` | owner | `{ timeOff: [{ id, start, end, reason }] }` overlapping the range. Without `from`, recent and upcoming |
 | `POST /v1/time-off` | owner | `{ start, end, reason? }`. Blocks online booking in that span |
 | `DELETE /v1/time-off/:id` | owner | `204` |
@@ -330,6 +330,218 @@ job attaches to their existing record.
 
 Stripe secret keys only ever live in the Worker. The app only holds a Terminal
 connection token.
+
+### CRM: customers
+
+The customer list as a CRM, one customer's profile and timeline, notes and
+calls, tags, source, consent, referrals, CSV export and merging duplicates.
+Owner-only. See `docs/crm.md`. Money is in cents.
+
+| Method | Path | What |
+| --- | --- | --- |
+| GET | `/v1/crm/customers?segment=<json>` | `{ customers }` with their numbers, filtered and sorted by a segment (`q`, `lifecycle`: any/lead/customer/repeat/lapsed, `lapsedDays`, `minSpend`, `maxSpend`, `minVisits`, `maxVisits`, `lastVisitBefore`, `lastVisitAfter`, `noUpcoming`, `services`, `zips` (prefixes), `sources`, `tags`, `canEmail`, `canText`, `sort`: spend/recent/visits/name/newest, `limit` ≤ 2000, default 500). 422 on a bad segment |
+| GET | `/v1/crm/customers/export?segment=<json>` | The same segment as a CSV download (up to 2,000 rows): Name, Phone, Email, Visits, Spent (dollars), Last visit, Next booking, Source, Tags, Can email, Can text. Cells starting with `= + - @` are prefixed with `'` |
+| GET | `/v1/crm/customers/tags` | `{ tags: [{ tag, count }] }`, most used first, for filters |
+| GET | `/v1/crm/customers/duplicates` | `{ groups: [{ reasons: ['phone' \| 'email' \| 'name'], customers: [{ id, name, phone, email, address, createdAt, visits }] }] }` |
+| GET | `/v1/crm/customers/:id` | The profile (below). About a dozen queries whatever the history. Makes a referral code for an older customer who has none |
+| PATCH | `/v1/crm/customers/:id` | Same as `PATCH /v1/customers/:id`: `name`, `phone`, `email`, `address`, `notes`, `tags` (list; trimmed, lower-cased, deduped, ≤ 12, each ≤ 24 characters), `source` (one of google, maps, instagram, facebook, nextdoor, referral, van, repeat, other, or null), `sourceDetail` (≤ 120), `emailOk`, `textOk` (booleans), `referredBy` (a customer id or null; not themselves, no loops). Returns the customer |
+| POST | `/v1/crm/customers/:id/activities` | `{ kind: 'note' \| 'call' \| 'text', body, direction?: 'out' \| 'in' }` (201). A note needs a body; a call or text doesn't. Returns the timeline item |
+| PATCH | `/v1/crm/customers/:id/activities/:activityId` | `{ body?, direction? }`. Only notes, calls and texts Jacob added (403 otherwise). Sets `meta.editedAt` |
+| DELETE | `/v1/crm/customers/:id/activities/:activityId` | 204. Same rule as editing |
+| POST | `/v1/crm/customers/:id/merge` | `{ otherId }`: two records of one person become one. The **older** record stays whichever id is in the path. Jobs, invoices, quote requests, timeline, follow-ups and campaign sends move to it; blank phone, email, address, source and referral code are filled from the other; notes are joined; tags combined; an email or text opt-out on either stands; people the other one referred point at the kept one. One atomic batch, logged on the timeline. Returns `{ kept, removed, customer }` |
+
+**Profile shape** (`GET /v1/crm/customers/:id`):
+
+- `customer`: the customer (as `GET /v1/customers/:id`, plus `attribution`:
+  what the website saw on their first visit, `{ utmSource, utmMedium,
+  utmCampaign, referrer, landing, firstSeen, ref }`, or null).
+- `numbers`: `visits`, `spend`, `avgTicket`, `firstVisit`, `lastVisit`
+  (YYYY-MM-DD), `lastService`, `nextVisit` (ISO), `customerSince` (the earlier
+  of the day they were added and their first visit), `everyDays` (average
+  days between visits, or null), `services` (ids), `zip`, `referrals`,
+  `paid` and `tips` (money in on their invoices), `owed` (unpaid balances).
+  Only done jobs count as visits and spend; a job's value is its final price,
+  else the quote's total.
+- `referral`: `{ code, url, referredBy: { id, name } | null, referred: [{ id,
+  name, createdAt, visits }] }`. `url` is `https://www.kedservice.com/?ref=CODE`.
+- `jobs` (as `GET /v1/jobs/:id`), `invoices` (as `GET /v1/invoices`),
+  `payments` (`{ id, date, amount, method, jobId, tip }`), `quoteRequests`
+  (`{ id, status, service, vehicle, zip, notes, range, source, createdAt }`),
+  `followUps` (open ones: `{ id, kind, dueDate, channel, title, message,
+  jobId, leadId, createdAt }`).
+- `timeline`: newest first, up to 400 items `{ type, id, at, title, body,
+  amount?, jobId?, invoiceId?, date?, status?, meta?, by?, editable? }`.
+  `type` is an activity kind (`note`, `call`, `text`, `email`,
+  `review_request`, `referral`, `system`) or `job` (done at its start,
+  cancelled when cancelled, else booked when made), `invoice` (sent or made;
+  voided), `payment` (`at` is its day at 1 PM Central) or `quote`. Calls and
+  texts have `meta.direction`.
+
+### CRM: follow-ups
+
+Who Jacob should contact today, made each morning by the daily rules
+(`runDaily`, cron `0 14 * * *`), plus his own reminders. Owner-only unless
+marked public. See `docs/crm.md`.
+
+| Method | Path | What |
+| --- | --- | --- |
+| GET | `/v1/crm/follow-ups` | `{ today, due, upcoming, sent, done, email: { configured, sentLastDay, perDay } }`. `due`: open, due today or earlier (the Today list). `upcoming`: open, due later. `sent`: emailed automatically in the last 7 days. `done`: done or skipped in the last 7 days. `?customerId=` returns `{ today, followUps, email }` for one customer, all of theirs |
+| POST | `/v1/crm/follow-ups` | Jacob's own: `{ title, dueDate?, customerId?, leadId?, message?, channel? }` (201). `dueDate` defaults to today |
+| POST | `/v1/crm/follow-ups/run` | "Check now": runs the rules and sends due emails. Safe to repeat. Returns `{ today, created: { rebook, review, … }, emailed, emailFailed, emailWaiting, emailConfigured }` |
+| GET | `/v1/crm/follow-ups/settings` | `{ settings, defaults, updatedAt, placeholders, services: [{ id, name, level }], fallbackReviewUrl, email: { configured } }` |
+| PUT | `/v1/crm/follow-ups/settings` | The whole settings object, validated (422 lists every problem, including unknown `{placeholders}`) |
+| GET | `/v1/crm/follow-ups/:id` | One follow-up |
+| PATCH | `/v1/crm/follow-ups/:id` | Edit an open one: `message`, `subject`, `title`, `dueDate`, `channel` (choosing `text` or `call` takes it out of the email queue) |
+| POST | `/v1/crm/follow-ups/:id/texted` | "I texted them": done, and the message goes on their timeline as a text |
+| POST | `/v1/crm/follow-ups/:id/done` | `{ how?: 'text' \| 'call' \| 'email' }`; `how` logs that on their timeline |
+| POST | `/v1/crm/follow-ups/:id/skip` | Not doing this one |
+| POST | `/v1/crm/follow-ups/:id/snooze` | `{ days: 1–90 }` or `{ until: 'YYYY-MM-DD' }` |
+| POST | `/v1/crm/follow-ups/:id/reopen` | Undo done or skip (not for sent emails) |
+| GET | `/v1/crm/public/unsubscribe/:token` | Public. `{ firstName, email (masked), unsubscribed }` for the unsubscribe page |
+| POST | `/v1/crm/public/unsubscribe/:token` | Public. Unsubscribes from email (`email_ok = 0`, logged). Also the RFC 8058 one-click target of the `List-Unsubscribe` header: any body, no session |
+| POST | `/v1/crm/public/unsubscribe/:token/undo` | Public. Subscribes them again |
+
+**Follow-up shape**: `id`, `kind` (`review` = first thank-you with the review
+ask, `thank_you`, `reminder`, `rebook`, `winback`, `quote_chase`, `custom`),
+`status` (`open`, `done`, `skipped`, `sent`), `channel` (`text`, `email`,
+`call`), `title` (the why: "Due for a Level I: last one June 12"), `message`
+(ready to send), `subject`, `dueDate`, `customer { id, name, phone, email,
+emailOk, textOk }` (or null), `leadId`, `jobId`, `email` (`{ state: queued |
+sending | sent | failed, note, sentAt }` for automatic email, else null),
+`auto` (made by a rule), `createdAt`, `updatedAt`, `doneAt`.
+
+**Texts are never sent by the server.** For a `text` follow-up, open the
+Messages composer with `message` filled in, then call `/texted`. Emails go
+automatically only when Resend is set up, the rule allows it and the customer
+hasn't unsubscribed; otherwise the follow-up stays open as a text.
+
+### CRM: marketing
+
+Campaigns to a segment by email or text list, tracking links, the referral
+program, review asks and the "find more leads" playbook. Owner-only, all under
+`/v1/crm/campaigns` (`api/src/crm-campaigns.ts`). See `docs/crm.md`. Money is
+in cents.
+
+| Method | Path | What |
+| --- | --- | --- |
+| GET | `/v1/crm/campaigns` | `{ campaigns, emailReady }`, newest first. `emailReady` is false until `RESEND_API_KEY` is set |
+| GET | `/v1/crm/campaigns/templates` | `{ templates: [{ id, name, why, months, channel, subject, email, text, segment }], placeholders }`. Ids: `spring-boats`, `winter-salt`, `holiday-gift`, `miss-you`, `ceramic-upsell`, `referral`. `months` (1–12, Central) are when it fits |
+| POST | `/v1/crm/campaigns` | A new draft (201): `{ template, channel? }`, or `{ name, segment, channel: 'email' \| 'text', subject?, body }`. `segment` is the one `GET /v1/crm/customers` takes; without `limit` it means everyone who matches (up to 2,000) |
+| POST | `/v1/crm/campaigns/preview` | Nothing saved. `{ segment, channel, subject, body, name?, sampleId? }` → `{ count, canEmail, canText, people (first 100: id, name, canEmail, canText, visits, spend, lastVisit), sample: { id, name, subject, body } \| null, unknown }`. `unknown` lists placeholders that won't be filled |
+| GET | `/v1/crm/campaigns/:id` | One campaign |
+| PATCH | `/v1/crm/campaigns/:id` | Drafts only (409 after it starts): `name`, `segment`, `channel`, `subject`, `body` |
+| DELETE | `/v1/crm/campaigns/:id` | Drafts only (204; 409 after it starts) |
+| POST | `/v1/crm/campaigns/:id/send` | Starts it, then (email) sends the next batch. The first call freezes the list: one `campaign_sends` row per person, `queued`, or `skipped` with why (`no_email`, `unsubscribed`, `no_phone`, `no_texts`). Email sends up to 10 per call (6 on the first), about 3 queries each; **call again while `campaign.stats.queued` > 0**. Returns `{ campaign, batch: { sent, failed, skipped, dailyLimit, emailsLeftToday } \| null }`. Campaigns stop at 90 emails a day (UTC, counting every marketing email) to stay under Resend's free 100; `dailyLimit` says so. 409 `email_not_set_up` without the Resend key. For a text campaign it only makes the list |
+| POST | `/v1/crm/campaigns/:id/retry` | Failed emails go back in the queue |
+| GET | `/v1/crm/campaigns/:id/people` | `{ people: [{ customerId, name, phone, email, status, reason, sentAt, message }] }`, still-to-do first. `message` is the filled-in text for text campaigns |
+| POST | `/v1/crm/campaigns/:id/texted` | Text campaigns: `{ customerId, message?, texted?: false }`. Marks them texted (logs a `text` activity with `message`), or undoes it. The campaign turns `sent` when nobody is left. Returns the campaign |
+| GET | `/v1/crm/campaigns/links` | `{ links, site }`. Link: `{ id, name, channel, source, medium, campaign, url, createdAt, leads, bookings, revenue }`. `leads`: people (quote requests and customers) whose first visit carried the link's `utm_source` and `utm_campaign`; `bookings`: their jobs, not cancelled; `revenue`: their done jobs |
+| POST | `/v1/crm/campaigns/links` | `{ name, channel, source, medium, campaign }` (201). The three tags are lower-cased, spaces become dashes, letters, numbers, `-`, `_`, `.` only. 409 if `source` + `campaign` is already used. `url` is `https://www.kedservice.com/?utm_source=…&utm_medium=…&utm_campaign=…` |
+| PATCH | `/v1/crm/campaigns/links/:id` | `{ name }` |
+| DELETE | `/v1/crm/campaigns/links/:id` | 204 |
+| GET | `/v1/crm/campaigns/settings` | `{ settings: { referrerGets, friendGets, reviewUrl, done }, siteReviewUrl }`. `reviewUrl` null means the website's review link (`siteReviewUrl`, from the Website tab, else the built-in one) |
+| PUT | `/v1/crm/campaigns/settings` | Any of `referrerGets`, `friendGets` (≤ 80; blank restores the default "$20 off …"), `reviewUrl` (http(s) URL or null) |
+| GET | `/v1/crm/campaigns/referrals` | `{ referrerGets, friendGets, leaders: [{ id, name, phone, code, link, referred, becameCustomers, revenue }], linked, saidFriend, site }`. `saidFriend`: customers who picked "a friend" but came without a link |
+| GET | `/v1/crm/campaigns/referrals/:customerId` | `{ id, name, phone, code, link }`, making their code if they had none |
+| GET | `/v1/crm/campaigns/reviews` | `{ reviewUrl, siteReviewUrl, toAsk: [{ jobId, customerId, name, phone, date, service, onToday }], recent: [{ name, at }] }`. `toAsk`: each customer's latest done job in the last 60 days, unless they had a `review_request` in the last year or the job's review follow-up is done. `phone` is null if they don't want texts. `onToday`: an open review follow-up exists |
+| POST | `/v1/crm/campaigns/reviews/asked` | `{ jobId, how?: 'text' \| 'in_person' }`: logs a `review_request` on their timeline |
+| GET | `/v1/crm/campaigns/playbook` | `{ month, zips: [{ zip, town, jobs, customers, revenue, share }], nearbyOpen: [{ zip, town, jobs }], streets: [{ street, zip, town, jobs, customers, last }], channels: [{ source, name, people, recent, booked, state: 'untried' \| 'no-bookings' \| 'working', tryIt, links }], seasons: [{ key, title, text, template?, now }], checklist: [{ key, title, text, every: 'once' \| 'week' \| 'month', doneAt, done }] }`. From done jobs in the last two years. A weekly item counts as done for 7 days, a monthly one for 31 |
+| POST | `/v1/crm/campaigns/playbook/done` | `{ key, done }`: tick or untick a checklist item |
+
+**Campaign shape**: `id`, `name`, `template`, `segment`, `channel`, `subject`,
+`body`, `status` (`draft`, `sending`, `sent`), `createdAt`, `updatedAt`,
+`sentAt` (when it started), `stats: { total, queued, sent, failed, skipped,
+bookings, bookedValue }`. `bookings` counts jobs (not cancelled) booked by
+people on it within 30 days after they got it.
+
+**Placeholders** in `subject` and `body`: `{first}`, `{name}`, `{last
+service}` (their last done package, "The" dropped), `{referral link}`,
+`{quote link}` (`/quote/` with `utm_source=email|text&utm_campaign=<name>`),
+`{you get}` and `{friend gets}` (the referral rewards). Every email gets the
+unsubscribe footer and headers from `sendMarketingEmail`. Texts are never
+sent by the server: open the Messages composer with `message`, then call
+`/texted`.
+
+### CRM: insights
+
+Every number for a period, each with what to do about it, marketing spend by
+channel, and the weekly plain-English note. Owner-only, all under
+`/v1/crm/insights` (`api/src/crm-insights.ts`). See `docs/crm.md`. Money is in
+cents, rates are 0–1, dates are `YYYY-MM-DD` in America/Chicago.
+
+| Method | Path | What |
+| --- | --- | --- |
+| GET | `/v1/crm/insights` | `?from&to` (default the last 90 days, at most 3 years), `compare=0` to skip the previous period. One D1 batch (9 queries). Returns the object below |
+| GET | `/v1/crm/insights/spend` | `?from=YYYY-MM&to=YYYY-MM` → `{ spend: [{ id, month, source, amount, note, createdAt, updatedAt }] }`, newest month first |
+| POST | `/v1/crm/insights/spend` | `{ month: 'YYYY-MM', source, amount, note? }` (201). `source` is one of the CRM sources (`google`, `maps`, `instagram`, `facebook`, `nextdoor`, `referral`, `van`, `repeat`, `other`) |
+| PATCH | `/v1/crm/insights/spend/:id` | Any of `month`, `source`, `amount`, `note` |
+| DELETE | `/v1/crm/insights/spend/:id` | 204 |
+| GET | `/v1/crm/insights/summary` | `?limit=1–20` (5) → `{ summaries, claude }`, newest first. `claude`: whether `ANTHROPIC_API_KEY` is set |
+| POST | `/v1/crm/insights/summary` | "Make one now": writes, stores and emails the note for last week (Monday to Sunday) (201). Under 25 queries |
+
+**Period**: the previous period is the same number of days just before, except
+from the 1st of a month: this month so far compares with the same days last
+month, whole months with the months before, and the year so far with the same
+dates last year.
+
+**GET /v1/crm/insights** returns:
+
+- `period`: `{ from, to, days, compare: { from, to } | null, today }`.
+- `money`: `cur` and `prev` totals (`revenue` from done jobs, `jobs`,
+  `avgTicket`, `workDays`, `perDay`, `hours` (quoted, middle of the range),
+  `perHour`, `addonRate`, `customers`, `cancelled`, `cancelledByCustomer`,
+  `cancelledValue`, `cancelRate`, `online` (source `web`), `phone` (`app`));
+  `books` / `booksPrev` (`hasBooks`, `collected` = all income in the books,
+  `tips`, `expenses`, `advertising`, `profit`); `byMonth` (every month from
+  the first job, zeros filled); `seasonality` (12 calendar months, `avgRevenue`
+  over full months, null until a year of history); `weekdays` (`jobs`,
+  `revenue`, `openDays`, `closed`, `jobsPerDay`, `fill` = jobs ÷ open days ×
+  `maxJobsPerDay`); `services` (`jobs`, `revenue`, `share`, `avgTicket`,
+  `addonJobs`, `addonRate`); `craft` / `craftPrev` (`boats`, `cars`); `sizes`
+  (by vehicle class); `addOns` (`jobs`, `revenue` as quoted, `rate`).
+- `customers`: `total` (1+ done job), `leadsOnly`, `new` / `newPrev` (first
+  done job in the period), `served`, `returning`, `repeat`, `repeatRate`,
+  `back6` / `back12` (`{ base, back, rate }`: second visit within 6/12 months
+  of the first, among those whose first was that long ago), `avgVisits`,
+  `lifetimeValue`, `avgDaysBetween`, `lapsed` (`{ count, atRisk, days: 180 }`,
+  at risk = one visit each at their average ticket), `overdue` (`{ count,
+  value }`: 2+ visits, nothing booked, 1.25× their usual gap), `top` (10 by
+  spend in the period: `id, name, spend, visits, lifetimeSpend,
+  lifetimeVisits, lastVisit, nextVisit, source, zip`), `top20` (`{ count, of,
+  revenue, share }`), `cohorts` (first-visit quarter: `customers, cameBack,
+  rate, avgSpend`).
+- `sources`: per source (`unknown` when not recorded): `leads`,
+  `leadsBooked` (marked booked, or a live job made after the request),
+  `conversion`, `leadsPrev`, `newCustomers`, `newCustomersPrev`, `revenue`
+  (their spend in the period), `customers`, `avgLifetimeSpend`, `repeatRate`,
+  `spend` (marketing spend prorated by day), `costPerLead`,
+  `costPerCustomer`, `newCustomerValue`, `returnOnSpend` (new customers'
+  spend so far ÷ spend). `leads`: totals `{ leads, booked, conversion, prev }`.
+  `referrers`: `{ id, name, referrals, referredRevenue }`.
+- `zips`: `{ zip, town, miles (straight line from 63049), zone, travelFee,
+  customers, repeatRate, avgTicket, lifetimeRevenue, periodJobs,
+  periodRevenue, perHour }`; `towns`; `nearby` (ZIPs within 5 miles of a
+  strong one with at most one customer: `{ zip, town, miles, customers, near,
+  nearMiles }`).
+- `pipeline`: `next30` (`jobs, revenue, hours, openHours, openDays, slots,
+  use` = jobs ÷ slots, `hoursUse`), `emptyDays` (open days in the next 14
+  with nothing booked), `openQuotes` (`count, value, oldestDays`: new or
+  contacted in the last 60 days, nothing booked since), `period` (slots used
+  in the chosen period), `maxJobsPerDay`.
+- `spend`: `{ rows, total, booksAdvertising, notSplit }`.
+- `actions`: up to 8, most dollars first: `{ id, type, title, detail, impact
+  (cents or null), impactNote, target: { tab, label, segment? } }`. `type` is
+  `reviews`, `rebook`, `area`, `pricing`, `schedule`, `channel`, `referral`,
+  `upsell` or `leads`. `target.tab` is an admin tab (`today`, `leads`,
+  `marketing`, `prices`, `insights`); `segment` is the customer filter it's
+  about.
+
+**Summary shape**: `id`, `weekStart`, `weekEnd`, `source` (`claude` or
+`rules`), `model`, `body` (plain text: "How last week went:", "Do these 3
+things this week:" with `- ` lines, "Stop doing this:"), `note` (why it fell
+back to the rules), `inputTokens`, `outputTokens`, `emailed`, `createdBy`
+(`cron` or the owner), `createdAt`. The cron (`runWeekly`, Mondays
+`0 13 * * 1`) makes one a week and emails it to `ALERT_EMAIL`.
 
 ## Screens (v1)
 
