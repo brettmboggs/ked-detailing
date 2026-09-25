@@ -26,11 +26,45 @@ const hero = post.data.hero
   ? heroes[`../../assets/blog/${post.data.hero.split('/').pop()}`]?.default
   : undefined;
 
+const site = Astro.site ?? 'https://www.kedservice.com';
+const url = new URL(`/blog/${post.id}/`, site).href;
+
+// BlogPosting and a breadcrumb trail, so posts can show as articles in search
+// rather than as more pages of the business.
+const schema = [
+  {
+    '@type': 'BlogPosting',
+    '@id': `${url}#post`,
+    headline: post.data.title,
+    description: post.data.description,
+    datePublished: post.data.pubDate.toISOString(),
+    mainEntityOfPage: url,
+    ...(hero ? { image: new URL(hero.src, site).href } : {}),
+    ...(post.data.tags.length ? { keywords: post.data.tags.join(', ') } : {}),
+    author: { '@id': `${site}#business` },
+    publisher: { '@id': `${site}#business` },
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', site).href },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: new URL('/blog/', site).href },
+      { '@type': 'ListItem', position: 3, name: post.data.title, item: url },
+    ],
+  },
+];
+
 const fmt = (d: Date) =>
   d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 ---
 
-<Base title={`${post.data.title} | Knock Em' Down Detailing`} description={post.data.description}>
+<Base
+  title={`${post.data.title} | Knock Em' Down Detailing`}
+  description={post.data.description}
+  ogType="article"
+  ogImage={hero?.src}
+  schema={schema}
+>
   <Header />
 
   <main id="main">

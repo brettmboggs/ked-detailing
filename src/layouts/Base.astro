@@ -16,6 +16,10 @@ interface Props {
   noindex?: boolean;
   /** Send no Referer anywhere, for pages whose URL carries a secret (a pay link). */
   noReferrer?: boolean;
+  /** `article` on blog posts; everything else is a `website`. */
+  ogType?: 'website' | 'article';
+  /** Extra JSON-LD nodes for this page, added to the site-wide @graph. */
+  schema?: Record<string, unknown>[];
 }
 
 const {
@@ -25,6 +29,8 @@ const {
   includeFaq = false,
   noindex: pageNoindex = false,
   noReferrer = false,
+  ogType = 'website',
+  schema: pageSchema = [],
 } = Astro.props;
 
 const hours = await loadHours();
@@ -138,6 +144,7 @@ const schema = {
           },
         ]
       : []),
+    ...pageSchema,
   ],
 };
 ---
@@ -155,7 +162,7 @@ const schema = {
     <meta name="description" content={description} />
     <meta name="theme-color" content="#07080a" />
 
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical.href} />
