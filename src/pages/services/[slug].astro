@@ -1,0 +1,186 @@
+---
+import { fromPrice, formatMoney } from '@ked/pricing';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { areaPages, servicePages, type ServicePage } from '../../data/local-pages';
+import { quoteLive } from '../../data/site';
+import { bookLink } from '../../lib/book';
+import { loadSite } from '../../lib/live-site';
+import { loadPricing } from '../../lib/pricing';
+import { withBase } from '../../lib/url';
+
+/**
+ * One page per service people search for by name: "ceramic coating St.
+ * Louis". Content in src/data/local-pages.ts; the "From" price comes from
+ * Jacob's live pricing, like the home page's.
+ */
+export function getStaticPaths() {
+  return servicePages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props as { page: ServicePage };
+const { business, testimonials } = await loadSite();
+const pricing = quoteLive ? await loadPricing() : null;
+const from = pricing ? fromPrice(pricing, page.serviceId) : null;
+const price = from !== null ? `From ${formatMoney(from)}` : 'Quoted after a look';
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('../../assets/photos/*.jpg', { eager: true });
+const photo = photos[`../../assets/photos/${page.photo}`]?.default;
+const review = page.review ? testimonials.find((t) => t.name === page.review) : undefined;
+const related = page.related.map((s) => servicePages.find((p) => p.slug === s)!).filter(Boolean);
+
+const site = Astro.site ?? 'https://www.kedservice.com';
+const url = new URL(`/services/${page.slug}/`, site).href;
+const schema = [
+  {
+    '@type': 'Service',
+    '@id': `${url}#service`,
+    name: page.headline.join(' ').replace(/[.,]$/, ''),
+    serviceType: page.eyebrow.split(' · ')[0],
+    description: page.description,
+    url,
+    provider: { '@id': `${site}#business` },
+    areaServed: [{ '@type': 'City', name: 'St. Louis' }, ...areaPages.map((a) => ({ '@type': 'City', name: a.name }))],
+    ...(from !== null
+      ? { offers: { '@type': 'Offer', priceCurrency: 'USD', price: (from / 100).toFixed(0), priceSpecification: { '@type': 'PriceSpecification', minPrice: (from / 100).toFixed(0), priceCurrency: 'USD' } } }
+      : {}),
+  },
+  {
+    '@type': 'FAQPage',
+    '@id': `${url}#faq`,
+    mainEntity: page.faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', site).href },
+      { '@type': 'ListItem', position: 2, name: page.eyebrow.split(' · ')[0], item: url },
+    ],
+  },
+];
+---
+
+<Base title={page.title} description={page.description} ogImage={photo?.src} schema={schema}>
+  <Header />
+
+  <main id="main">
+    <article>
+      <header class="relative overflow-hidden bg-ink-950 pt-36 pb-12 lg:pt-44 lg:pb-16">
+        <div class="mx-auto max-w-5xl px-5 sm:px-8">
+          <div class="mb-6 flex items-center gap-4">
+            <span class="h-px w-10 bg-gold-500"></span>
+            <p class="eyebrow">{page.eyebrow}</p>
+          </div>
+          <h1 class="display-lg max-w-4xl text-bone-50">
+            <span class="block">{page.headline[0]}</span>{' '}
+            <span class="block text-gold-500">{page.headline[1]}</span>
+          </h1>
+          <p class="mt-8 max-w-2xl text-lg leading-relaxed text-bone-200">{page.intro}</p>
+
+          <div class="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-ink-800 pt-6">
+            <p class="font-display text-2xl text-bone-50" style="font-variation-settings:'wdth' 92,'wght' 700">{price}</p>
+            <p class="text-sm text-bone-400">{page.duration}</p>
+            <p class="text-sm text-bone-400">At your home or office · {business.rating} stars across {business.reviewCount}+ reviews</p>
+          </div>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a {...bookLink(page.serviceId)} class="btn-gold">Get an instant quote</a>
+            <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+          </div>
+        </div>
+      </header>
+
+      {
+        photo && (
+          <div class="mx-auto max-w-5xl px-5 sm:px-8">
+            <figure class="relative aspect-[16/9] overflow-hidden bg-ink-850">
+              <Image src={photo} alt={page.photoAlt} widths={[800, 1200, 1600]} sizes="(min-width: 1024px) 64rem, 92vw" loading="eager" class="h-full w-full object-cover" />
+            </figure>
+          </div>
+        )
+      }
+
+      <div class="mx-auto max-w-3xl px-5 py-16 sm:px-8 lg:py-20">
+        <div class="prose-ked [&>h2:first-child]:mt-0">
+          {
+            page.sections.map((s) => (
+              <>
+                <h2>{s.heading}</h2>
+                {s.body.map((p) => <p>{p}</p>)}
+                {s.list && (
+                  <ul>
+                    {s.list.map((li) => <li>{li}</li>)}
+                  </ul>
+                )}
+              </>
+            ))
+          }
+        </div>
+
+        {
+          review && (
+            <figure class="mt-14 border-l-2 border-gold-500 pl-6">
+              <blockquote class="text-lg leading-relaxed text-bone-50">“{review.quote}”</blockquote>
+              <figcaption class="mt-4 text-sm text-bone-400">
+                {review.name} · {review.detail} · {review.source}
+              </figcaption>
+            </figure>
+          )
+        }
+
+        <section class="mt-16">
+          <h2 class="display-sm text-bone-50">Questions</h2>
+          <dl class="mt-6 border-t border-ink-800">
+            {
+              page.faqs.map((f) => (
+                <div class="border-b border-ink-800 py-6">
+                  <dt class="font-semibold text-bone-50">{f.q}</dt>
+                  <dd class="mt-2 leading-relaxed text-bone-200">{f.a}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </section>
+
+        <aside class="mt-14 border border-ink-800 bg-ink-900 p-8 lg:p-10">
+          <h2 class="display-sm text-bone-50">Price it in a minute</h2>
+          <p class="mt-3 max-w-lg text-sm leading-relaxed text-bone-400">
+            Pick your vehicle and its condition and the quote updates as you go. Fully mobile across the St. Louis
+            metro: we bring the water, the power and the products.
+          </p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a {...bookLink(page.serviceId)} class="btn-gold">Get an instant quote</a>
+            <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+          </div>
+        </aside>
+
+        <nav aria-label="More" class="mt-14 grid gap-8 border-t border-ink-800 pt-10 sm:grid-cols-2">
+          <div>
+            <h2 class="eyebrow mb-4">Also done at your door</h2>
+            <ul class="space-y-2">
+              {related.map((r) => (
+                <li><a href={withBase(`/services/${r.slug}/`)} class="text-bone-200 underline-offset-4 hover:text-gold-400 hover:underline">{r.eyebrow.split(' · ')[0]}</a></li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 class="eyebrow mb-4">Where Jacob works</h2>
+            <p class="text-sm leading-relaxed text-bone-400">
+              {areaPages.map((a, i) => (
+                <>
+                  {i > 0 && ', '}
+                  <a href={withBase(`/areas/${a.slug}/`)} class="text-bone-200 underline-offset-4 hover:text-gold-400 hover:underline">{a.name}</a>
+                </>
+              ))}{' '}
+              and <a href={withBase('/areas/')} class="text-bone-200 underline-offset-4 hover:text-gold-400 hover:underline">the rest of the metro</a>.
+            </p>
+          </div>
+        </nav>
+      </div>
+    </article>
+  </main>
+
+  <Footer />
+</Base>

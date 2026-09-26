@@ -5,8 +5,13 @@ import { loadPricing } from '../lib/pricing';
 import SitePhoto from './SitePhoto.astro';
 import { quoteLive } from '../data/site';
 import { loadSite } from '../lib/live-site';
+import { withBase } from '../lib/url';
 
 const { alsoAvailable, services } = await loadSite();
+
+// Jacob can rename these, so match loosely to the page that explains them.
+const pageFor = (name: string) =>
+  /ceramic|coating|correction/i.test(name) ? '/services/ceramic-coating/' : /marine|boat/i.test(name) ? '/services/boat-detailing/' : null;
 
 const numeral = (level: string) => level.replace('Level ', '');
 
@@ -192,6 +197,11 @@ const priceText = (level: string) => {
                   <path d="M1 13L13 1M13 1H4M13 1v9" stroke="currentColor" stroke-width="1.75" />
                 </svg>
               </a>
+              {pageFor(a.name) && (
+                <a href={withBase(pageFor(a.name)!)} class="ml-6 text-[0.8rem] text-bone-400 underline underline-offset-4 hover:text-gold-400">
+                  How it works
+                </a>
+              )}
             </div>
           ))
         }

@@ -147,6 +147,15 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   follow the site document Jacob edits. The logo is `public/email/logo.png`.
   Paying an invoice in full emails a receipt (only if it was sent). The
   invoice page prints, or saves as a PDF, as a letterhead invoice.
+- **Local search pages** (2026-09-25): `/services/<slug>/` (ceramic coating,
+  paint correction, interior, boat) and `/areas/` plus a page per town,
+  all from `src/data/local-pages.ts`. Town pages must each carry something
+  of their own (ZIPs, road miles and travel charge from the live pricing
+  via `src/lib/areas.ts`, and a local note) or Google treats them as doorway
+  spam: don't clone a town without writing its note. Linked from the footer
+  and the home page's "also available" cards. Copy only claims what the
+  site already does; product names, warranty terms and prices come from
+  Jacob.
 - **After-care** (2026-09-25, `api/src/care.ts`, `api/src/weather.ts`,
   migration 0018). A cron at 14:15 and 23:15 UTC (about 9am and 6pm) runs:
   - **Rain nudge:** the National Weather Service's free hourly forecast for

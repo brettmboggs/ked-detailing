@@ -3,6 +3,7 @@ import { bookLink } from '../lib/book';
 import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 import { footerNav } from '../data/site';
+import { areaPages, servicePages } from '../data/local-pages';
 import { withBase } from '../lib/url';
 import { loadHours } from '../lib/hours';
 import { loadSite } from '../lib/live-site';
@@ -85,8 +86,30 @@ const year = new Date().getFullYear();
       </div>
     </div>
 
+    <!-- Every service and area page, so each is one click from anywhere. -->
+    <nav aria-label="Services and areas" class="mt-14 grid gap-6 border-t border-ink-800 pt-8 text-xs sm:grid-cols-2">
+      <p class="leading-relaxed text-bone-500">
+        <span class="mr-2 uppercase tracking-[0.18em]">Services</span>
+        {servicePages.map((s, i) => (
+          <>
+            {i > 0 && ' · '}
+            <a href={withBase(`/services/${s.slug}/`)} class="text-bone-400 transition-colors hover:text-gold-400">{s.eyebrow.split(' · ')[0]}</a>
+          </>
+        ))}
+      </p>
+      <p class="leading-relaxed text-bone-500">
+        <a href={withBase('/areas/')} class="mr-2 uppercase tracking-[0.18em] transition-colors hover:text-gold-400">Areas</a>
+        {areaPages.map((a, i) => (
+          <>
+            {i > 0 && ' · '}
+            <a href={withBase(`/areas/${a.slug}/`)} class="text-bone-400 transition-colors hover:text-gold-400">{a.name}</a>
+          </>
+        ))}
+      </p>
+    </nav>
+
     <div
-      class="mt-14 flex flex-col gap-3 border-t border-ink-800 pt-7 text-xs text-bone-500 sm:flex-row sm:items-center sm:justify-between"
+      class="mt-8 flex flex-col gap-3 border-t border-ink-800 pt-7 text-xs text-bone-500 sm:flex-row sm:items-center sm:justify-between"
     >
       <p>© {year} {business.legalName}. All rights reserved.</p>
       <p>

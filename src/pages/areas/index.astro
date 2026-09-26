@@ -1,0 +1,109 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { areaPages, servicePages } from '../../data/local-pages';
+import { quoteLive } from '../../data/site';
+import { areaFacts } from '../../lib/areas';
+import { bookLink } from '../../lib/book';
+import { loadSite } from '../../lib/live-site';
+import { loadPricing } from '../../lib/pricing';
+import { withBase } from '../../lib/url';
+
+/** The service area: every town page, grouped by county, with its drive and travel charge. */
+const { business } = await loadSite();
+const pricing = quoteLive ? await loadPricing() : null;
+const rows = areaPages.map((a) => ({ ...a, facts: areaFacts(a, pricing, business.baseCity) }));
+const counties = [...new Set(rows.map((r) => r.county))];
+const zones = pricing?.travel.zones ?? [];
+
+const site = Astro.site ?? 'https://www.kedservice.com';
+const schema = [
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: new URL('/', site).href },
+      { '@type': 'ListItem', position: 2, name: 'Service area', item: new URL('/areas/', site).href },
+    ],
+  },
+];
+---
+
+<Base
+  title="Service Area: St. Louis & Jefferson County | Knock Em' Down"
+  description={`Mobile detailing across St. Louis, St. Louis County, Jefferson County and St. Charles, from ${business.baseCity}. See the towns, drive times and travel charges.`}
+  schema={schema}
+>
+  <Header />
+
+  <main id="main" class="bg-ink-950">
+    <div class="mx-auto max-w-5xl px-5 pt-36 pb-20 sm:px-8 lg:pt-44">
+      <div class="mb-6 flex items-center gap-4">
+        <span class="h-px w-10 bg-gold-500"></span>
+        <p class="eyebrow">Service area</p>
+      </div>
+      <h1 class="display-lg max-w-4xl text-bone-50">
+        <span class="block">We come</span>{' '}
+        <span class="block text-gold-500">to you.</span>
+      </h1>
+      <p class="mt-8 max-w-2xl text-lg leading-relaxed text-bone-200">
+        Based in {business.baseCity}, Jacob covers {business.serviceArea}: St. Louis, St. Louis County, Jefferson County and
+        St. Charles County. The van carries its own water and power, so a driveway or a parking spot is all it needs.
+      </p>
+
+      {
+        zones.length > 0 && (
+          <dl class="mt-10 grid gap-x-10 gap-y-4 border-t border-ink-800 pt-6 text-sm sm:grid-cols-3">
+            {zones.map((z) => (
+              <div>
+                <dt class="text-bone-500">{z.label}</dt>
+                <dd class="mt-1 text-bone-50">{z.fee === 0 ? 'No travel charge' : `$${Math.round(z.fee / 100)} travel charge`}</dd>
+              </div>
+            ))}
+          </dl>
+        )
+      }
+
+      {
+        counties.map((county) => (
+          <section class="mt-14">
+            <h2 class="eyebrow mb-3">{county}</h2>
+            <ul class="border-t border-ink-800">
+              {rows
+                .filter((r) => r.county === county)
+                .map((r) => (
+                  <li class="border-b border-ink-800">
+                    <a href={withBase(`/areas/${r.slug}/`)} class="group flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-4">
+                      <span class="text-lg text-bone-50 group-hover:text-gold-400">{r.name}</span>
+                      <span class="text-sm text-bone-400">
+                        {r.facts.driveText} · {r.facts.feeText}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))
+      }
+
+      <p class="mt-12 max-w-2xl leading-relaxed text-bone-400">
+        Not listed? The instant quote checks any ZIP in the metro and shows the travel charge before you book.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a {...bookLink()} class="btn-gold">Get an instant quote</a>
+        <a href={business.phoneHref} class="btn-ghost">{business.phone}</a>
+      </div>
+
+      <nav aria-label="Services" class="mt-16 border-t border-ink-800 pt-10">
+        <h2 class="eyebrow mb-4">Services</h2>
+        <ul class="flex flex-wrap gap-x-8 gap-y-2">
+          {servicePages.map((s) => (
+            <li><a href={withBase(`/services/${s.slug}/`)} class="text-bone-200 underline-offset-4 hover:text-gold-400 hover:underline">{s.eyebrow.split(' · ')[0]}</a></li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
