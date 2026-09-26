@@ -40,6 +40,8 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
 | API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations through 0017 |
 | iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. On TestFlight, and matches the web admin as of 2026-09-25 (books, invoices, inventory, CRM, marketing, insights, website editor, add-ons, drive time, after-care). Brett's Mac is only needed for Apple builds: from here, clone it to `../ked-app`, run `npm run sync:shared` after changing `packages/`, commit and push |
+| Backups | private repo `brettmboggs/ked-backups` | Sundays 08:00 UTC, GitHub copies the database and KV photos, each file encrypted to `lock.pem`. Only Brett's key (`~/.config/ked-backup/backup-key.pem`, and his password manager) opens them. Restore steps in its README. Needs the repo secret `CLOUDFLARE_API_TOKEN` (D1 Edit, KV Read) |
+| Tests on push | `.github/workflows/test.yml` | Type check plus every workspace's tests on each push and PR |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
 ### Backend: what's built (all tested)
