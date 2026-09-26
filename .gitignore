@@ -29,3 +29,4 @@ tools/feed/
 tools/curated/
 __pycache__/
 *.pyc
+tools/stickers/

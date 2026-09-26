@@ -80,6 +80,7 @@ import {
 } from './notify.ts';
 import { ApiError, countingDb, json, list, text, type Bindings } from './lib.ts';
 import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } from './photos.ts';
+import { printFileResponse, uploadPrintFile } from './print-files.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import { currentSite, saveSite, sitePhotoResponse, uploadSitePhoto } from './site.ts';
 import { campaigns, runCampaigns } from './crm-campaigns.ts';
@@ -148,6 +149,8 @@ app.get('/site', async (c) => {
   return c.json(await currentSite(c.env.DB));
 });
 app.get('/site/photos/:id', async (c) => sitePhotoResponse(c.env, c.req.param('id')));
+// Sticker sheet artwork for the print shop to fetch. Unguessable, gone in a week.
+app.get('/print-files/:name', async (c) => printFileResponse(c.env, c.req.param('name')));
 
 /** Alerts run after the response, so a slow push never holds up the customer. */
 const later = (c: { executionCtx: { waitUntil(p: Promise<unknown>): void } }, work: Promise<unknown>) =>
@@ -287,6 +290,7 @@ app.put('/site', requireOwner, async (c) => {
 });
 // Raw image body, like /photos. Not public until a PUT /site uses it.
 app.post('/site/photos', requireOwner, async (c) => c.json(await uploadSitePhoto(c.env, c.req.raw), 201));
+app.post('/print-files', requireOwner, async (c) => c.json(await uploadPrintFile(c.env, c.req.raw), 201));
 
 app.get('/jobs', requireOwner, async (c) => c.json({ jobs: await listJobs(c.env.DB, c.req.query('from'), c.req.query('to')) }));
 app.post('/jobs', requireOwner, async (c) => c.json(await createJob(c.env.DB, await json(c.req.raw)), 201));

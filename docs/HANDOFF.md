@@ -165,7 +165,15 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
     `/car/?t=`), linked by scanning in the app. Codes are 4 to 16 letters or
     digits; use random ones so nobody can walk the list.
     `node tools/sticker-codes.mjs 250` makes a CSV of codes and URLs for a
-    printer that does numbered/variable QR labels.
+    printer that does numbered/variable QR labels. Or Printful:
+    `node tools/sticker-order.mjs 250` lays them out five to a kiss-cut
+    sticker sheet (product 505, about $5 a sheet) in `tools/stickers/`
+    (gitignored) to look at; add `--draft --ship-to=ship.json` with
+    `PRINTFUL_TOKEN` (Jacob's) and `KED_TOKEN` to put a **draft** order in
+    his Printful account. He confirms and pays there; the tool never does.
+    Printful fetches art by URL, so the sheets are hosted at unguessable
+    `/v1/print-files/<id>.png` addresses in KV that expire after a week
+    (`api/src/print-files.ts`).
 - **Add-ons found at the car** (2026-09-25): on a job, Jacob offers a fix
   from his price list or his own ("pet hair, $40") with a note and a photo,
   then texts the customer a link (`/approve/?a=<token>`,
@@ -213,7 +221,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (16),
-  scheduling (15), books (18) and API (125), import (9). The API tests
+  scheduling (15), books (18) and API (127), import (9). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account

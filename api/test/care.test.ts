@@ -108,7 +108,7 @@ test('rain during a job puts a text on the list, once, and takes it off when it 
   await call('POST', '/care/run');
 });
 
-test('the done page shows the job's own photos, and the thank-you carries it', async () => {
+test("the done page shows the job's own photos, and the thank-you carries it", async () => {
   const j = await job('Photo Phil', '2036-05-04T15:00:00.000Z', { email: 'phil@example.com' });
   await call('PATCH', `/jobs/${j.id}`, { status: 'done', finalPrice: 20000 });
   const before = await upload(`kind=job&jobId=${j.id}&stage=before`);
