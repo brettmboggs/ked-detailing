@@ -39,15 +39,16 @@ export interface QbJournal {
 }
 
 export function readQuickBooksJournal(text: string): QbJournal {
-  const t = readTable(text, (h) => h.includes('account') && h.includes('debit') && h.includes('credit'));
+  const ACCOUNT = ['account', 'account full name', 'account name', 'distribution account', 'split account'].map(norm);
+  const t = readTable(text, (h) => h.some((c) => ACCOUNT.includes(c)) && h.includes('debit') && h.includes('credit'));
   if (!t) return { transactions: [], accounts: [], problems: ["Couldn't find the Account / Debit / Credit header. Is this the Journal report?"] };
   const c = {
-    date: t.col('date'),
+    date: t.col('date', 'transaction date', 'txn date'),
     type: t.col('transaction type', 'type'),
     num: t.col('num', 'no', 'number'),
     name: t.col('name'),
     memo: t.col('memo/description', 'memo', 'description'),
-    account: t.col('account', 'account name', 'split account'),
+    account: t.col('account', 'account full name', 'account name', 'distribution account', 'split account'),
     debit: t.col('debit'),
     credit: t.col('credit'),
     trans: t.col('trans #', 'trans no'),
@@ -82,8 +83,18 @@ export function readQuickBooksJournal(text: string): QbJournal {
     if (first.startsWith('total')) return close();
     const account = cell(row, c.account);
     const dateText = cell(row, c.date);
-    // A new transaction starts wherever a date (or Desktop's Trans #) appears.
-    if (dateText || cell(row, c.trans)) {
+    // A new transaction starts wherever a date (or Desktop's Trans #) appears,
+    // except that the newer layout repeats the date on every line: a line with
+    // the same date, type and number joins a transaction that doesn't balance yet.
+    const continues =
+      current !== null &&
+      current.lines.length > 0 &&
+      current.lines.reduce((s, l) => s + l.amount, 0) !== 0 &&
+      readDate(dateText) === current.date &&
+      cell(row, c.type) === current.type &&
+      cell(row, c.num) === current.num &&
+      !cell(row, c.trans);
+    if ((dateText || cell(row, c.trans)) && !continues) {
       close();
       const date = readDate(dateText);
       if (!date) {

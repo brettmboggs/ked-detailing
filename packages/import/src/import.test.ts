@@ -150,3 +150,53 @@ test('mapped entries merge lines that land in one account, and drop ones that ne
   });
   assert.throws(() => toEntries(j.transactions, {}), /isn't mapped/);
 });
+
+test("Housecall Pro's current job list: long column names, split address, arrival window", () => {
+  const csv = [
+    'Job #,Customer name,Customer mobile number,Customer email,Address,Street,Street 2,City,State,Zip code,Job description,Job status,Job arrival window,Job scheduled start date,Job scheduled end date,Job amount,Job revenue',
+    '1042,Dana Whitfield,(314) 555-0101,dana@example.com,9 Oak St,9 Oak St,,High Ridge,MO,63049,Full detail,Scheduled,,10/02/2026 10:00 AM,10/02/2026 1:00 PM,$225.00,$225.00',
+    '1043,Kit Moss,314-555-0107,,,1 Elm Ct,,Fenton,MO,63026,Wash,Pro canceled,10:00am - 12:00pm,10/05/2026,,$80.00,$0.00',
+  ].join('\n');
+  const r = readHcpJobs(csv, TZ);
+  assert.deepEqual(r.problems, []);
+  assert.equal(r.items[0]!.start, '2026-10-02T15:00:00.000Z');
+  assert.equal(r.items[0]!.end, '2026-10-02T18:00:00.000Z');
+  assert.equal(r.items[0]!.address, '9 Oak St, High Ridge, MO 63049', 'city and ZIP kept when "Address" is only the street');
+  assert.equal(r.items[0]!.customer.phone, '(314) 555-0101');
+  assert.equal(r.items[0]!.total, 22500);
+  assert.equal(r.items[1]!.start, '2026-10-05T15:00:00.000Z', 'time from the arrival window');
+  assert.equal(r.items[1]!.status, 'cancelled');
+});
+
+test("Housecall Pro's older export: Date / End Time / Invoice Number, Street Line 2", () => {
+  const csv = [
+    'Invoice Number,Date,End Time,Customer,Mobile Phone,Home Phone,Street,Street Line 2,City,State,Zip,Description,Amount,Job Status',
+    '1042-1,10/02/2026 10:00 AM,10/02/2026 1:00 PM,Dana Whitfield,,(314) 555-0101,9 Oak St,Apt 2,High Ridge,MO,63049,Full detail,$225.00,Done',
+  ].join('\n');
+  const [job] = readHcpJobs(csv, TZ).items;
+  assert.equal(job!.ref, '1042-1');
+  assert.equal(job!.end, '2026-10-02T18:00:00.000Z');
+  assert.equal(job!.address, '9 Oak St Apt 2, High Ridge, MO 63049');
+  assert.equal(job!.customer.phone, '(314) 555-0101', 'home phone when there is no mobile');
+});
+
+test("QuickBooks' newer journal layout: renamed columns, and the date on every line", () => {
+  const csv = [
+    'Journal',
+    'Knock Em Down Auto & Marine Detailing',
+    'All Dates',
+    '',
+    'Transaction date,Transaction type,Num,Name,Memo/Description,Account full name,Debit,Credit',
+    '01/05/2026,Invoice,1001,Dana Whitfield,Full detail,Accounts Receivable (A/R),$225.00,',
+    '01/05/2026,Invoice,1001,Dana Whitfield,Full detail,Sales of Product Income,,$225.00',
+    '01/05/2026,Expense,,Chemical Guys,Soap,Supplies & Materials,$40.00,',
+    '01/05/2026,Expense,,Chemical Guys,Soap,Merchant Fees,$2.00,',
+    '01/05/2026,Expense,,Chemical Guys,Soap,Business Visa,,$42.00',
+    '01/05/2026,Expense,,Starbucks,,Meals,$5.00,',
+    '01/05/2026,Expense,,Starbucks,,Business Visa,,$5.00',
+    'TOTAL,,,,,,$272.00,$272.00',
+  ].join('\n');
+  const j = readQuickBooksJournal(csv);
+  assert.deepEqual(j.problems, []);
+  assert.deepEqual(j.transactions.map((t) => [t.name, t.lines.length]), [['Dana Whitfield', 2], ['Chemical Guys', 3], ['Starbucks', 2]]);
+});

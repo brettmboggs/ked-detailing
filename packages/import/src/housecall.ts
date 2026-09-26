@@ -39,11 +39,11 @@ const NAME = ['display name', 'customer name', 'name', 'full name', 'customer'];
 const FIRST = ['first name', 'first', 'customer first name'];
 const LAST = ['last name', 'last', 'customer last name'];
 const COMPANY = ['company', 'company name'];
-const PHONE = ['mobile number', 'mobile phone', 'mobile', 'cell phone', 'customer phone', 'customer mobile', 'phone', 'phone number', 'home number', 'home phone', 'work number', 'work phone'];
+const PHONE = ['mobile number', 'mobile phone', 'customer mobile number', 'mobile', 'cell phone', 'customer phone', 'customer mobile', 'phone', 'phone number', 'home number', 'home phone', 'customer home number', 'work number', 'work phone', 'customer work number'];
 const EMAIL = ['email', 'email address', 'customer email', 'emails'];
 const ADDRESS = ['address', 'service address', 'job address', 'customer address', 'full address'];
 const STREET = ['street', 'street 1', 'street address', 'address line 1', 'address 1'];
-const UNIT = ['street 2', 'address line 2', 'address 2', 'unit'];
+const UNIT = ['street 2', 'street line 2', 'address line 2', 'address 2', 'unit'];
 const CITY = ['city'];
 const STATE = ['state', 'region'];
 const ZIP = ['zip', 'zip code', 'postal code', 'zipcode'];
@@ -63,7 +63,9 @@ function personOf(t: Table, row: string[], prefer: { notes?: string[] } = {}): P
   if (!name) return null;
   const street = [t.get(row, ...STREET), t.get(row, ...UNIT)].filter(Boolean).join(' ');
   const cityLine = [t.get(row, ...CITY), [t.get(row, ...STATE), t.get(row, ...ZIP)].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-  const address = t.get(row, ...ADDRESS) || [street, cityLine].filter(Boolean).join(', ');
+  // Split columns win when they carry a city or ZIP: some exports' "Address" is only the street.
+  const composed = [street, cityLine].filter(Boolean).join(', ');
+  const address = cityLine ? composed : t.get(row, ...ADDRESS) || composed;
   const p: Person = { name };
   const phone = t.get(row, ...PHONE);
   const email = t.get(row, ...EMAIL).split(/[,;\s]+/)[0];
@@ -94,12 +96,12 @@ export function readHcpCustomers(text: string): Read<Person> {
 }
 
 const REF = ['job number', 'job #', 'job no', 'job id', 'job', 'invoice number', 'invoice #', 'invoice', 'number', 'id'];
-const START = ['scheduled start', 'schedule start', 'scheduled start date', 'scheduled start time', 'start date', 'start', 'scheduled date', 'scheduled for', 'job date', 'date'];
-const START_TIME = ['start time', 'scheduled time', 'arrival window', 'time'];
-const END = ['scheduled end', 'schedule end', 'scheduled end date', 'end date', 'end'];
+const START = ['job scheduled start date', 'scheduled start', 'schedule start', 'scheduled start date', 'scheduled start time', 'start date', 'start', 'scheduled date', 'scheduled for', 'job date', 'date'];
+const START_TIME = ['start time', 'scheduled time', 'job arrival window', 'arrival window', 'window', 'time'];
+const END = ['job scheduled end date', 'scheduled end', 'schedule end', 'scheduled end date', 'end date', 'end time', 'end'];
 const STATUS = ['job status', 'status', 'work status'];
 const TOTAL = ['total amount', 'job total', 'total', 'amount', 'invoice total', 'revenue', 'job amount'];
-const DESCRIPTION = ['description', 'job description', 'line items', 'services', 'service', 'job type', 'title'];
+const DESCRIPTION = ['description', 'job description', 'job name', 'line items', 'services', 'service', 'job type', 'title'];
 const JOB_NOTES = ['notes', 'job notes', 'private notes'];
 
 /** Jobs in the business's zone (HCP exports local wall-clock times). */

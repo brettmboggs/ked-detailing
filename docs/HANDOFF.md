@@ -39,7 +39,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
 | Scheduling (slots, rules, time zones) | `packages/scheduling` | Pure TS |
 | Books (ledger, bank files, rules, reports) | `packages/books` | Pure TS |
 | API (Cloudflare Worker, Hono, D1, KV) | `api/` | Deployed at `https://ked-api.ked-api.workers.dev`. Migrations through 0017 |
-| iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. Milestones 1–2 done (shell, Apple sign-in, Quote, Pricing editor, booking screens); Money tab (milestone 3) in progress |
+| iPhone app (Expo) | private repo `brettmboggs/ked-app` | Built by a separate session on Brett's Mac from `docs/mobile-app.md`. On TestFlight, and matches the web admin as of 2026-09-25 (books, invoices, inventory, CRM, marketing, insights, website editor, add-ons, drive time, after-care). Brett's Mac is only needed for Apple builds: from here, clone it to `../ked-app`, run `npm run sync:shared` after changing `packages/`, commit and push |
 | Staging refresh | `tools/stage.sh` (`npm run stage`) | Builds the staging site, commits it into `../brettboggs.dev/public/ked/` and pushes |
 
 ### Backend: what's built (all tested)
@@ -100,8 +100,12 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   land on the calendar. Past ones come in as `history`, which never asks for
   payment or mileage. QuickBooks accounts are matched to ours through a
   `<file>.map.json` it writes with guesses. Everything is keyed to its
-  source, so re-running is safe. Written against the files' likely shape:
-  **check the preview on Jacob's real exports first.** It needs `KED_TOKEN`:
+  source, so re-running is safe. It reads Housecall Pro's current job list
+  (`Job scheduled start date`, `Customer mobile number`, …), its older export
+  (`Date`, `End Time`, `Invoice Number`) and both QuickBooks Journal layouts
+  (subtotal rows, or the newer one with the date on every line and
+  `Transaction date` / `Account full name`), all from the vendors' published
+  column lists. **Still check the preview on Jacob's real exports first.** It needs `KED_TOKEN`:
   set the Worker's `ADMIN_TOKEN` secret for the day, and delete it after.
 - **Web admin:** `kedservice.com/admin` (`src/pages/admin.astro`,
   `src/scripts/admin/`, one file per tab over `core.ts`). Jacob's main tool
@@ -209,7 +213,7 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   command with `source ~/.nvm/nvm.sh && nvm use 22`, and include that in any
   command you hand to Brett.
 - **Tests:** `npm test` at the root runs every workspace: pricing (16),
-  scheduling (15), books (18) and API (125), import (6). The API tests
+  scheduling (15), books (18) and API (125), import (9). The API tests
   (`api/test/run.sh`) start a real local Worker with a throwaway D1 and run
   serially (`--test-concurrency=1`), because the suites share one database.
   New API suites should use their own year or their own account
@@ -316,7 +320,11 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 
 ## What to build next (none of it needs Jacob)
 
-1. Flip `quoteLive` once the prices and hours are in.
+Nothing is queued. Everything left waits on Jacob (above): real prices and
+hours, Stripe, and his exports. Stripe has no account yet, so Tap to Pay
+(which Apple approves per payment provider) waits on it too. When a new
+feature lands here, the app follows it: update `docs/mobile-app.md` and
+give Brett the one-line message for the Mac session.
 
 Deliberately **not** built: payroll. When Jacob hires, he uses a payroll
 service (Gusto or similar), and its totals get recorded in the books.
