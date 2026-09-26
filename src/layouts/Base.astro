@@ -223,7 +223,9 @@ const schema = {
     <script>
       import { initMotion } from '../scripts/motion';
       import { recordVisit } from '../scripts/attribution';
+      import { recordView } from '../scripts/views';
       recordVisit();
+      recordView();
       initMotion();
     </script>
   </body>

@@ -14,6 +14,7 @@ import { renderLeads } from './leads';
 import { renderMarketing } from './marketing';
 import { renderPrices } from './prices';
 import { renderToday } from './today';
+import { renderUsage } from './usage';
 import { renderWebsite } from './website';
 import { API, KEY, h, $, token, remember, api, showError, clearError, showSignIn, selectTab } from './core';
 
@@ -52,11 +53,17 @@ const views: Record<string, () => Promise<void>> = {
   prices: renderPrices,
   hours: renderHours,
   website: renderWebsite,
+  usage: renderUsage,
 };
+
+/** Checks in for the Usage page. Best effort: never gets in the way. */
+const checkIn = (kind: 'open' | 'screen', path?: string) =>
+  void api('/usage', { method: 'POST', body: { client: 'admin', kind, path } }).catch(() => undefined);
 
 async function open(name: string) {
   clearError();
   selectTab(name);
+  checkIn('screen', name);
   const view = $(`[data-view="${name}"]`);
   view.replaceChildren(h('p', { class: 'text-bone-400' }, 'Loading…'));
   try {
@@ -111,6 +118,10 @@ export async function initAdmin() {
   } catch {
     // fine
   }
+  checkIn('open');
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && token) checkIn('open');
+  });
   // A reload stays on the page you were on (the hash holds it; see selectTab).
   const start = location.hash.slice(1);
   await open(Object.hasOwn(views, start) ? start : 'today');

@@ -272,6 +272,9 @@ There are no passwords and no sign-up screen.
 | `GET /v1/tags?customerId=` | owner | `{ tags }` |
 | `DELETE /v1/tags/:code` | owner | Takes a sticker off → `204` |
 | `GET /v1/car/:code`, `GET /v1/coating/:token` | public | A car's page (`/car/`), by sticker or certificate: `{ vehicle, coating, history: [{ date, service }], bookUrl }`. No names or prices: the car may have been sold |
+| `POST /v1/usage` | owner | Check-in for the web admin's Usage page: `{ client: 'app' \| 'admin', kind: 'open' \| 'screen', path?, version? }` → `204`. The app sends `open` on launch and on coming back to the front, and `screen` with the route (ids as `:id`); the server drops repeats within 10 minutes. Best effort, ignore failures |
+| `GET /v1/usage?days=30` | owner | The Usage page: people (last seen, opens), opens per day, top screens, latest events, phones, and site page views |
+| `POST /v1/visit` | public | Page-view beacon from the website: `{ path, owner }` as text/plain. Counted per day and path, nothing about the visitor |
 | `POST /v1/care/run` | owner | Runs the rain check and coating reminders now → `{ weather, coatings }`. They run on their own at about 9am and 6pm |
 | `GET /v1/invoices?status=&jobId=&customerId=` | owner | `{ invoices }`, newest number first. `status`: `draft`, `sent`, `paid`, `void`, or `unpaid` (draft and sent) |
 | `GET /v1/invoices/:id` | owner | One invoice |

@@ -149,6 +149,12 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   follow the site document Jacob edits. The logo is `public/email/logo.png`.
   Paying an invoice in full emails a receipt (only if it was sent). The
   invoice page prints, or saves as a PDF, as a letterhead invoice.
+- **Usage tracking** (2026-09-26, `api/src/usage.ts`, migration 0019):
+  the app and web admin check in on open, on return and per screen
+  (throttled to one per 10 minutes, kept 180 days), with the app's OTA
+  update id in `version`. The website counts page views per day and path
+  with nothing about the visitor; views from a browser signed into the admin
+  count apart. See it in the web admin under Usage.
 - **Local search pages** (2026-09-25): `/services/<slug>/` (ceramic coating,
   paint correction, interior, boat) and `/areas/` plus a page per town,
   all from `src/data/local-pages.ts`. Town pages must each carry something

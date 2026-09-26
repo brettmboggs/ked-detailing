@@ -22,6 +22,7 @@ import {
   voidCoating,
 } from './care.ts';
 import { runWeather } from './weather.ts';
+import { pruneUsage, recordUsage, recordView, usageReport } from './usage.ts';
 import { booksInbox } from './inbox.ts';
 import { availability, createBooking, currentRules, saveRules } from './booking.ts';
 import {
@@ -217,6 +218,11 @@ app.post('/approve/:token/:extraId', async (c) => {
 app.get('/approve/:token/photos/:photoId', async (c) =>
   photoResponse(c.env, await extraPhotoId(c.env.DB, c.req.param('token'), c.req.param('photoId'))),
 );
+// A page view on the public site, sent as a beacon. Counted, never identified.
+app.post('/visit', async (c) => {
+  await recordView(c.env, c.req.raw);
+  return c.body(null, 204);
+});
 // The customer's finished job: photos, invoice, review button. Expires.
 app.get('/done/:token', async (c) => {
   c.header('Cache-Control', 'no-store');
@@ -350,6 +356,15 @@ app.post('/tags', requireOwner, async (c) => {
 app.delete('/tags/:code', requireOwner, async (c) => {
   await unlinkTag(c.env, c.req.param('code'));
   return c.body(null, 204);
+});
+// The app and web admin check in when opened and on each screen.
+app.post('/usage', requireOwner, async (c) => {
+  await recordUsage(c.env, who(c.get('owner')), await json(c.req.raw));
+  return c.body(null, 204);
+});
+app.get('/usage', requireOwner, async (c) => {
+  const days = Number(c.req.query('days') ?? 30);
+  return c.json(await usageReport(c.env, Number.isInteger(days) && days > 0 && days <= 180 ? days : 30));
 });
 // Runs the rain check and coating reminders now, as the twice-daily cron does.
 app.post('/care/run', requireOwner, async (c) => {
@@ -557,7 +572,7 @@ export default {
         : event.cron === HOURLY_CRON
           ? runCampaigns(env)
           : event.cron === CARE_CRON
-            ? Promise.all([runWeather(env), runCoatingReminders(env)])
+            ? Promise.all([runWeather(env), runCoatingReminders(env), pruneUsage(env)])
             : runDaily(env);
     ctx.waitUntil(work.catch((err) => console.error(`cron ${event.cron} failed`, err)));
   },

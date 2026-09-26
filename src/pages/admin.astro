@@ -23,6 +23,7 @@ const groups = [
   { id: 'money', label: 'Money', tabs: [['invoices', 'Invoices'], ['books', 'Books']] },
   { id: 'supplies', label: 'Supplies', tabs: [['inventory', 'Inventory']] },
   { id: 'site', label: 'Website', tabs: [['website', 'Words and photos'], ['prices', 'Prices']] },
+  { id: 'usage', label: 'Usage', tabs: [['usage', 'Usage']] },
 ];
 const groupBtn =
   'whitespace-nowrap border-b-2 border-transparent py-3 font-display text-[0.95rem] uppercase tracking-[0.12em] text-bone-400 transition-colors hover:text-bone-50 ' +
@@ -93,6 +94,7 @@ const tab =
       <section data-view="prices" hidden></section>
       <section data-view="hours" hidden></section>
       <section data-view="website" hidden></section>
+      <section data-view="usage" hidden></section>
 
       <p class="mt-16 text-xs text-bone-500">Something wrong? Text Brett. {business.name}</p>
     </div>
