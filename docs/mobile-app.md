@@ -708,19 +708,23 @@ get recorded in the books as expenses. Contractors are covered: payees with
 It should look like it belongs to the same business as kedservice.com, and
 **not like a component-kit template**.
 
-Tokens (from the website's `src/styles/global.css`):
+Colours: the website's family (near-black, warm bone, one gold), tuned for a
+phone screen rather than copied hex for hex. The printed Championship Gold
+looks flat lit from behind, so the app's is brighter and warmer. The app's
+values live in `src/theme.ts`:
 
-| Token | Hex | Use |
+| Token | Dark | Use |
 | --- | --- | --- |
-| ink-950 | `#0b0b0b` | Background |
-| ink-900 | `#131312` | Raised surfaces |
-| ink-800 | `#1c1c1c` | Hairline dividers |
-| ink-700 | `#2a2927` | Borders |
-| gold-500 | `#c9a961` | The one accent: selection, primary action |
-| gold-400 | `#d8bc7a` | Pressed/hover accent |
-| bone-50 | `#eae6dc` | Primary text |
-| bone-200 | `#c8c4b9` | Secondary text |
-| bone-400 | `#8f8b82` | Muted text |
+| ink-950 | `#0c0c0c` | Background |
+| ink-900 | `#161616` | Raised surfaces |
+| ink-800 | `#262523` | Hairline dividers |
+| ink-700 | `#33312e` | Borders |
+| gold-500 | `#e2bd62` | The one accent: gold text, icons, rules, selection |
+| gold-400 | `#efd08a` | Pressed accent |
+| goldFill | `#e2bd62` | Gold behind dark text: primary buttons, bars |
+| bone-50 | `#f2efe8` | Primary text |
+| bone-200 | `#bdb8ae` | Secondary text |
+| bone-400 | `#8e897f` | Muted text |
 
 Logo and app icons: `tools/brand.mjs` draws every mark from one set of
 points. Never edit its output. The app's `assets/images/icon*.png` are copies of
@@ -729,8 +733,9 @@ and `app-icon-tinted-1024.png` (iOS tinted), and `splash-logo.png` is the KED
 wordmark.
 
 A **light look** (More → Settings) is there for full sun: the same tokens as a
-paper sheet (off-white ground, near-black text, gold darkened to `#94763a` so it
-reads on white). Dark stays the default.
+paper sheet (off-white ground, near-black text). Gold text darkens to `#8a6a1e`
+so it reads on white; `goldFill` stays bright, since it carries dark text.
+Dark stays the default.
 
 Type: **Archivo** (variable, condensed widths, heavy weights, uppercase) for
 headings and numbers, **Inter** for body. Both are on Google Fonts and load with
