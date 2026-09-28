@@ -33,7 +33,7 @@ ked-detailing  (this repo, github.com/brettmboggs/ked-detailing)
 ├── api/                 Cloudflare Worker + D1: the one backend   ← partly built
 └── src/               the website (Astro), incl. /quote
 
-ked-app  (the mobile repo)
+ked-app  (the mobile repo, github.com/brettmboggs/ked-app)
 └── the Expo app. Owns UI only. No business rules of its own.
 ```
 
@@ -177,8 +177,8 @@ means money in and `−` means money out, from the account's point of view.
 > saves. `/quote` posts to `POST /v1/leads` when that env var is set.
 >
 > Sign-in allowlist: `OWNER_EMAILS` / `OWNER_APPLE_SUBS` in `api/wrangler.jsonc`.
-> `APPLE_AUDIENCE` there must match the app's bundle ID. It's currently a
-> placeholder, `com.brettboggs.ked`, so tell this repo the real one.
+> `APPLE_AUDIENCE` there must match the app's bundle ID, `com.brettboggs.ked`
+> (set in ked-app's `app.json`).
 
 **Conventions**
 - Base URL comes from `EXPO_PUBLIC_API_URL`: a `*.workers.dev` URL until
