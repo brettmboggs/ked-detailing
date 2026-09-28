@@ -127,7 +127,7 @@ export function renderEmail(brand: Brand, e: EmailParts): string {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
 
 <tr><td align="center" bgcolor="${ink}" style="background:${ink};padding:30px 24px 26px;border-bottom:3px solid ${gold}">
-<a href="${esc(brand.siteUrl)}" style="text-decoration:none"><img src="${esc(brand.logoUrl)}" width="200" height="113" alt="${esc(brand.name)}" style="display:block;border:0;width:200px;height:auto;color:${paper};font-family:Helvetica,Arial,sans-serif;font-size:20px;font-weight:700"></a>
+<a href="${esc(brand.siteUrl)}" style="text-decoration:none"><img src="${esc(brand.logoUrl)}" width="200" height="40" alt="${esc(brand.name)}" style="display:block;border:0;width:200px;height:auto;color:${paper};font-family:Helvetica,Arial,sans-serif;font-size:20px;font-weight:700"></a>
 </td></tr>
 
 <tr><td bgcolor="${paper}" style="background:${paper};padding:36px 32px 30px;font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:${text}">

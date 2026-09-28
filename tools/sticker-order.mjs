@@ -33,7 +33,8 @@ const draft = args.includes('--draft');
 const INK = '#0b0d11';
 const GOLD = '#e8b14c';
 const BONE = '#f6f7f9';
-const WORDMARK = { left: 0, top: 180, width: 1000, height: 200 };
+/** src/assets/logo.svg's width over its height (see tools/brand.mjs). */
+const LOGO_RATIO = 856.3 / 172;
 
 async function printful(path, init = {}) {
   const token = process.env.PRINTFUL_TOKEN;
@@ -61,10 +62,8 @@ async function sheetSpec() {
 async function sticker(code, w, logo) {
   const pad = Math.round(w * 0.08);
   const panel = w - pad * 2;
-  // Just the wordmark band of src/assets/logo.png (1000×562): the car and the
-  // "mobile detailing service" line don't read at sticker size.
-  const logoW = Math.round(w * 0.8);
-  const logoH = Math.round((logoW * WORDMARK.height) / WORDMARK.width);
+  const logoW = Math.round(w * 0.7);
+  const logoH = Math.round(logoW / LOGO_RATIO);
   const logoY = Math.round(w * 0.04);
   const ruleY = logoY + logoH + Math.round(w * 0.03);
   const qrY = ruleY + Math.round(w * 0.04);
@@ -73,7 +72,7 @@ async function sticker(code, w, logo) {
   const h = codeY + Math.round(w * 0.05);
   const qr = await QRCode.toString(`${SITE}/c/${code}`, { type: 'svg', errorCorrectionLevel: 'Q', margin: 2, color: { dark: INK, light: '#ffffff' } });
   const qrInner = qr.replace(/^[\s\S]*?<svg[^>]*viewBox="([^"]+)"[^>]*>/, (_, vb) => `<svg x="${pad}" y="${qrY}" width="${panel}" height="${panel}" viewBox="${vb}" shape-rendering="crispEdges">`);
-  const logoPng = (await sharp(logo).extract(WORDMARK).resize(logoW, logoH).png().toBuffer()).toString('base64');
+  const logoPng = (await sharp(logo, { density: 600 }).resize(logoW, logoH).png().toBuffer()).toString('base64');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
   <rect width="${w}" height="${h}" rx="${Math.round(w * 0.01)}" fill="${INK}"/>
   <image href="data:image/png;base64,${logoPng}" x="${(w - logoW) / 2}" y="${logoY}" width="${logoW}" height="${logoH}"/>
@@ -121,7 +120,7 @@ async function host(png) {
 }
 
 const spec = await sheetSpec();
-const logo = readFileSync(join(ROOT, 'src/assets/logo.png'));
+const logo = readFileSync(join(ROOT, 'src/assets/logo.svg'));
 const codes = makeCodes(count);
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
 const out = join(ROOT, 'tools/stickers', stamp);

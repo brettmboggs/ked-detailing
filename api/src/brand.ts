@@ -25,7 +25,7 @@ export interface Brand {
   instagram: string | null;
   facebook: string | null;
   siteUrl: string;
-  /** White logo on transparent, 400×225. Sits on `colors.ink`. */
+  /** KED logo (bone and gold) on transparent, 400×80. Sits on `colors.ink`. */
   logoUrl: string;
   colors: { ink: string; gold: string; bone: string; paper: string; text: string; muted: string };
 }

@@ -1,7 +1,6 @@
 ---
 import { bookLink } from '../lib/book';
-import { Image } from 'astro:assets';
-import logo from '../assets/logo.png';
+import logo from '../assets/logo.svg';
 import { nav } from '../data/site';
 import { withBase } from '../lib/url';
 import { loadSite } from '../lib/live-site';
@@ -20,14 +19,7 @@ const { business } = await loadSite();
 >
   <div class="mx-auto flex max-w-[105rem] items-center justify-between gap-6 px-5 py-4 sm:px-8 lg:py-5">
     <a href={withBase("/")} class="shrink-0" aria-label={`${business.name} — home`}>
-      <Image
-        src={logo}
-        alt={business.name}
-        widths={[180, 360]}
-        sizes="160px"
-        class="h-10 w-auto lg:h-12"
-        loading="eager"
-      />
+      <img src={logo.src} alt={business.name} width={logo.width} height={logo.height} class="h-8 w-auto lg:h-10" />
     </a>
 
     <nav aria-label="Primary" class="hidden items-center gap-6 lg:flex xl:gap-9">

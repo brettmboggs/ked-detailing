@@ -1,7 +1,6 @@
 ---
 import { bookLink } from '../lib/book';
-import { Image } from 'astro:assets';
-import logo from '../assets/logo.png';
+import logo from '../assets/logo.svg';
 import { footerNav } from '../data/site';
 import { areaPages, servicePages } from '../data/local-pages';
 import { withBase } from '../lib/url';
@@ -19,7 +18,7 @@ const year = new Date().getFullYear();
   <div class="mx-auto max-w-[105rem] px-5 py-16 sm:px-8 lg:py-20">
     <div class="grid gap-12 lg:grid-cols-12">
       <div class="lg:col-span-5">
-        <Image src={logo} alt={business.name} widths={[220, 440]} sizes="200px" class="h-14 w-auto" />
+        <img src={logo.src} alt={business.name} width={logo.width} height={logo.height} loading="lazy" class="h-9 w-auto" />
         <p class="mt-6 max-w-sm text-sm leading-relaxed text-bone-500">
           Mobile auto and marine detailing across {business.serviceArea}, based in {business.baseCity}.
           We come to your home or office. {hours.line}.
