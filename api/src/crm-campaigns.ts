@@ -495,10 +495,15 @@ interface LinkRow {
   leads?: number;
   bookings?: number;
   revenue?: number;
+  visits?: number;
+  visits_week?: number;
+  last_visit?: string | null;
 }
 
+// A link made before campaigns were required (the printed QR card) has no campaign tag.
 const linkUrl = (env: Bindings, r: LinkRow) =>
-  `${site(env)}/?utm_source=${encodeURIComponent(r.utm_source)}&utm_medium=${encodeURIComponent(r.utm_medium)}&utm_campaign=${encodeURIComponent(r.utm_campaign)}`;
+  `${site(env)}/?utm_source=${encodeURIComponent(r.utm_source)}&utm_medium=${encodeURIComponent(r.utm_medium)}` +
+  (r.utm_campaign ? `&utm_campaign=${encodeURIComponent(r.utm_campaign)}` : '');
 
 const toLink = (env: Bindings, r: LinkRow) => ({
   id: r.id,
@@ -512,6 +517,9 @@ const toLink = (env: Bindings, r: LinkRow) => ({
   leads: Number(r.leads ?? 0),
   bookings: Number(r.bookings ?? 0),
   revenue: Number(r.revenue ?? 0),
+  visits: Number(r.visits ?? 0),
+  visitsWeek: Number(r.visits_week ?? 0),
+  lastVisit: r.last_visit ?? null,
 });
 
 const tag = (v: unknown, field: string) => {
@@ -522,28 +530,35 @@ const tag = (v: unknown, field: string) => {
 
 /**
  * People and jobs each link brought: leads and customers whose first visit
- * carried the link's utm_source and utm_campaign. One query.
+ * carried the link's utm_source and utm_campaign (a missing campaign matches a
+ * link with none). Plus visits, from link_visits. One query; ?1 is the first
+ * day of "this week" (the last 7 days).
  */
 const LINKS_SQL = `
   WITH m AS (
     SELECT t.id AS link_id, c.id AS person FROM tracked_links t
     JOIN customers c ON c.attribution IS NOT NULL
       AND lower(json_extract(c.attribution, '$.utmSource')) = t.utm_source
-      AND lower(json_extract(c.attribution, '$.utmCampaign')) = t.utm_campaign
+      AND lower(COALESCE(json_extract(c.attribution, '$.utmCampaign'), '')) = t.utm_campaign
     UNION
     SELECT t.id, COALESCE(l.customer_id, 'lead:' || l.id) FROM tracked_links t
     JOIN leads l ON l.attribution IS NOT NULL
       AND lower(json_extract(l.attribution, '$.utmSource')) = t.utm_source
-      AND lower(json_extract(l.attribution, '$.utmCampaign')) = t.utm_campaign
+      AND lower(COALESCE(json_extract(l.attribution, '$.utmCampaign'), '')) = t.utm_campaign
   )
   SELECT t.*,
     (SELECT COUNT(*) FROM m WHERE m.link_id = t.id) AS leads,
     (SELECT COUNT(*) FROM jobs j WHERE j.status != 'cancelled' AND j.customer_id IN (SELECT person FROM m WHERE m.link_id = t.id)) AS bookings,
-    (SELECT COALESCE(SUM(${VALUE}), 0) FROM jobs j WHERE j.status = 'done' AND j.customer_id IN (SELECT person FROM m WHERE m.link_id = t.id)) AS revenue
-  FROM tracked_links t`;
+    (SELECT COALESCE(SUM(${VALUE}), 0) FROM jobs j WHERE j.status = 'done' AND j.customer_id IN (SELECT person FROM m WHERE m.link_id = t.id)) AS revenue,
+    v.visits, v.visits_week, v.last_visit
+  FROM tracked_links t
+  LEFT JOIN (
+    SELECT link_id, SUM(visits) AS visits, SUM(CASE WHEN day >= ?1 THEN visits ELSE 0 END) AS visits_week, MAX(day) AS last_visit
+    FROM link_visits GROUP BY link_id
+  ) v ON v.link_id = t.id`;
 
 campaigns.get('/links', async (c) => {
-  const { results } = await c.env.DB.prepare(`${LINKS_SQL} ORDER BY t.id DESC`).all<LinkRow>();
+  const { results } = await c.env.DB.prepare(`${LINKS_SQL} ORDER BY t.id DESC`).bind(chicagoDate(-6)).all<LinkRow>();
   return c.json({ links: results.map((r) => toLink(c.env, r)), site: site(c.env) });
 });
 
@@ -585,9 +600,33 @@ campaigns.patch('/links/:id', async (c) => {
 });
 
 campaigns.delete('/links/:id', async (c) => {
-  await c.env.DB.prepare('DELETE FROM tracked_links WHERE id = ?').bind(c.req.param('id')).run();
+  const id = c.req.param('id');
+  await c.env.DB.batch([
+    c.env.DB.prepare('DELETE FROM link_visits WHERE link_id = ?').bind(id),
+    c.env.DB.prepare('DELETE FROM tracked_links WHERE id = ?').bind(id),
+  ]);
   return c.body(null, 204);
 });
+
+const visitTag = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase().slice(0, 60) : '');
+
+/**
+ * Public: the website saying someone landed on a tagged link (POST /v1/link-visits).
+ * Counts only tags that belong to one of Jacob's links, so made-up tags can't
+ * fill the table. Always 204, so it never tells a caller which tags exist.
+ */
+export async function countVisit(db: D1Database, body: Record<string, unknown>) {
+  const source = visitTag(body.utmSource);
+  if (!source) return;
+  await db
+    .prepare(
+      `INSERT INTO link_visits (link_id, day, visits)
+       SELECT id, ?1, 1 FROM tracked_links WHERE utm_source = ?2 AND utm_campaign = ?3
+       ON CONFLICT (link_id, day) DO UPDATE SET visits = visits + 1`,
+    )
+    .bind(chicagoDate(), source, visitTag(body.utmCampaign))
+    .run();
+}
 
 /* ------------------------------------------------------------ referrals */
 

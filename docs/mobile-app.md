@@ -206,6 +206,7 @@ There are no passwords and no sign-up screen.
 | `GET /v1/site/photos/:id` | – | A website photo, only while the saved site uses it (else `404`). Cached for a year. The build copies these into the site, so pages never load them from here |
 | `PUT /v1/pricing` | owner | Save a config. The server re-runs `validateConfig` and bumps `version`, and old versions are kept |
 | `POST /v1/leads` | – | Website quote submissions: contact, vehicle, `QuoteInput`, quote snapshot |
+| `POST /v1/link-visits` | – | The website, when someone lands on a tagged link (QR code, bio link): `{ utmSource, utmCampaign }` via `sendBeacon` (`text/plain`), once per browser per link per day. Counts only tags that match a tracking link; always `204` |
 | `GET /v1/leads?status=` | owner | New quote requests |
 | `PATCH /v1/leads/:id` | owner | `status`: `new` → `contacted` → `booked` / `lost` |
 | `POST /v1/availability` | – | `{ input: QuoteInput }` → `{ bookable, reason?, timezone, minutes, quote, days: [{ date, slots: [ISO], nearby? }] }`. With `input.zip`, times allow for the drive from Jacob's other jobs that day, and `nearby` is true when he already has one within about 6 miles. `reason` is customer-facing text when it can't be booked online |
@@ -464,7 +465,7 @@ in cents.
 | POST | `/v1/crm/campaigns/:id/retry` | Failed emails go back in the queue |
 | GET | `/v1/crm/campaigns/:id/people` | `{ people: [{ customerId, name, phone, email, status, reason, sentAt, message }] }`, still-to-do first. `message` is the filled-in text for text campaigns |
 | POST | `/v1/crm/campaigns/:id/texted` | Text campaigns: `{ customerId, message?, texted?: false }`. Marks them texted (logs a `text` activity with `message`), or undoes it. The campaign turns `sent` when nobody is left. Returns the campaign |
-| GET | `/v1/crm/campaigns/links` | `{ links, site }`. Link: `{ id, name, channel, source, medium, campaign, url, createdAt, leads, bookings, revenue }`. `leads`: people (quote requests and customers) whose first visit carried the link's `utm_source` and `utm_campaign`; `bookings`: their jobs, not cancelled; `revenue`: their done jobs |
+| GET | `/v1/crm/campaigns/links` | `{ links, site }`. Link: `{ id, name, channel, source, medium, campaign, url, createdAt, leads, bookings, revenue, visits, visitsWeek, lastVisit }`. `leads`: people (quote requests and customers) whose first visit carried the link's `utm_source` and `utm_campaign` (no campaign tag matches a link whose `campaign` is `""`); `bookings`: their jobs, not cancelled; `revenue`: their done jobs. `visits`: landings on the link, once per browser per day (see `POST /v1/link-visits`); `visitsWeek`: the last 7 days, today included; `lastVisit`: `YYYY-MM-DD` (Chicago) or `null`. One link has an empty `campaign`: the printed "Website QR card", whose `url` then has no `utm_campaign` |
 | POST | `/v1/crm/campaigns/links` | `{ name, channel, source, medium, campaign }` (201). The three tags are lower-cased, spaces become dashes, letters, numbers, `-`, `_`, `.` only. 409 if `source` + `campaign` is already used. `url` is `https://www.kedservice.com/?utm_source=…&utm_medium=…&utm_campaign=…` |
 | PATCH | `/v1/crm/campaigns/links/:id` | `{ name }` |
 | DELETE | `/v1/crm/campaigns/links/:id` | 204 |

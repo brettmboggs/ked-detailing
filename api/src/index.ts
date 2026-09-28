@@ -84,7 +84,7 @@ import { attachReceipt, deletePhoto, jobPhotos, photoResponse, uploadPhoto } fro
 import { printFileResponse, uploadPrintFile } from './print-files.ts';
 import { currentPricing, savePricing } from './pricing.ts';
 import { currentSite, saveSite, sitePhotoResponse, uploadSitePhoto } from './site.ts';
-import { campaigns, runCampaigns } from './crm-campaigns.ts';
+import { campaigns, countVisit, runCampaigns } from './crm-campaigns.ts';
 import { customers as crmCustomers } from './crm-customers.ts';
 import { followups, runDaily } from './crm-followups.ts';
 import { insights, runWeekly } from './crm-insights.ts';
@@ -161,6 +161,19 @@ app.post('/leads', async (c) => {
   const lead = await createLead(c.env.DB, await json(c.req.raw));
   if (lead.quote) later(c, leadMade(c.env, lead.id)); // no quote means the honeypot caught it
   return c.json(lead, 201);
+});
+
+// Someone landed on a tagged link (a QR code, a bio link). Sent with sendBeacon, so
+// the body arrives as text/plain; a bad body is ignored rather than refused.
+app.post('/link-visits', async (c) => {
+  let body: Record<string, unknown> = {};
+  try {
+    body = await json(c.req.raw);
+  } catch {
+    return c.body(null, 204);
+  }
+  await countVisit(c.env.DB, body);
+  return c.body(null, 204);
 });
 
 // Open start times for a job, priced and sized from the customer's answers.

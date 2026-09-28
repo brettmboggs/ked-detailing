@@ -232,9 +232,33 @@ test('tracking links count the leads and bookings they bring', async () => {
   assert.equal(mine.bookings, 1);
   assert.equal(mine.revenue, 20000);
 
+  // Landings count as visits: only for tags that belong to a link, and any body gets a 204.
+  const visit = (body: unknown) =>
+    fetch(`${API}/v1/link-visits`, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: typeof body === 'string' ? body : JSON.stringify(body) });
+  for (const b of [{ utmSource: 'Van', utmCampaign: 'MKTEST-2022' }, { utmSource: 'van', utmCampaign: 'mktest-2022' }, { utmSource: 'nope', utmCampaign: 'x' }, {}, 'not json'])
+    assert.equal((await visit(b)).status, 204);
+  const counted = (await call('GET', '/crm/campaigns/links')).body.links.find((l: any) => l.id === link.body.id);
+  assert.equal(counted.visits, 2);
+  assert.equal(counted.visitsWeek, 2);
+  assert.match(counted.lastVisit, /^\d{4}-\d{2}-\d{2}$/);
+
   const renamed = await call('PATCH', `/crm/campaigns/links/${link.body.id}`, { name: 'Van magnet, driver side' });
   assert.equal(renamed.body.name, 'Van magnet, driver side');
   assert.equal((await call('DELETE', `/crm/campaigns/links/${link.body.id}`)).status, 204);
+});
+
+test('the printed QR card is a link with no campaign, and counts its visits and people', async () => {
+  const card = () => call('GET', '/crm/campaigns/links').then((r) => r.body.links.find((l: any) => l.source === 'qr' && l.campaign === ''));
+  const before = await card();
+  assert.ok(before, 'the migration adds the printed card');
+  assert.equal(before.url, 'https://www.kedservice.com/?utm_source=qr&utm_medium=print');
+  const res = await fetch(`${API}/v1/link-visits`, { method: 'POST', body: JSON.stringify({ utmSource: 'qr' }) });
+  assert.equal(res.status, 204);
+  const attribution = { utmSource: 'qr', utmMedium: 'print' };
+  assert.equal((await call('POST', '/leads', { name: 'Quinn Mkcard', phone: '314-555-8203', input, attribution }, {})).status, 201);
+  const after = await card();
+  assert.equal(after.visits, before.visits + 1);
+  assert.equal(after.leads, before.leads + 1);
 });
 
 test('referrals: settings, each customer link, and the leaderboard', async () => {

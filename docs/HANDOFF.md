@@ -137,7 +137,12 @@ once.** Until then, the header's "Book Now" still points at Housecall Pro, and
   (every metric with a ranked next step, and a Monday note built from the
   numbers by fixed rules; Brett isn't spending AI credits on this project, so
   leave `ANTHROPIC_API_KEY` unset) and Marketing (campaigns, tracking links and QR
-  codes, referrals, reviews, lead playbook). Customer email goes through
+  codes, referrals, reviews, lead playbook). Tracking links also count
+  visits (2026-09-27): the site sends `POST /v1/link-visits` once per browser per
+  link per day when someone lands with `utm_source`, stored as daily counts in
+  `link_visits` (migration 0020, which also saves the printed QR card,
+  `?utm_source=qr&utm_medium=print` with no campaign, as the link "Website QR
+  card"). The iPhone app doesn't show `visits` yet. Customer email goes through
   Resend (`RESEND_API_KEY` set, kedservice.com verified; DMARC `p=none` added 2026-09-25). Crons: daily 14:00 UTC, Monday 13:00 UTC, hourly :30 for
   campaign batches. Migrations through 0016 are applied.
 - **Branding** (2026-09-25): every customer email is branded automatically.

@@ -1,8 +1,9 @@
 /**
  * Marketing → Links & QR codes: a different link for each thing Jacob puts
- * out (van magnet, door hangers, Instagram bio...). The website remembers
- * which link someone first came in on, so each one shows the people and
- * jobs it brought. QR codes are made here in the browser, ready to print.
+ * out (van magnet, door hangers, Instagram bio...). Each link shows how many
+ * visits it got (scans and taps, once per phone per day), and, because the
+ * website remembers which link someone first came in on, the people and jobs
+ * it brought. QR codes are made here in the browser, ready to print.
  */
 import { h, api, input, small, dollars } from './core';
 import { type GoOpts, type MarketingCtx, M, button, confirmButton, copyButton, goldSmall, note, part, plural, quiet } from './marketing-shared';
@@ -20,7 +21,14 @@ interface Link {
   leads: number;
   bookings: number;
   revenue: number;
+  visits: number;
+  visitsWeek: number;
+  lastVisit: string | null;
 }
+
+/** "Sep 27" from a YYYY-MM-DD day. */
+const shortDay = (day: string) =>
+  new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
 
 /** Where a link goes, and the tags that tell the website where people came from. */
 export const PRESETS: { key: string; name: string; source: string; medium: string; tip: string }[] = [
@@ -105,8 +113,10 @@ export async function renderLinks(el: HTMLElement, _ctx: MarketingCtx, opts: GoO
         h(
           'p',
           { class: 'text-sm tabular-nums text-bone-200 sm:text-right' },
-          `${plural(l.leads, 'person', 'people')} · ${plural(l.bookings, 'job')}`,
+          h('span', { class: 'block' }, plural(l.visits, 'visit'), l.visitsWeek ? h('span', { class: 'text-bone-400' }, `, ${l.visitsWeek} this week`) : null),
+          h('span', { class: 'block' }, `${plural(l.leads, 'person', 'people')} · ${plural(l.bookings, 'job')}`),
           l.revenue ? h('span', { class: 'block text-bone-400' }, `${dollars(l.revenue)} of finished work`) : null,
+          l.lastVisit ? h('span', { class: 'block text-xs text-bone-500' }, `Last visit ${shortDay(l.lastVisit)}`) : null,
         ),
       ),
       h(
@@ -182,7 +192,7 @@ export async function renderLinks(el: HTMLElement, _ctx: MarketingCtx, opts: GoO
     h(
       'p',
       { class: 'mb-8 max-w-2xl border-l-2 border-gold-500 pl-4 text-bone-200' },
-      'Use a different link on each thing you put out. When someone visits from it and asks for a price or books, it shows up here, so you can see what is worth your money.',
+      'Use a different link on each thing you put out. Every scan or tap counts as a visit, and when someone who came in on it asks for a price or books, that shows up here too, so you can see what is worth your money.',
     ),
     part(
       'Make a link',
@@ -206,7 +216,7 @@ export async function renderLinks(el: HTMLElement, _ctx: MarketingCtx, opts: GoO
     ),
     part(
       'Your links',
-      'People counts anyone who asked for a price or booked after first coming in on the link. Jobs counts everything they booked since.',
+      'Visits counts each phone that opened the link, once a day. People counts anyone who asked for a price or booked after first coming in on the link. Jobs counts everything they booked since.',
       listEl,
       empty,
     ),
