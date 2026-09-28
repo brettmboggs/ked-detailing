@@ -31,7 +31,7 @@ const inches = Number(flag('size', 1.8));
 const draft = args.includes('--draft');
 
 const INK = '#0b0d11';
-const GOLD = '#e8b14c';
+const GOLD = '#c9a961';
 const BONE = '#f6f7f9';
 /** src/assets/logo.svg's width over its height (see tools/brand.mjs). */
 const LOGO_RATIO = 856.3 / 172;

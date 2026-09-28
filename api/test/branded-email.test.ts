@@ -57,7 +57,7 @@ test('an invoice email is branded, with the pay link as its button', async () =>
   assert.match(m.subject, /^Invoice \d+ from Knock Em' Down Detailing$/);
   assert.ok(m.text.includes(inv.payUrl), 'the plain text keeps the link');
   assert.ok(m.html.includes('/email/logo.png'), 'logo');
-  assert.ok(m.html.includes('#e8b14c'), 'gold');
+  assert.ok(m.html.includes('#c9a961'), 'gold');
   assert.ok(m.html.includes('View your invoice'), 'button');
   assert.equal(m.html.split(inv.payUrl).length - 1, 1, 'the link shows once, as the button');
   assert.ok(m.html.includes('(314) 223-2988'), 'business details in the footer');

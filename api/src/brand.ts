@@ -43,7 +43,7 @@ const DEFAULTS = {
   instagram: 'https://www.instagram.com/knockemdowndetailing/',
   facebook: 'https://www.facebook.com/knockemdowndetailing/',
   // The site's own palette (ink-950, gold-500, bone-50).
-  colors: { ink: '#07080a', gold: '#e8b14c', bone: '#f4f1ea', paper: '#ffffff', text: '#1b1c1f', muted: '#6b6f76' },
+  colors: { ink: '#07080a', gold: '#c9a961', bone: '#f4f1ea', paper: '#ffffff', text: '#1b1c1f', muted: '#6b6f76' },
 };
 
 /** "(314) 223-2988" → "+13142232988". US numbers only, like the site's validator. */

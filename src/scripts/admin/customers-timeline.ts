@@ -63,7 +63,7 @@ export function timelineBlock(
     const verb = kind === 'call' ? ['I called them', 'They called me'] : ['I texted them', 'They texted me'];
     dirRow.replaceChildren(
       ...(['out', 'in'] as const).map((d, i) => {
-        const r = h('input', { type: 'radio', name: `dir-${customerId}`, class: 'size-4 accent-[#e8b14c]', value: d }) as HTMLInputElement;
+        const r = h('input', { type: 'radio', name: `dir-${customerId}`, class: 'size-4 accent-[#c9a961]', value: d }) as HTMLInputElement;
         r.checked = direction === d;
         r.addEventListener('change', () => (direction = d));
         return h('label', { class: 'flex items-center gap-2' }, r, verb[i]!);

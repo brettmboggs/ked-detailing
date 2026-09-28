@@ -179,7 +179,7 @@ export function field(
 }
 
 export function checkbox(label: string, get: () => boolean, set: (v: boolean) => void) {
-  const el = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]' }) as HTMLInputElement;
+  const el = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]' }) as HTMLInputElement;
   el.checked = get();
   el.addEventListener('change', () => set(el.checked));
   return h('label', { class: 'flex items-center gap-2 text-sm text-bone-200' }, el, label);

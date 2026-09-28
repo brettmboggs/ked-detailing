@@ -160,7 +160,7 @@ export async function renderPlaybook(el: HTMLElement, ctx: MarketingCtx) {
     'ul',
     { class: 'border-t border-ink-800' },
     ...p.checklist.map((item) => {
-      const box = h('input', { type: 'checkbox', class: 'mt-1 size-5 shrink-0 accent-[#e8b14c]', 'aria-label': item.title }) as HTMLInputElement;
+      const box = h('input', { type: 'checkbox', class: 'mt-1 size-5 shrink-0 accent-[#c9a961]', 'aria-label': item.title }) as HTMLInputElement;
       box.checked = item.done;
       const when = h('span', { class: 'text-xs uppercase tracking-[0.14em] text-bone-500' });
       const drawWhen = () =>

@@ -274,7 +274,7 @@ function segmentPicker(seg: Segment, svc: { id: string; name: string }[], change
     changed();
   });
 
-  const booked = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]' }) as HTMLInputElement;
+  const booked = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]' }) as HTMLInputElement;
   booked.checked = !!seg.noUpcoming;
   booked.addEventListener('change', () => {
     seg.noUpcoming = booked.checked || undefined;

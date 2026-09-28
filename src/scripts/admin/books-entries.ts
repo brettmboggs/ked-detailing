@@ -55,7 +55,7 @@ export async function renderEntries(host: HTMLElement, ctx: BooksCtx, openId?: s
     filters.kind,
   );
   const search = textInput({ value: filters.q, placeholder: 'Store, note or amount' });
-  const hideBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]', checked: filters.hideVoids }) as HTMLInputElement;
+  const hideBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]', checked: filters.hideVoids }) as HTMLInputElement;
   const list = h('div', { class: 'mt-6' });
   const opened = h('div');
 

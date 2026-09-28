@@ -136,7 +136,7 @@ function moneyOut(books: Books, payees: Payee[], jobs: Job[], ctx: BooksCtx): Ch
   const cat = select(categoryOptions(books, 'expense'), 'supplies');
   const from = select(moneyOptions(books), 'checking');
   const who = payeeField(payees, 'Store or person');
-  const helperBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]' }) as HTMLInputElement;
+  const helperBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]' }) as HTMLInputElement;
   const job = jobSelect(jobs);
   const memo = textInput({ placeholder: 'Anything to remember (optional)' });
   const receipt = receiptField();

@@ -24,7 +24,7 @@ export async function renderBank(host: HTMLElement, ctx: BooksCtx) {
   const accounts = moneyAccounts(ctx.books);
   const account = select(accounts.map((a) => [a.id, a.name]), accounts.some((a) => a.id === 'checking') ? 'checking' : accounts[0]?.id);
   const picker = h('input', { type: 'file', accept: '.qfx,.ofx,.qbo,.csv,text/csv', class: 'sr-only' }) as HTMLInputElement;
-  const invertBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]' }) as HTMLInputElement;
+  const invertBox = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]' }) as HTMLInputElement;
   const invert = h(
     'label',
     { class: 'flex items-start gap-2 text-sm text-bone-200', hidden: true },

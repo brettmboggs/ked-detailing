@@ -716,8 +716,8 @@ Tokens (from the website's `src/styles/global.css`):
 | ink-900 | `#0b0d11` | Raised surfaces |
 | ink-800 | `#171b22` | Hairline dividers |
 | ink-700 | `#232832` | Borders |
-| gold-500 | `#e8b14c` | The one accent: selection, primary action |
-| gold-400 | `#f5c76a` | Pressed/hover accent |
+| gold-500 | `#c9a961` | The one accent: selection, primary action |
+| gold-400 | `#d8bc7a` | Pressed/hover accent |
 | bone-50 | `#f6f7f9` | Primary text |
 | bone-200 | `#d3d7de` | Secondary text |
 | bone-400 | `#8a919e` | Muted text |

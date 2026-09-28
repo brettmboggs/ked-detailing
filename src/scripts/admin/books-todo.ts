@@ -184,7 +184,7 @@ function lineRow(line: BankLine, inbox: Inbox, books: Books, row: HTMLElement, a
     form.hidden = false;
   };
   const remember = () => {
-    const box = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]', checked: true }) as HTMLInputElement;
+    const box = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]', checked: true }) as HTMLInputElement;
     return { box, el: h('label', { class: 'flex items-center gap-2 text-sm text-bone-200' }, box, `Next time, file ${merchant} like this by itself`) };
   };
 

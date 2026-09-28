@@ -68,7 +68,7 @@ function settingsForm(s: BooksSettings, updatedAt: string | null, ctx: BooksCtx)
 
   const threshold = moneyInput(s.contractor1099Threshold);
   const receipt = moneyInput(s.receiptPromptOver);
-  const taxOn = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]', checked: s.salesTax.enabled }) as HTMLInputElement;
+  const taxOn = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]', checked: s.salesTax.enabled }) as HTMLInputElement;
   const taxRate = textInput({ value: String(s.salesTax.rate), inputmode: 'decimal' });
   const rateWrap = labelled('Sales tax rate (%)', taxRate, 'sm:max-w-[12rem]');
   rateWrap.hidden = !taxOn.checked;
@@ -140,7 +140,7 @@ function payeesList(payees: Payee[]) {
             const status = statusLine();
             const kind = select([['vendor', 'Store or company'], ['contractor', 'Helper I pay']], p.kind);
             kind.classList.add('sm:w-48');
-            const w9 = h('input', { type: 'checkbox', class: 'size-4 accent-[#e8b14c]', checked: p.taxFormOnFile }) as HTMLInputElement;
+            const w9 = h('input', { type: 'checkbox', class: 'size-4 accent-[#c9a961]', checked: p.taxFormOnFile }) as HTMLInputElement;
             const w9Label = h('label', { class: 'flex items-center gap-2 text-sm text-bone-200', hidden: p.kind !== 'contractor' }, w9, 'W-9 on file');
             const patch = (body: Record<string, unknown>, said: string) =>
               status.run(null, async () => {
