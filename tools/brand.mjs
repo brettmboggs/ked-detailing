@@ -8,7 +8,7 @@ import sharp from 'sharp';
 
 const BONE = '#EAE6DC';
 const GOLD = '#C9A961';
-const INK = '#07080A';
+const INK = '#0B0B0B';
 
 // Full KED. Top of the letters is y=16, baseline is y=188.
 const KED = {
@@ -46,7 +46,11 @@ function svg(mark, { main, accent, pad = 0, square = false, bg } = {}) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${[x, y, w, h].map((n) => +n.toFixed(1)).join(' ')}">${rect}${body}</svg>\n`;
 }
 
-const png = (s, width, out) => sharp(Buffer.from(s), { density: 600 }).resize({ width }).png().toFile(out);
+/** `opaque` drops the alpha channel, which the App Store refuses in an app icon. */
+const png = (s, width, out, { opaque = false } = {}) => {
+  const img = sharp(Buffer.from(s), { density: 600 }).resize({ width });
+  return (opaque ? img.removeAlpha() : img).png().toFile(out);
+};
 
 /** A .ico holding one PNG, which every current browser reads. */
 async function ico(s, size, out) {
@@ -78,7 +82,16 @@ for (const [name, mark] of [['ked', KED], ['k', K]]) {
 }
 const appIcon = svg(K, { main: BONE, accent: GOLD, pad: 0.55, square: true, bg: INK });
 writeFileSync('brand/app-icon.svg', appIcon);
-await png(appIcon, 1024, 'brand/png/app-icon-1024.png');
+await png(appIcon, 1024, 'brand/png/app-icon-1024.png', { opaque: true });
+// iOS dark and tinted home screens. Dark: no background, iOS lays its own.
+// Tinted: greyscale that iOS colours, the strike a step darker so it still
+// reads as its own piece.
+const appIconDark = svg(K, { main: BONE, accent: GOLD, pad: 0.55, square: true });
+writeFileSync('brand/app-icon-dark.svg', appIconDark);
+await png(appIconDark, 1024, 'brand/png/app-icon-dark-1024.png');
+const appIconTinted = svg(K, { main: '#FFFFFF', accent: '#BDBDBD', pad: 0.55, square: true, bg: '#000000' });
+writeFileSync('brand/app-icon-tinted.svg', appIconTinted);
+await png(appIconTinted, 1024, 'brand/png/app-icon-tinted-1024.png', { opaque: true });
 
 // Website.
 writeFileSync('src/assets/logo.svg', svg(KED, { main: BONE, accent: GOLD }));

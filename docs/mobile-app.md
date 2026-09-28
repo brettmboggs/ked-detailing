@@ -712,18 +712,24 @@ Tokens (from the website's `src/styles/global.css`):
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| ink-950 | `#07080a` | Background |
-| ink-900 | `#0b0d11` | Raised surfaces |
-| ink-800 | `#171b22` | Hairline dividers |
-| ink-700 | `#232832` | Borders |
+| ink-950 | `#0b0b0b` | Background |
+| ink-900 | `#131312` | Raised surfaces |
+| ink-800 | `#1c1c1c` | Hairline dividers |
+| ink-700 | `#2a2927` | Borders |
 | gold-500 | `#c9a961` | The one accent: selection, primary action |
 | gold-400 | `#d8bc7a` | Pressed/hover accent |
-| bone-50 | `#f6f7f9` | Primary text |
-| bone-200 | `#d3d7de` | Secondary text |
-| bone-400 | `#8a919e` | Muted text |
+| bone-50 | `#eae6dc` | Primary text |
+| bone-200 | `#c8c4b9` | Secondary text |
+| bone-400 | `#8f8b82` | Muted text |
+
+Logo and app icons: `tools/brand.mjs` draws every mark from one set of
+points. Never edit its output. The app's `assets/images/icon*.png` are copies of
+`brand/png/app-icon-1024.png`, `app-icon-dark-1024.png` (iOS dark home screen)
+and `app-icon-tinted-1024.png` (iOS tinted), and `splash-logo.png` is the KED
+wordmark.
 
 A **light look** (More → Settings) is there for full sun: the same tokens as a
-paper sheet (off-white ground, near-black text, gold darkened to `#a8740f` so it
+paper sheet (off-white ground, near-black text, gold darkened to `#94763a` so it
 reads on white). Dark stays the default.
 
 Type: **Archivo** (variable, condensed widths, heavy weights, uppercase) for

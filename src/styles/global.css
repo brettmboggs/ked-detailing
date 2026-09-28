@@ -3,13 +3,13 @@
 @import 'tailwindcss' source('..');
 
 @theme {
-  /* Obsidian base — deep automotive black with a cool cast */
-  --color-ink-950: #07080a;
-  --color-ink-900: #0b0d11;
-  --color-ink-850: #111419;
-  --color-ink-800: #171b22;
-  --color-ink-700: #232832;
-  --color-ink-600: #343b48;
+  /* Obsidian and Charcoal from the brand sheet, with warm-neutral steps between */
+  --color-ink-950: #0b0b0b;
+  --color-ink-900: #131312;
+  --color-ink-850: #181817;
+  --color-ink-800: #1c1c1c;
+  --color-ink-700: #2a2927;
+  --color-ink-600: #3a3935;
 
   /* Championship gold — the "knockout" accent */
   --color-gold-400: #d8bc7a;
@@ -20,10 +20,10 @@
   --color-spec-300: #bfe9ff;
   --color-spec-400: #7fd9ff;
 
-  --color-bone-50: #f6f7f9;
-  --color-bone-200: #d3d7de;
-  --color-bone-400: #8a919e;
-  --color-bone-500: #666d7a;
+  --color-bone-50: #eae6dc;
+  --color-bone-200: #c8c4b9;
+  --color-bone-400: #8f8b82;
+  --color-bone-500: #6e6b64;
 
   --font-display: 'Archivo', 'Archivo Fallback', system-ui, sans-serif;
   --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
