@@ -310,15 +310,15 @@ test('the playbook reads his own streets, ZIPs and channels, and remembers ticks
     t.setUTCHours(10, 13, 0, 0);
     return t.toISOString();
   };
-  await doneJob({ customerId: people[2]!.id, address: '12 Mkstreet Road, High Ridge', zip: '63049' }, recent(40));
-  await doneJob({ customerId: people[3]!.id, address: '40 mkstreet rd.', zip: '63049' }, recent(41));
+  await doneJob({ customerId: people[2]!.id, address: '12 Mkstreet Road, Brentwood', zip: '63144' }, recent(40));
+  await doneJob({ customerId: people[3]!.id, address: '40 mkstreet rd.', zip: '63144' }, recent(41));
 
   const r = await call('GET', '/crm/campaigns/playbook');
   assert.equal(r.status, 200);
   assert.ok(r.queries < CAP);
   const street = r.body.streets.find((s: any) => s.street === 'Mkstreet Rd');
-  assert.deepEqual({ jobs: street.jobs, customers: street.customers, zip: street.zip, town: street.town }, { jobs: 2, customers: 2, zip: '63049', town: 'High Ridge' });
-  assert.ok(r.body.zips.some((z: any) => z.zip === '63049'));
+  assert.deepEqual({ jobs: street.jobs, customers: street.customers, zip: street.zip, town: street.town }, { jobs: 2, customers: 2, zip: '63144', town: 'Brentwood' });
+  assert.ok(r.body.zips.some((z: any) => z.zip === '63144'));
   assert.equal(r.body.channels.length, 7);
   assert.ok(r.body.seasons.length >= 1);
   assert.ok(r.body.checklist.length >= 10);

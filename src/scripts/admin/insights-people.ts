@@ -183,7 +183,7 @@ export function whereSection(d: Insights) {
     bits.join(' ') || 'Where your customers are shows here once jobs have ZIP codes.',
     [
       'A customer’s ZIP is the one on their latest job. Customers, came back and average job are all-time; this period is money from finished jobs there in the period.',
-      'Miles are a straight line from High Ridge (63049), so the drive is a bit longer. Per hour divides that ZIP’s money by the hours its quotes expected, before driving.',
+      'Miles are a straight line from Brentwood (63144), so the drive is a bit longer. Per hour divides that ZIP’s money by the hours its quotes expected, before driving.',
       'Close by lists ZIPs within 5 miles of one where at least 3 customers pay your usual price or more, with one customer or none yet.',
     ],
     table(cols, shown, { empty: 'No jobs with a ZIP yet.' }),

@@ -38,7 +38,7 @@ const DEFAULTS = {
   motto: 'Founded on quality, built on service, continued on referrals.',
   phone: '(314) 223-2988',
   email: 'knockemdowndetailing@gmail.com',
-  city: 'High Ridge',
+  city: 'Brentwood',
   region: 'MO',
   instagram: 'https://www.instagram.com/knockemdowndetailing/',
   facebook: 'https://www.facebook.com/knockemdowndetailing/',

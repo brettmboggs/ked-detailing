@@ -39,7 +39,7 @@ Verified against Jacob's public business listings, then confirmed by Brett.
 | --- | --- |
 | Legal name | Knock Em Down Auto & Marine Detailing LLC |
 | Operator | Jacob |
-| Base | High Ridge, MO — **a home address, deliberately not published** |
+| Base | Brentwood, MO (63144) — **a home address, deliberately not published**. Was listed as High Ridge until 2026-09-28 |
 | Service area | Greater St. Louis, St. Charles, Jefferson County |
 | Hours | Seven days a week, per Brett. His Google profile disagrees — see below |
 | Rating | 5.0 across exactly 25 Google reviews, verified 10 Sep 2026 |
@@ -109,7 +109,7 @@ whoever owns the profile:
 - It currently reads **"Closed · Opens 9 AM Fri."** If he works seven days a
   week, the profile is turning people away on the days it says he is shut.
 - **Areas served is set to "Chesterfield and nearby areas"** only. He is based
-  in High Ridge and works the whole metro. Chesterfield is one suburb.
+  in Brentwood and works the whole metro. Chesterfield is one suburb.
 - **Category is only "Car detailing service."** There is a separate boat
   detailing category, and marine work is in his registered name.
 

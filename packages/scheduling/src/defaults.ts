@@ -14,8 +14,8 @@ export const defaultRules: BookingRules = {
   week: [day, day, day, day, day, day, day],
   slotStepMinutes: 60,
   bufferMinutes: 60,
-  // TENANT: home base is High Ridge.
-  travel: { on: true, homeZip: '63049', packUpMinutes: 15 },
+  // TENANT: home base is Brentwood.
+  travel: { on: true, homeZip: '63144', packUpMinutes: 15 },
   maxJobsPerDay: 2,
   minNoticeHours: 24,
   horizonDays: 30,

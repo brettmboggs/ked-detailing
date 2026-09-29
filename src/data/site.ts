@@ -76,7 +76,7 @@ export const business = {
    * Base of operations. Deliberately not published as a street address — it is
    * a home address, and this is a service-area business.
    */
-  baseCity: 'High Ridge',
+  baseCity: 'Brentwood',
   /** Finishes "Mobile auto and marine detailing across …" in the footer. */
   serviceArea: 'the greater St. Louis metro',
   city: 'St. Louis',
@@ -293,7 +293,7 @@ export const faqs: Faq[] = [
   },
   {
     q: 'Which areas do you cover?',
-    a: 'Based in High Ridge and working across the greater St. Louis metro, including St. Charles and Jefferson County. If you are not sure you are in range, call and ask.',
+    a: 'Based in Brentwood and working across the greater St. Louis metro, including St. Charles and Jefferson County. If you are not sure you are in range, call and ask.',
   },
   {
     q: 'How often should a car be detailed?',

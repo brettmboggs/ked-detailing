@@ -176,7 +176,7 @@ test('a year of numbers, each counted the way the notes say', async () => {
   assert.equal(eureka.periodRevenue, 160000);
   assert.equal(eureka.periodJobs, 6);
   assert.equal(eureka.town, 'Eureka');
-  assert.equal(eureka.miles, 6, 'straight line from High Ridge');
+  assert.equal(eureka.miles, 17, 'straight line from Brentwood');
   assert.equal(d.zips.find((z: any) => z.zip === '63088').periodRevenue, 60000);
 
   // Actions: each with a type, the number behind it and somewhere to go, ranked by dollars.

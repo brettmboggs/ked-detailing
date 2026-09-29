@@ -785,7 +785,7 @@ export const CHECKLIST: ChecklistItem[] = [
   { key: 'van', every: 'once', title: 'Letter the van', text: 'Name, phone number and website big enough to read from across a street, plus a QR magnet from Links & QR codes. It works at every job you do.' },
   { key: 'cards', every: 'once', title: 'Leave two cards at every job', text: 'One for them and one to pass on. Put the referral offer on the back so they have a reason to.' },
   { key: 'nextdoor', every: 'month', title: 'Post on Nextdoor', text: 'A before and after in your best ZIPs, and ask happy customers to recommend you there. Neighbors trust neighbors.' },
-  { key: 'facebook-groups', every: 'month', title: 'Post in local Facebook groups', text: 'Town groups for High Ridge, House Springs, Fenton and Arnold. A photo and "I come to you" does better than an ad. Check each group\'s rules first.' },
+  { key: 'facebook-groups', every: 'month', title: 'Post in local Facebook groups', text: 'Town groups for Brentwood, Webster Groves, Kirkwood and Maplewood. A photo and "I come to you" does better than an ad. Check each group\'s rules first.' },
   { key: 'dealers', every: 'once', title: 'Talk to two used car dealers', text: 'Small lots on Gravois and in Fenton need cars cleaned before they sell. Offer a flat price per car. Steady weekday work.' },
   { key: 'marina', every: 'once', title: 'Ask a marina about a boat day', text: 'Alton Marina, Grafton Harbor or a Lake of the Ozarks marina. Offer a spring on-site day: owners book slots, you detail boats right at the dock.' },
   { key: 'apartments', every: 'once', title: 'Pitch an apartment complex', text: 'Ask the office for a monthly on-site day in their lot. Residents book ahead, you do 4 to 6 cars in one trip and never drive between jobs.' },
@@ -810,23 +810,23 @@ const SEASONS: Season[] = [
   { key: 'salt', months: [12, 1, 2, 3], title: 'Salt removal', text: 'Salt eats paint and the underside of cars. After each snow, send a salt wash message to past customers.', template: 'winter-salt' },
 ];
 
-/** Towns around High Ridge, so the playbook can point at nearby ZIPs he hasn't worked yet. */
+/** Towns around Brentwood, so the playbook can point at nearby ZIPs he hasn't worked yet. */
 const NEARBY: Record<string, string> = {
-  '63049': 'High Ridge',
-  '63051': 'House Springs',
-  '63026': 'Fenton',
-  '63010': 'Arnold',
-  '63052': 'Imperial',
-  '63088': 'Valley Park',
-  '63021': 'Ballwin',
-  '63011': 'Ballwin',
-  '63025': 'Eureka',
-  '63129': 'Oakville',
-  '63128': 'Sappington',
-  '63127': 'Sunset Hills',
+  '63144': 'Brentwood',
+  '63117': 'Richmond Heights',
+  '63143': 'Maplewood',
+  '63119': 'Webster Groves',
+  '63124': 'Ladue',
+  '63105': 'Clayton',
   '63122': 'Kirkwood',
+  '63132': 'Olivette',
+  '63139': 'Southampton',
+  '63109': 'St. Louis Hills',
   '63123': 'Affton',
-  '63012': 'Barnhart',
+  '63126': 'Crestwood',
+  '63131': 'Des Peres',
+  '63130': 'University City',
+  '63127': 'Sunset Hills',
 };
 
 interface ChannelAdvice {
@@ -839,7 +839,7 @@ const CHANNELS: ChannelAdvice[] = [
   { source: 'maps', name: 'Google Maps', tryIt: 'Your Google profile is the cheapest customer you will get. Post every week and ask every customer for a review.' },
   { source: 'google', name: 'Google search', tryIt: 'People searching "mobile detailing near me" find your website. Reviews and a full Google profile move you up.' },
   { source: 'instagram', name: 'Instagram', tryIt: 'Post a short before and after video after good jobs, and put your Instagram tracking link in your bio.' },
-  { source: 'facebook', name: 'Facebook', tryIt: 'Post before and afters in town groups (High Ridge, Fenton, Arnold, House Springs) and on your page.' },
+  { source: 'facebook', name: 'Facebook', tryIt: 'Post before and afters in town groups (Brentwood, Webster Groves, Kirkwood, Maplewood) and on your page.' },
   { source: 'nextdoor', name: 'Nextdoor', tryIt: 'A business page is free. Post in your best ZIPs and ask 3 happy customers to recommend you on it.' },
   { source: 'referral', name: 'Referrals', tryIt: 'Send your best customers their referral link, and leave two cards at every job.' },
   { source: 'van', name: 'The van and signs', tryIt: 'Letter the van and add a QR magnet. Door hangers on the street after each job work too.' },

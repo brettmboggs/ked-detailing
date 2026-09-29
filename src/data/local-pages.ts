@@ -269,11 +269,20 @@ export interface AreaPage {
 
 export const areaPages: AreaPage[] = [
   {
+    slug: 'brentwood',
+    name: 'Brentwood',
+    county: 'St. Louis County',
+    zips: ['63144'],
+    note: 'Brentwood is home base. Jacob lives and works here, so it gets the shortest drive, the easiest scheduling and no travel charge.',
+    lead: 'paint-correction',
+    nearby: ['webster-groves', 'kirkwood', 'chesterfield', 'fenton'],
+  },
+  {
     slug: 'high-ridge',
     name: 'High Ridge',
     county: 'Jefferson County',
     zips: ['63049'],
-    note: "High Ridge is home base. Jacob lives and works here, so it gets the shortest drive, the easiest scheduling and no travel charge.",
+    note: 'High Ridge is inside the no-travel-fee area. Bigger lots out here mean trucks and trailers, and the van brings its own water and power, so nothing needs hooking up.',
     lead: 'interior-detailing',
     nearby: ['fenton', 'arnold', 'wildwood', 'imperial'],
   },
@@ -282,7 +291,7 @@ export const areaPages: AreaPage[] = [
     name: 'Fenton',
     county: 'St. Louis County',
     zips: ['63026'],
-    note: 'Fenton is minutes from home base along Highway 141 and I-44, and plenty of Fenton details happen in office and warehouse parking lots while the owner works.',
+    note: 'Fenton is a short run down I-44 from home base, and plenty of Fenton details happen in office and warehouse parking lots while the owner works.',
     lead: 'interior-detailing',
     nearby: ['high-ridge', 'arnold', 'ballwin', 'kirkwood'],
   },
@@ -300,7 +309,7 @@ export const areaPages: AreaPage[] = [
     name: 'Imperial',
     county: 'Jefferson County',
     zips: ['63052'],
-    note: 'Imperial is a short run down I-55 from home base, inside the no-travel-fee area, and a good fit for regular maintenance washes on a schedule.',
+    note: 'Imperial is inside the no-travel-fee area, and a good fit for regular maintenance washes on a schedule.',
     lead: 'interior-detailing',
     nearby: ['arnold', 'festus', 'high-ridge'],
   },
@@ -320,7 +329,7 @@ export const areaPages: AreaPage[] = [
     zips: ['63122'],
     note: "Kirkwood's old trees are lovely until they drop sap, pollen and bird droppings on your paint. A sealant or a ceramic coating makes that wash off instead of etching in.",
     lead: 'ceramic-coating',
-    nearby: ['webster-groves', 'fenton', 'ballwin', 'chesterfield'],
+    nearby: ['brentwood', 'webster-groves', 'fenton', 'ballwin'],
   },
   {
     slug: 'webster-groves',
@@ -329,7 +338,7 @@ export const areaPages: AreaPage[] = [
     zips: ['63119'],
     note: 'Webster Groves has the same tree canopy as its neighbor Kirkwood, and the same sap and pollen season. A single-car driveway is all the van needs.',
     lead: 'paint-correction',
-    nearby: ['kirkwood', 'fenton'],
+    nearby: ['brentwood', 'kirkwood', 'fenton'],
   },
   {
     slug: 'ballwin',

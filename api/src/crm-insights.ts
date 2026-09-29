@@ -29,7 +29,7 @@ const who = (o: Owner) => o.email ?? o.subject;
 /**
  * St. Louis area ZIPs: the town people call it, and a rough centre point, so
  * insights can say "Oakville, about 9 miles" and find the neighbours of a good
- * ZIP. Distances are straight lines from High Ridge (63049), where Jacob is.
+ * ZIP. Distances are straight lines from Brentwood (63144), where Jacob is.
  */
 const ZIPS: Record<string, [string, number, number]> = {
   '63005': ['Chesterfield', 38.64, -90.65], '63010': ['Arnold', 38.43, -90.38], '63011': ['Ballwin', 38.6, -90.56],
@@ -62,7 +62,7 @@ const ZIPS: Record<string, [string, number, number]> = {
   '63304': ['St. Charles', 38.72, -90.62], '63366': ["O'Fallon", 38.8, -90.72], '63367': ['Lake St. Louis', 38.79, -90.78],
   '63368': ["O'Fallon", 38.75, -90.73], '63376': ['St. Peters', 38.78, -90.61],
 };
-const HOME = ZIPS['63049']!;
+const HOME = ZIPS['63144']!;
 
 function milesBetween(a: [string, number, number], b: [string, number, number]) {
   const rad = Math.PI / 180;

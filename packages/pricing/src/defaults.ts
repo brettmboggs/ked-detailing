@@ -218,7 +218,7 @@ export const defaultConfig: PricingConfig = {
   travel: {
     zones: [
       // Placeholder zoning by ZIP prefix. 630/631 covers the city, the county
-      // and Jefferson County around High Ridge (63049).
+      // and Jefferson County, around home in Brentwood (63144).
       { id: 'core', label: 'St. Louis & Jefferson County', zips: ['630', '631'], fee: 0 },
       { id: 'st-charles', label: 'St. Charles County', zips: ['633'], fee: 2500 },
       { id: 'outer', label: 'Outer Missouri', zips: ['636'], fee: 5000 },

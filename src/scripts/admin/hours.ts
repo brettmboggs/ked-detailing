@@ -4,9 +4,9 @@ export async function renderHours() {
   const view = $('[data-view="hours"]');
   const { rules } = await api<{ rules: BookingRules }>('/settings/booking');
   const r: BookingRules = structuredClone(rules);
-  // Rules saved before drive time existed: offer it switched off, with High Ridge filled in.
+  // Rules saved before drive time existed: offer it switched off, with Brentwood filled in.
   // TENANT: home base.
-  r.travel ??= { on: false, homeZip: '63049', packUpMinutes: 15 };
+  r.travel ??= { on: false, homeZip: '63144', packUpMinutes: 15 };
   const t = r.travel;
 
   const dayRow = (i: number) => {

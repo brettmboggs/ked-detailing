@@ -548,7 +548,7 @@ dates last year.
   `costPerCustomer`, `newCustomerValue`, `returnOnSpend` (new customers'
   spend so far ÷ spend). `leads`: totals `{ leads, booked, conversion, prev }`.
   `referrers`: `{ id, name, referrals, referredRevenue }`.
-- `zips`: `{ zip, town, miles (straight line from 63049), zone, travelFee,
+- `zips`: `{ zip, town, miles (straight line from 63144, Brentwood), zone, travelFee,
   customers, repeatRate, avgTicket, lifetimeRevenue, periodJobs,
   periodRevenue, perHour }`; `towns`; `nearby` (ZIPs within 5 miles of a
   strong one with at most one customer: `{ zip, town, miles, customers, near,
