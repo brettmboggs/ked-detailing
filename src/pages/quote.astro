@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { quoteLive } from '../data/site';
+import { bookOnHousecall, quoteLive } from '../data/site';
 import { loadSite } from '../lib/live-site';
 import { withBase } from '../lib/url';
 import { formatHours, formatMoney, fromPrice } from '@ked/pricing';
@@ -22,6 +22,8 @@ import { apiUrl, loadPricing } from '../lib/pricing';
 // Sample prices until the cutover switch in src/data/site.ts goes on.
 const { business } = await loadSite();
 const PLACEHOLDER_PRICING = !quoteLive;
+// Our calendar and booking form, or (until the cutover) Housecall Pro's.
+const ownBooking = !!apiUrl && !bookOnHousecall;
 
 const config = await loadPricing();
 // Handed to the browser script so it prices with exactly what was rendered.
@@ -91,7 +93,7 @@ const input =
     </section>
 
     <div class="mx-auto grid max-w-[105rem] gap-10 px-5 sm:px-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16">
-      <form data-quote class="flex flex-col gap-14" novalidate>
+      <form data-quote data-own-booking={ownBooking ? '' : undefined} class="flex flex-col gap-14" novalidate>
         <fieldset>
           <legend class={heading} style={headingStyle}>What are we detailing?</legend>
           <div class={segments} role="radiogroup" aria-label="What are we detailing?">
@@ -267,7 +269,7 @@ const input =
         </fieldset>
 
         {
-          apiUrl && (
+          ownBooking && (
             <>
               <fieldset id="when" data-when class="scroll-mt-28">
                 <legend class={heading} style={headingStyle}>When</legend>
@@ -368,7 +370,7 @@ const input =
           </p>
 
           {
-            apiUrl && (
+            ownBooking && (
               <p data-chosen hidden class="mt-5 border-t border-ink-800 pt-5 text-sm">
                 <span class="block text-xs uppercase tracking-[0.2em] text-bone-500">Your time</span>
                 <span data-chosen-text class="mt-1 block font-semibold text-bone-50" />
@@ -377,17 +379,17 @@ const input =
           }
 
           <div class="mt-6 flex flex-col gap-3">
-            <a data-sms href={business.phoneHref} class={apiUrl ? 'btn-ghost w-full' : 'btn-gold w-full'}>
-              {apiUrl ? 'Or text Jacob' : 'Text Jacob this quote'}
-            </a>
-            {/* Housecall Pro only when our own calendar isn't connected. */}
+            {/* Housecall Pro when our own calendar is off or not connected. */}
             {
-              !apiUrl && (
-                <a href={business.bookingUrl} target="_blank" rel="noopener" class="text-center text-sm text-bone-400 hover:text-gold-400">
+              !ownBooking && (
+                <a href={business.bookingUrl} target="_blank" rel="noopener" class="btn-gold w-full">
                   Book online
                 </a>
               )
             }
+            <a data-sms href={business.phoneHref} class="btn-ghost w-full">
+              {ownBooking ? 'Or text Jacob' : 'Or text Jacob this quote'}
+            </a>
             <a href={business.phoneHref} class="text-center text-sm text-bone-400 hover:text-gold-400">
               Or call {business.phone}
             </a>
@@ -398,7 +400,7 @@ const input =
 
     <!-- Phones: the running total stays in reach while scrolling the form. -->
     <a
-      href={apiUrl ? '#when' : '#summary'}
+      href={ownBooking ? '#when' : '#summary'}
       data-mobile-bar
       class="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-4 border-t border-ink-700 bg-ink-950/95 px-5 py-4 backdrop-blur-xl lg:hidden"
     >
@@ -406,7 +408,7 @@ const input =
         <span class="block text-xs uppercase tracking-[0.2em] text-bone-500">Estimate</span>
         <span data-bar-range class="font-display text-xl text-bone-50" style="font-variation-settings:'wdth' 80,'wght' 800">—</span>
       </span>
-      <span class="btn-gold !px-5 !py-3">{apiUrl ? 'Pick a time' : 'Next steps'}</span>
+      <span class="btn-gold !px-5 !py-3">{ownBooking ? 'Pick a time' : 'Book online'}</span>
     </a>
   </main>
 
@@ -550,8 +552,8 @@ const input =
   }
 
   // Calendar, details and submit live in their own module; it only runs when
-  // the API is configured, because the markup it drives only exists then.
-  const booking = API ? initBooking({ api: API, form, readInput, phone: PHONE }) : null;
+  // our own booking is on, because the markup it drives only exists then.
+  const booking = API && form.hasAttribute('data-own-booking') ? initBooking({ api: API, form, readInput, phone: PHONE }) : null;
 
   // A package's "Book" button links here with ?service=level-2: start on it.
   const wanted = new URLSearchParams(location.search).get('service');

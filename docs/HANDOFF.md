@@ -13,8 +13,12 @@ instant quotes and bookings, an iPhone app runs his day (schedule, jobs, money,
 inventory), and one Cloudflare backend serves both. Ongoing cost should stay at
 $0 apart from Stripe's per-payment fee. **Nothing customer-facing is switched
 over until the whole system can replace Housecall Pro and QuickBooks at
-once.** Until then, the header's "Book Now" still points at Housecall Pro, and
-`/quote` stays hidden (noindex, out of the sitemap and the nav).
+once.** Until then (since 2026-09-28): every Book button goes to the instant
+quote at `/quote`, and its last step is "Book online" on Jacob's Housecall Pro
+page, so bookings land where he looks (`bookOnHousecall` in
+`src/data/site.ts`; set it to false at the cutover to turn our calendar back
+on). Housecall Pro's booking page has reCAPTCHA, so our server can't forward
+bookings into it; its API needs his plan to include API access.
 
 ## Who's who
 

@@ -61,6 +61,14 @@ export interface NavItem {
  */
 export const quoteLive = true;
 
+/**
+ * Until Jacob works from our app, bookings go to his Housecall Pro page so they
+ * land where he looks. The instant quote stays: it prices the job, then its
+ * last step is "Book online" on Housecall Pro instead of our calendar. Set to
+ * false at the cutover to switch our own booking back on.
+ */
+export const bookOnHousecall = true;
+
 /* --------------------------------------------------------------- business */
 
 // TENANT: everything about the business itself. See docs/multi-tenant.md.
