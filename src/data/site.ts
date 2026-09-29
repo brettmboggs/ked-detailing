@@ -293,7 +293,7 @@ export const faqs: Faq[] = [
   },
   {
     q: 'Which areas do you cover?',
-    a: 'Based in Brentwood and working across the greater St. Louis metro, including St. Charles and Jefferson County. If you are not sure you are in range, call and ask.',
+    a: 'Based in Brentwood and working across St. Louis County: Ladue, Clayton, Frontenac, Town and Country, Chesterfield and the neighborhoods around them. If you are not sure you are in range, call and ask.',
   },
   {
     q: 'How often should a car be detailed?',

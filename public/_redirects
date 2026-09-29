@@ -31,5 +31,22 @@
 /blog/category/*  /blog  301
 /store/p/*  /#services  301
 
+# Town pages retired 2026-09-28 when the area pages moved to the high-end
+# neighborhoods around Brentwood. Send their search traffic to the area index.
+/areas/high-ridge  /areas/  301
+/areas/fenton  /areas/  301
+/areas/arnold  /areas/  301
+/areas/imperial  /areas/  301
+/areas/festus  /areas/  301
+/areas/ballwin  /areas/  301
+/areas/st-charles  /areas/  301
+/areas/high-ridge/  /areas/  301
+/areas/fenton/  /areas/  301
+/areas/arnold/  /areas/  301
+/areas/imperial/  /areas/  301
+/areas/festus/  /areas/  301
+/areas/ballwin/  /areas/  301
+/areas/st-charles/  /areas/  301
+
 # The QR stickers in customers' door jambs: /c/<CODE> is the car's page.
 /c/:code  /car/?t=:code  302

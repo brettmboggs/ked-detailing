@@ -55,7 +55,7 @@ The four levels exist so the process can be matched to the car rather than sold 
 
 ## Where we work
 
-Based in Brentwood, covering the greater St. Louis metro including St. Charles and Jefferson County. Cars, trucks, exotics, classics, boats and trailers.
+Based in Brentwood, covering Ladue, Clayton, Frontenac, Town and Country, Chesterfield and the rest of St. Louis County. Cars, trucks, exotics, classics, boats and trailers.
 
 If you are not sure you are in range, call and ask.
 
