@@ -169,7 +169,7 @@ export const services: Service[] = [
       'UV and contaminant shielding',
     ],
     closer: 'Built for enthusiasts, collectors and long-term protection.',
-    photo: 'porsche-964-red.jpg',
+    photo: 'aventador-doors-up.jpg',
   },
   {
     level: 'Level IV',
@@ -415,8 +415,8 @@ export const gallery: GalleryItem[] = [
 export const recent: GalleryItem[] = [
   { src: 'porsche-badge-foam.jpg', alt: 'Foam sheeting across the Panamera Turbo badge' },
   { src: 'caliper-macro.jpg', alt: 'Yellow brake caliper cleaned behind the spokes of a wheel' },
-  { src: 'golden-hour-flare.jpg', alt: 'Rinsing a white Porsche into low golden-hour sun' },
-  { src: 'ferrari-f12.jpg', alt: 'A white Ferrari F12 and a blue Ferrari at a dealership' },
+  { src: 'aventador-van-wipe.jpg', alt: 'Wiping down a white Lamborghini Aventador, doors up, with the Knock Em Down van behind' },
+  { src: 'aventador-wheel-garage.jpg', alt: 'Low view of a white Lamborghini Aventador’s black wheel and side intake after a detail' },
 ];
 
 /** Clip used for the type-masked band — a separate shot from the hero. */
