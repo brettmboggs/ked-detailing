@@ -25,7 +25,7 @@ export const defaultConfig: PricingConfig = {
       level: 'Level I',
       craft: 'vehicle',
       base: 15000,
-      hours: [2, 3],
+      hours: [0.75, 1.25],
       spread: 0.08,
       // A maintenance wash doesn't do stain or odor work, so they don't price in.
       ignoresConditions: ['stains', 'odor'],
@@ -36,7 +36,7 @@ export const defaultConfig: PricingConfig = {
       level: 'Level II',
       craft: 'vehicle',
       base: 27500,
-      hours: [4, 7],
+      hours: [1.25, 2],
       spread: 0.1,
     },
     {
@@ -45,7 +45,7 @@ export const defaultConfig: PricingConfig = {
       level: 'Level III',
       craft: 'vehicle',
       base: 45000,
-      hours: [8, 14],
+      hours: [2.5, 4],
       spread: 0.12,
     },
     {
@@ -54,7 +54,7 @@ export const defaultConfig: PricingConfig = {
       level: 'Level IV',
       craft: 'vehicle',
       base: 65000,
-      hours: [6, 10],
+      hours: [3.5, 5],
       spread: 0.15,
       // Paint correction. The interior isn't part of the job.
       ignoresConditions: ['pet-hair', 'interior', 'stains', 'odor'],
@@ -65,7 +65,7 @@ export const defaultConfig: PricingConfig = {
       level: '',
       craft: 'vehicle',
       base: 0,
-      hours: [10, 18],
+      hours: [5.5, 7],
       spread: 0,
       inspectionOnly: true,
       ignoresConditions: ['pet-hair', 'interior', 'stains', 'odor'],
@@ -88,8 +88,8 @@ export const defaultConfig: PricingConfig = {
       craft: 'vehicle',
       options: [
         { id: 'none', label: 'No pet hair', add: 0, hours: 0, scalesWithSize: false },
-        { id: 'some', label: 'Some pet hair', add: 4000, hours: 0.5, scalesWithSize: true },
-        { id: 'heavy', label: 'Heavy pet hair', add: 9000, hours: 1.5, scalesWithSize: true },
+        { id: 'some', label: 'Some pet hair', add: 4000, hours: 0.25, scalesWithSize: true },
+        { id: 'heavy', label: 'Heavy pet hair', add: 9000, hours: 0.75, scalesWithSize: true },
       ],
     },
     {
@@ -98,12 +98,12 @@ export const defaultConfig: PricingConfig = {
       craft: 'vehicle',
       options: [
         { id: 'normal', label: 'Normal use', add: 0, hours: 0, scalesWithSize: false },
-        { id: 'heavy', label: 'Heavily soiled interior', add: 6000, hours: 1, scalesWithSize: true },
+        { id: 'heavy', label: 'Heavily soiled interior', add: 6000, hours: 0.5, scalesWithSize: true },
         {
           id: 'extreme',
           label: 'Mold, fluids or spills',
           add: 15000,
-          hours: 2,
+          hours: 1,
           scalesWithSize: true,
           flagsInspection: true,
         },
@@ -115,8 +115,8 @@ export const defaultConfig: PricingConfig = {
       craft: 'vehicle',
       options: [
         { id: 'none', label: 'No stains', add: 0, hours: 0, scalesWithSize: false },
-        { id: 'few', label: 'A few stains', add: 3000, hours: 0.5, scalesWithSize: false },
-        { id: 'many', label: 'Lots of stains', add: 7500, hours: 1, scalesWithSize: true },
+        { id: 'few', label: 'A few stains', add: 3000, hours: 0.25, scalesWithSize: false },
+        { id: 'many', label: 'Lots of stains', add: 7500, hours: 0.5, scalesWithSize: true },
       ],
     },
     {
@@ -125,7 +125,7 @@ export const defaultConfig: PricingConfig = {
       craft: 'vehicle',
       options: [
         { id: 'none', label: 'No odor', add: 0, hours: 0, scalesWithSize: false },
-        { id: 'smoke', label: 'Smoke odor', add: 10000, hours: 1, scalesWithSize: false },
+        { id: 'smoke', label: 'Smoke odor', add: 10000, hours: 0.5, scalesWithSize: false },
       ],
     },
     {
@@ -134,7 +134,7 @@ export const defaultConfig: PricingConfig = {
       craft: 'vehicle',
       options: [
         { id: 'normal', label: 'Normal road dirt', add: 0, hours: 0, scalesWithSize: false },
-        { id: 'heavy', label: 'Mud, sap or heavy bugs', add: 4000, hours: 0.5, scalesWithSize: true },
+        { id: 'heavy', label: 'Mud, sap or heavy bugs', add: 4000, hours: 0.25, scalesWithSize: true },
       ],
     },
     {

@@ -81,7 +81,7 @@ export const servicePages: ServicePage[] = [
         ],
       },
     ],
-    duration: 'Usually 1–2 days, depending on the correction',
+    duration: 'Usually 6–10 hours, depending on the correction',
     faqs: [
       {
         q: 'How long does a ceramic coating last?',
@@ -136,7 +136,7 @@ export const servicePages: ServicePage[] = [
         ],
       },
     ],
-    duration: 'Most of a day; multi-stage work can take two',
+    duration: '4–7 hours; multi-stage work up to about 10',
     review: 'Ian R.',
     faqs: [
       {
@@ -186,7 +186,7 @@ export const servicePages: ServicePage[] = [
         ],
       },
     ],
-    duration: 'Half a day to a full day',
+    duration: '1½–4 hours, depending on condition',
     review: 'Nina Hanser',
     faqs: [
       {

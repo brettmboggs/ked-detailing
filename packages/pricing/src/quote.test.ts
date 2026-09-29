@@ -14,7 +14,7 @@ test('a clean sedan in the core zone is just the base, rounded to a range', () =
   const q = quote(config, { service: 'level-1', vehicleClass: 'sedan', zip: '63049' });
   assert.equal(q.total, 15000);
   assert.deepEqual(q.range, [13500, 16500]); // ±8%, rounded outward to $5
-  assert.deepEqual(q.hours, [2, 3]);
+  assert.deepEqual(q.hours, [1, 1.5]);
   assert.equal(q.travelZone?.id, 'core');
   assert.equal(q.lines.length, 1);
   assert.equal(q.inspection, false);

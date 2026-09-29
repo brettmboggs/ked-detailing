@@ -122,7 +122,7 @@ export const services: Service[] = [
     level: 'Level I',
     name: 'The Tune-Up',
     price: null,
-    duration: '2–3 hours',
+    duration: '1–2 hours',
     summary:
       'The maintenance detail. Keeps a car sharp between deeper services so road grime never gets the chance to set in.',
     includes: [
@@ -139,7 +139,7 @@ export const services: Service[] = [
     level: 'Level II',
     name: 'The Refresh',
     price: null,
-    duration: 'Half day – full day',
+    duration: '1½–3 hours',
     summary:
       'A full reset, inside and out. The paint gets decontaminated and the interior gets stripped back and rebuilt.',
     includes: [
@@ -158,7 +158,7 @@ export const services: Service[] = [
     level: 'Level III',
     name: 'The Knockout',
     price: null,
-    duration: '1–2 days',
+    duration: '3–6 hours',
     summary:
       'Everything in The Refresh, plus the engine bay, deep carpet extraction and a sealant that actually holds.',
     includes: [
@@ -175,7 +175,7 @@ export const services: Service[] = [
     level: 'Level IV',
     name: 'The Revival',
     price: null,
-    duration: 'By quote',
+    duration: '4–7 hours',
     summary:
       'Paint correction. A one-step machine polish that cuts swirls, light scratches and oxidation back out of the clear coat.',
     includes: [
@@ -281,7 +281,7 @@ export const faqs: Faq[] = [
   },
   {
     q: 'How long does a detail take?',
-    a: 'It depends on the package. A Level I Tune-Up runs 2–3 hours. Level II is a half day to a full day. Level III can run 1–2 days depending on correction work and cure times. You get a realistic window up front, not a guess.',
+    a: 'It depends on the package. A Level I Tune-Up runs 1–2 hours. Level II is 1½–3 hours and Level III 3–6, depending on the size of the vehicle and its condition. Paint correction and ceramic coating are the longest jobs, up to about 8–10 hours. You get a realistic window up front, not a guess.',
   },
   {
     q: 'Will you work on exotics, classics and collector cars?',

@@ -36,7 +36,7 @@ async function emptyDay() {
 test('open times allow for the drive from the job before, and say when Jacob is nearby', async () => {
   assert.equal((await call('PUT', '/settings/booking', defaultRules, admin)).status, 200);
   const day = await emptyDay();
-  // A 10:00 job in High Ridge (3 hours with the default quote).
+  // A 10:00 job in High Ridge (2 hours with the default quote).
   const first = await call(
     'POST',
     '/jobs',

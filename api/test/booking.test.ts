@@ -16,7 +16,7 @@ async function call(method: string, path: string, body?: unknown, headers: Recor
   return { status: res.status, body: (textBody ? JSON.parse(textBody) : null) as any };
 }
 
-/** Level I on a sedan: 3 hours at the high end, so 180 minutes on the calendar. */
+/** Level I on a sedan: 1½ hours at the high end, rounded up to 120 minutes on the calendar. */
 const input = { service: 'level-1', vehicleClass: 'sedan', conditions: {}, addOns: [] };
 const customer = {
   name: 'Pat Booker',
@@ -38,7 +38,7 @@ const allSlots = async () => (await slots()).days.flatMap((d: any) => d.slots) a
 test('availability sizes the job from the quote and lists open starts', async () => {
   const a = await slots();
   assert.equal(a.bookable, true);
-  assert.equal(a.minutes, 180);
+  assert.equal(a.minutes, 120);
   assert.equal(a.timezone, 'America/Chicago');
   assert.equal(a.days.length, defaultRules.horizonDays + 1);
   assert.ok((await allSlots()).length > 50);
@@ -58,7 +58,7 @@ test('a booking takes its slot, and the same slot cannot be booked twice', async
   const booked = await call('POST', '/bookings', { ...customer, input, start });
   assert.equal(booked.status, 201, JSON.stringify(booked.body));
   assert.equal(booked.body.start, start);
-  assert.equal(new Date(booked.body.end).getTime() - new Date(start).getTime(), 180 * 60_000);
+  assert.equal(new Date(booked.body.end).getTime() - new Date(start).getTime(), 120 * 60_000);
 
   assert.ok(!(await allSlots()).includes(start), 'slot no longer offered');
   const again = await call('POST', '/bookings', { ...customer, name: 'Someone Else', phone: '314-555-0999', input, start });
@@ -125,7 +125,7 @@ test('Jacob can add a clashing job by hand, and is warned', async () => {
   // Reschedule keeps the length; cancelling frees the time.
   const moved = await call('PATCH', `/jobs/${r.body.job.id}`, { start: new Date(Date.now() + 60 * 864e5).toISOString() }, admin);
   assert.equal(moved.status, 200);
-  assert.equal(new Date(moved.body.end).getTime() - new Date(moved.body.start).getTime(), 180 * 60_000);
+  assert.equal(new Date(moved.body.end).getTime() - new Date(moved.body.start).getTime(), 120 * 60_000);
   const done = await call('PATCH', `/jobs/${r.body.job.id}`, { status: 'done', finalPrice: 16000 }, admin);
   assert.equal(done.body.status, 'done');
   assert.equal(done.body.finalPrice, 16000);

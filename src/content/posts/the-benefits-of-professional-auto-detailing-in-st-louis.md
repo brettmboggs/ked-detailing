@@ -34,10 +34,10 @@ Inside, that means extraction rather than a wipe-down, and conditioning so leath
 
 Timings are honest rather than optimistic, because underestimating them just means rushing your car.
 
-- **The Tune-Up** — two to three hours. Maintenance, keeping a car ahead of buildup.
-- **The Refresh** — half a day to a full day. Decontamination outside, a full reset inside.
-- **The Knockout** — one to two days. Everything in The Refresh plus engine bay, deep extraction and sealant.
-- **The Revival** — quoted per car. One-step machine polish to cut swirls and oxidation back out of the clear coat.
+- **The Tune-Up** — one to two hours. Maintenance, keeping a car ahead of buildup.
+- **The Refresh** — an hour and a half to three hours. Decontamination outside, a full reset inside.
+- **The Knockout** — three to six hours. Everything in The Refresh plus engine bay, deep extraction and sealant.
+- **The Revival** — four to seven hours, quoted per car. One-step machine polish to cut swirls and oxidation back out of the clear coat.
 
 Paint correction and ceramic coating are booked separately, as is marine work.
 
