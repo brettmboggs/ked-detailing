@@ -436,11 +436,12 @@ export const band = {
 
 /**
  * Header nav. Root-relative so it works from every page.
- * Blog sits in the footer only — seven items will not fit the header at 1024px.
+ * Blog sits in the footer only. Seven items just fit the header at 1024px; an eighth will not.
  */
 export const nav: NavItem[] = [
   { label: 'Work', href: '/#work' },
   { label: 'Services', href: '/#services' },
+  { label: 'Guide', href: '/guide' },
   { label: 'Reviews', href: '/#reviews' },
   { label: 'FAQs', href: '/#faqs' },
   { label: 'Store', href: '/store' },

@@ -1,0 +1,323 @@
+---
+import { formatMoney, fromPrice, type PricingConfig } from '@ked/pricing';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Marquee from '../components/Marquee.astro';
+import { guideTips, guideTopics, type GuideTopic } from '../data/guide';
+import { quoteLive } from '../data/site';
+import { bookLink } from '../lib/book';
+import { loadSite } from '../lib/live-site';
+import { loadPricing } from '../lib/pricing';
+
+/**
+ * What the work actually is, by treatment: who needs it, what it involves and
+ * why it takes skill, each ending in the package or add-on that gets it.
+ * Package names and prices come from Jacob's live price list.
+ */
+const { business } = await loadSite();
+const pricing: PricingConfig = await loadPricing();
+const showPrices = quoteLive;
+
+const photos = import.meta.glob<{ default: ImageMetadata }>('../assets/photos/*.jpg', { eager: true });
+const photoFor = (file?: string) => (file ? photos[`../assets/photos/${file}`]?.default : undefined);
+
+const serviceName = (id: string) => pricing.services.find((s) => s.id === id)?.name;
+const smallest = Math.min(...pricing.vehicleClasses.map((c) => c.multiplier));
+
+const joinNames = (names: string[]) =>
+  names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+
+/** The "how to get it" line under each treatment, and where its button goes. */
+function offer(t: GuideTopic): { line: string; cta: string; serviceId?: string } {
+  const p = t.pricing;
+  const included = (p.included ?? []).map(serviceName).filter((n): n is string => !!n);
+  const parts: string[] = [];
+  let serviceId = p.service ?? p.included?.[0];
+
+  if (p.service) {
+    const s = pricing.services.find((x) => x.id === p.service);
+    const from = showPrices ? fromPrice(pricing, p.service) : null;
+    if (s?.inspectionOnly) parts.push(`${s.name}. Quoted after Jacob sees the paint.`);
+    else if (s) parts.push(from !== null ? `${s.name}, from ${formatMoney(from)}.` : `${s.name}.`);
+  }
+  if (included.length && !p.service) {
+    parts.push(included.length === 1 ? `Comes with ${included[0]}.` : `Comes with ${joinNames(included)}.`);
+  }
+  const addOn = p.addOn ? pricing.addOns.find((a) => a.id === p.addOn) : undefined;
+  if (addOn) {
+    const amount = Math.round(addOn.price * (addOn.scalesWithSize ? smallest : 1));
+    const price = showPrices ? ` for ${addOn.scalesWithSize ? 'from ' : ''}${formatMoney(amount)}` : '';
+    parts.push(included.length ? `Or add it to any other package${price}.` : `Add it to any package${price}.`);
+    if (!p.included?.length) serviceId = undefined;
+  }
+  if (p.condition) {
+    const c = pricing.conditions.find((x) => x.id === p.condition);
+    if (c) parts.push(`The quote asks about it, and the price depends on how bad it is.`);
+  }
+  return {
+    line: parts.join(' '),
+    cta: addOn && !p.included?.length ? 'Add it to a quote' : 'Price it for your car',
+    serviceId,
+  };
+}
+
+const topics = guideTopics.map((t, i) => ({ ...t, n: String(i + 1).padStart(2, '0'), img: photoFor(t.photo), offer: offer(t) }));
+---
+
+<Base
+  title="What You're Paying For | Knock Em' Down Detailing"
+  description="Clay bar, polishing, sealant, ceramic coating, headlight and trim restoration, extraction: what each one is, how to tell if your car needs it, and why it takes a pro."
+>
+  <Header />
+
+  <main id="main">
+    <section class="relative overflow-hidden bg-ink-950 pt-36 pb-12 lg:pt-44 lg:pb-16">
+      <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
+        <div class="rise mb-6 flex items-center gap-4">
+          <span class="h-px w-10 bg-gold-500"></span>
+          <p class="eyebrow">The guide</p>
+        </div>
+        <h1 class="display-lg max-w-4xl text-bone-50">
+          <span class="rise block">What you're</span>{' '}
+          <span class="rise block text-gold-500" data-delay="0.08">paying for.</span>
+        </h1>
+        <p class="rise mt-8 max-w-2xl text-lg leading-relaxed text-bone-200" data-delay="0.16">
+          A wash cleans what's sitting on your car. Detailing fixes what's stuck in it. Here's every treatment
+          Jacob does, how to tell if your car needs it, and why it's worth paying someone who knows what
+          they're doing.
+        </p>
+      </div>
+    </section>
+
+    <!-- Symptom deck: start from what you notice, land on the fix. -->
+    <section aria-labelledby="deck-title" class="bg-ink-950 pb-20 lg:pb-28" data-deck>
+      <div class="mx-auto max-w-[105rem] px-5 sm:px-8">
+        <div class="mb-7 flex items-end justify-between gap-6 border-t border-ink-800 pt-8">
+          <div>
+            <h2 id="deck-title" class="display-sm text-bone-50">Start with what you notice</h2>
+            <p class="mt-2 text-sm text-bone-400">Swipe through. Tap one to see the fix.</p>
+          </div>
+          <div class="hidden items-center gap-4 sm:flex">
+            <p class="font-display text-sm tabular-nums text-bone-400" style="font-variation-settings:'wdth' 100,'wght' 600" aria-live="polite">
+              <span data-deck-index class="text-bone-50">01</span> / {String(topics.length).padStart(2, '0')}
+            </p>
+            <button type="button" data-deck-prev aria-label="Previous" class="grid h-11 w-11 place-items-center border border-ink-700 text-bone-50 transition-colors hover:border-gold-500 hover:text-gold-400 disabled:opacity-30 disabled:hover:border-ink-700 disabled:hover:text-bone-50">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.5" /></svg>
+            </button>
+            <button type="button" data-deck-next aria-label="Next" class="grid h-11 w-11 place-items-center border border-ink-700 text-bone-50 transition-colors hover:border-gold-500 hover:text-gold-400 disabled:opacity-30 disabled:hover:border-ink-700 disabled:hover:text-bone-50">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.5" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ol data-deck-track class="deck-track flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:gap-4 sm:px-8 lg:px-[max(2rem,calc((100vw-105rem)/2+2rem))]">
+        {
+          topics.map((t) => (
+            <li data-deck-card class="w-[78vw] max-w-[22rem] shrink-0 snap-start sm:w-[20rem]">
+              <a href={`#${t.id}`} class="group relative flex aspect-[4/5] flex-col justify-between overflow-hidden border border-ink-800 bg-ink-900 p-6 transition-colors duration-500 hover:border-gold-600">
+                {t.img && (
+                  <>
+                    <Image src={t.img} alt="" widths={[360, 720]} sizes="22rem" class="absolute inset-0 h-full w-full object-cover opacity-25 transition-[opacity,transform] duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04] group-hover:opacity-35" />
+                    <span class="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/60 to-transparent" />
+                  </>
+                )}
+                <span class="relative font-display text-sm text-gold-500" style="font-variation-settings:'wdth' 100,'wght' 650">{t.n}</span>
+                <span class="relative">
+                  <span class="block font-display text-[1.65rem] uppercase leading-[0.98] text-bone-50" style="font-variation-settings:'wdth' 84,'wght' 720">{t.symptom}</span>
+                  <span class="mt-5 flex items-center justify-between gap-3 border-t border-ink-700 pt-4 text-sm text-bone-200 transition-colors group-hover:text-gold-400">
+                    {t.name}
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" class="shrink-0 transition-transform duration-500 group-hover:translate-x-1"><path d="M2 8h11M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" /></svg>
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </section>
+
+    <Marquee angle={-1.6} variant="gold" speed={58} />
+
+    <!-- Every treatment, with a sticky index on wide screens. -->
+    <section class="bg-ink-950 py-20 lg:py-28">
+      <div class="mx-auto grid max-w-[105rem] gap-12 px-5 sm:px-8 lg:grid-cols-[15rem_1fr] lg:gap-20">
+        <nav aria-label="Treatments" class="lg:sticky lg:top-28 lg:self-start">
+          <p class="eyebrow mb-5">Every treatment</p>
+          <ol class="grid border-t border-ink-800 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-1" data-guide-index>
+            {
+              topics.map((t) => (
+                <li class="border-b border-ink-800">
+                  <a href={`#${t.id}`} data-guide-link={t.id} class="group flex items-baseline gap-4 py-3 text-sm text-bone-400 transition-colors hover:text-bone-50 data-[active=true]:text-bone-50">
+                    <span class="font-display text-xs tabular-nums text-bone-500 transition-colors group-data-[active=true]:text-gold-500" style="font-variation-settings:'wdth' 100,'wght' 600">{t.n}</span>
+                    {t.name}
+                  </a>
+                </li>
+              ))
+            }
+            <li class="border-b border-ink-800">
+              <a href="#tips" data-guide-link="tips" class="group flex items-baseline gap-4 py-3 text-sm text-bone-400 transition-colors hover:text-bone-50 data-[active=true]:text-bone-50">
+                <span class="font-display text-xs text-bone-500 transition-colors group-data-[active=true]:text-gold-500" style="font-variation-settings:'wdth' 100,'wght' 600">+</span>
+                Between visits
+              </a>
+            </li>
+          </ol>
+        </nav>
+
+        <div class="max-w-3xl">
+          {
+            topics.map((t) => (
+              <article id={t.id} data-guide-section class="scroll-mt-28 border-t border-ink-800 pt-10 pb-16 first:border-t-0 first:pt-0 lg:pb-20">
+                <p class="font-display text-sm text-gold-500" style="font-variation-settings:'wdth' 100,'wght' 650">
+                  {t.n} <span class="ml-2 text-bone-500">{t.symptom}</span>
+                </p>
+                <h2 class="display-lg mt-4 text-bone-50" style="font-size:clamp(2rem,4.5vw,3.5rem)">{t.name}</h2>
+                <p class="mt-5 text-xl leading-relaxed text-bone-50">{t.plain}</p>
+
+                {t.img && (
+                  <figure class="relative mt-8 aspect-[16/9] overflow-hidden bg-ink-850">
+                    <Image src={t.img} alt={t.photoAlt ?? ''} widths={[640, 960, 1280]} sizes="(min-width: 1024px) 48rem, 92vw" class="h-full w-full object-cover" />
+                  </figure>
+                )}
+
+                <div class="mt-10 grid gap-10 md:grid-cols-2">
+                  <div class="md:col-span-2">
+                    <h3 class="eyebrow mb-4">Does your car need it?</h3>
+                    <ul class="space-y-3">
+                      {t.who.map((w) => (
+                        <li class="flex gap-4 leading-relaxed text-bone-200">
+                          <span class="mt-[0.6em] h-1.5 w-1.5 shrink-0 rotate-45 bg-gold-500" aria-hidden="true" />
+                          {w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3 class="eyebrow mb-4">What it involves</h3>
+                    <p class="leading-relaxed text-bone-200">{t.what}</p>
+                  </div>
+                  <div>
+                    <h3 class="eyebrow mb-4">Why it takes a pro</h3>
+                    <p class="leading-relaxed text-bone-200">{t.skill}</p>
+                  </div>
+                </div>
+
+                <div class="mt-10 flex flex-col gap-5 border-l-2 border-gold-500 bg-ink-900 py-5 pr-5 pl-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p class="text-bone-50">{t.offer.line}</p>
+                  <a {...bookLink(t.offer.serviceId)} class="btn-gold shrink-0">{t.offer.cta}</a>
+                </div>
+              </article>
+            ))
+          }
+
+          <section id="tips" data-guide-section class="scroll-mt-28 border-t border-ink-800 pt-10">
+            <p class="eyebrow">Between visits</p>
+            <h2 class="display-lg mt-4 text-bone-50" style="font-size:clamp(2rem,4.5vw,3.5rem)">Make it last longer</h2>
+            <p class="mt-5 max-w-2xl text-lg leading-relaxed text-bone-200">
+              Small habits that keep you from paying to fix the same thing twice.
+            </p>
+            <ol class="mt-10 grid gap-px overflow-hidden border border-ink-800 bg-ink-800 sm:grid-cols-2">
+              {
+                guideTips.map((tip, i) => (
+                  <li class="bg-ink-950 p-6 lg:p-7">
+                    <span class="font-display text-sm tabular-nums text-gold-500" style="font-variation-settings:'wdth' 100,'wght' 650">{String(i + 1).padStart(2, '0')}</span>
+                    <h3 class="mt-3 font-semibold text-bone-50">{tip.title}</h3>
+                    <p class="mt-2 text-sm leading-relaxed text-bone-400">{tip.body}</p>
+                  </li>
+                ))
+              }
+            </ol>
+          </section>
+
+          <aside class="mt-16 border border-ink-800 bg-ink-900 p-8 lg:p-10">
+            <h2 class="display-sm text-bone-50">Not sure what your car needs?</h2>
+            <p class="mt-3 max-w-lg text-sm leading-relaxed text-bone-400">
+              Pick your vehicle and its condition and the quote prices it as you go. Or text Jacob a couple of photos
+              and he'll tell you straight.
+            </p>
+            <div class="mt-7 flex flex-wrap gap-3">
+              <a {...bookLink()} class="btn-gold">Get an instant quote</a>
+              <a href={`sms:${business.phoneHref.replace('tel:', '')}`} class="btn-ghost">Text Jacob</a>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .deck-track {
+    scrollbar-width: none;
+    scroll-padding-inline: 1.25rem;
+  }
+  .deck-track::-webkit-scrollbar {
+    display: none;
+  }
+  @media (min-width: 640px) {
+    .deck-track {
+      scroll-padding-inline: 2rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .deck-track {
+      scroll-padding-inline: max(2rem, calc((100vw - 105rem) / 2 + 2rem));
+    }
+  }
+</style>
+
+<script>
+  // Deck arrows and counter.
+  const deck = document.querySelector<HTMLElement>('[data-deck]');
+  const track = deck?.querySelector<HTMLElement>('[data-deck-track]');
+  if (deck && track) {
+    const cards = [...track.querySelectorAll<HTMLElement>('[data-deck-card]')];
+    const prev = deck.querySelector<HTMLButtonElement>('[data-deck-prev]');
+    const next = deck.querySelector<HTMLButtonElement>('[data-deck-next]');
+    const index = deck.querySelector<HTMLElement>('[data-deck-index]');
+    const current = () => {
+      const left = track.getBoundingClientRect().left + parseFloat(getComputedStyle(track).scrollPaddingInlineStart || '0');
+      let best = 0;
+      cards.forEach((c, i) => {
+        if (Math.abs(c.getBoundingClientRect().left - left) < Math.abs(cards[best].getBoundingClientRect().left - left)) best = i;
+      });
+      return best;
+    };
+    const update = () => {
+      const i = current();
+      if (index) index.textContent = String(i + 1).padStart(2, '0');
+      if (prev) prev.disabled = track.scrollLeft <= 2;
+      if (next) next.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+    };
+    const go = (step: number) => {
+      const target = cards[Math.min(cards.length - 1, Math.max(0, current() + step))];
+      track.scrollTo({ left: track.scrollLeft + target.getBoundingClientRect().left - cards[current()].getBoundingClientRect().left, behavior: 'smooth' });
+    };
+    prev?.addEventListener('click', () => go(-1));
+    next?.addEventListener('click', () => go(1));
+    track.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
+    update();
+  }
+
+  // Light up the index entry for the section being read.
+  const links = new Map(
+    [...document.querySelectorAll<HTMLElement>('[data-guide-link]')].map((a) => [a.dataset.guideLink!, a]),
+  );
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((a) => (a.dataset.active = 'false'));
+        const link = links.get(e.target.id);
+        if (link) link.dataset.active = 'true';
+      }
+    },
+    { rootMargin: '-30% 0px -60% 0px' },
+  );
+  document.querySelectorAll('[data-guide-section]').forEach((s) => observer.observe(s));
+</script>
