@@ -26,6 +26,8 @@ const BASELINES = [146, 300];
 
   <div class="relative mx-auto max-w-[105rem] px-5 sm:px-8">
     <div class="relative">
+      <!-- Inset a hair so the footage never reaches the panel's anti-aliased edge;
+           at fractional desktop widths that edge let a line of video show through. -->
       <video
         data-band-video
         data-src={withBase(band.video)}
@@ -36,7 +38,7 @@ const BASELINES = [146, 300];
         preload="none"
         aria-hidden="true"
         tabindex="-1"
-        class="absolute inset-0 h-full w-full object-cover object-[50%_45%]"
+        class="absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)] object-cover object-[50%_45%]"
       ></video>
 
       <!-- The panel: opaque everywhere except the letters. -->
