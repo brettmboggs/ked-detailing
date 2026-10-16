@@ -319,6 +319,8 @@ message to paste to the Mac session ("Re-read docs/mobile-app.md … new: …").
 
 ## Waiting on Jacob
 
+The whole switch, step by step, is `docs/cutover.md`.
+
 Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
 `docs/jacob-steps.md` is Jacob's. When the answers come back:
 
