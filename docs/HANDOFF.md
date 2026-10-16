@@ -314,6 +314,7 @@ message to paste to the Mac session ("Re-read docs/mobile-app.md … new: …").
 | Pages project | `ked-detailing` (env vars `PUBLIC_KED_API_URL`, `KED_NOINDEX=true`) |
 | Zone | `kedservice.com`, on Cloudflare since 2026-09-24. Registration is still at Squarespace (Jacob's account). Nameservers `georgia.ns.cloudflare.com`, `lou.ns.cloudflare.com` |
 | App bundle ID | `com.brettboggs.ked` |
+| Jacob's switch page (savings, Stripe and export steps) | https://claude.ai/artifact/2qn3d9MrQXxApUWkTroT1p |
 | Jacob's steps page | https://claude.ai/artifact/UKW361pRA3X3vfQDvgaGY4 (source: `docs/jacob-steps.md`; republish the page if the doc changes) |
 
 ## Waiting on Jacob
@@ -330,7 +331,10 @@ Brett is having a call with him. `docs/jacob-call.md` is Brett's checklist and
    Then switch on email (steps in `api/wrangler.jsonc`) and change
    `PAY_URL` and `MANAGE_URL` to kedservice.com. Push alerts already tell Jacob about
    bookings, as long as the app has notifications on.
-5. **Stripe:** once he adds Brett as a Developer, fill in Checkout behind the
+5. **Stripe:** planned as **Stripe Connect**, Brett's platform with Jacob as
+   the first connected account (2026-10-15). `docs/stripe-connect.md` has
+   the settings, fees and build steps and replaces the "invite Brett as
+   Developer" route below. Jacob only fills in Stripe's form from a link. Fill in Checkout behind the
    existing pay links (`startCheckout`, plus a webhook calling
    `recordInvoicePayment` with `depositToId: 'stripe'`, and `payOnline: true`),
    then Tap to Pay (Stripe Terminal in the app needs Apple's Tap to Pay
