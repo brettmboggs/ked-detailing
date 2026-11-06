@@ -16,5 +16,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run tenant-check
       - run: npm run check -w @ked/api
       - run: npm test

@@ -1,5 +1,25 @@
 # Turning this into a product for other detailers
 
+**Standing intention since day one, restated 2026-11-06:** this system is
+Jacob's, and it will become a white-label product for other businesses in
+the space (detailing, floor coatings, similar trades). The plan is to clone
+it and strip out everything that is Knock Em' Down's, or make it
+multi-business. Either way this map is the list. White-labeling is far off;
+keeping it cheap is a rule for every change made now. Never treat it as
+news.
+
+Since 2026-11-06 Jacob's system serves two businesses: Knock Em' Down
+Detailing and KED Coatings (garage floors, `brettmboggs/ked-coatings`).
+Code that knows about a trade (pricing model, job sheet, materials) should
+sit behind a trade boundary, not be assumed everywhere, because both of
+Jacob's businesses and every future customer need it that way.
+
+**Enforced:** `npm run tenant-check` (also in CI) counts Knock Em' Down
+names, Jacob, the domains and the home base in the system code (API,
+packages, admin, portal pages) against `tools/tenant-baseline.json`. New
+ones fail the build unless the line says `TENANT:`. The baseline may only
+go down.
+
 Not now. Brett's call (2026-09-25): prove it with Knock Em' Down first, at
 $0 a month. Once it's used every day and earning its keep, rework it so
 other detailers can sign up. This file is the map for that day, so nobody
