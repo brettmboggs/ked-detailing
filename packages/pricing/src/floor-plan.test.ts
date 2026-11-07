@@ -13,7 +13,9 @@ import {
   planToMap,
   rectanglePlan,
   removeCorner,
+  setStemEnd,
   setWallLength,
+  upgradePlan,
   toggleStemWall,
   wallLength,
 } from './index.ts';
@@ -52,11 +54,11 @@ test('a corner added on a wall keeps the door and stem wall on the same stretch'
   p = insertCorner(p, 0, [20, 0.4]); // lands on the wall at x = 20
   assert.equal(p.outline.length, 5);
   assert.deepEqual(p.outline[1], [20, 0]);
-  assert.deepEqual(p.stemWalls, [0, 1]);
+  assert.deepEqual(p.stemWalls, [{ wall: 0 }, { wall: 1 }]);
   assert.deepEqual(planToMap(p).doors, [{ a: [3, 0], b: [19, 0] }]);
   const back = removeCorner(p, 1);
   assert.equal(back.outline.length, 4);
-  assert.deepEqual(back.stemWalls, [0]);
+  assert.equal(measureFloorMap(planToMap(back)).stemWallFeet, 6);
   assert.deepEqual(planToMap(back).doors, [{ a: [3, 0], b: [19, 0] }]);
 });
 
@@ -107,4 +109,27 @@ test('lengths read the way people type them', () => {
   assert.equal(formatFeet(22.5), '22′ 6″');
   assert.equal(formatFeet(22), '22′');
   assert.equal(formatFeet(21.999), '22′');
+});
+
+test('a curb can run part of a wall, and its ends drag', () => {
+  let p = toggleStemWall(rectanglePlan(22, 24), 1); // right wall, door to back
+  p = setStemEnd(p, 0, 'from', 10); // starts 10 ft back from the door
+  assert.equal(measureFloorMap(planToMap(p)).stemWallFeet, 14);
+  p = setStemEnd(p, 0, 'to', 20);
+  assert.equal(measureFloorMap(planToMap(p)).stemWallFeet, 10);
+  // dragged back to the corner, it follows the wall again
+  p = setStemEnd(p, 0, 'to', 23.8);
+  assert.equal(p.stemWalls[0]!.to, undefined);
+  assert.equal(measureFloorMap(planToMap(setWallLength(p, 1, 30))).stemWallFeet, 20);
+});
+
+test('a curb run that crosses a door stops at the door', () => {
+  const p = toggleStemWall(garage(), 0);
+  const q = setStemEnd(p, 0, 'from', 5); // from 5 ft: door is 3..19
+  assert.equal(measureFloorMap(planToMap(q)).stemWallFeet, 3);
+});
+
+test('plans saved with whole-wall curbs still read', () => {
+  const old = { ...rectanglePlan(10, 10), stemWalls: [0, 2] } as unknown as Parameters<typeof upgradePlan>[0];
+  assert.equal(measureFloorMap(planToMap(upgradePlan(old))).stemWallFeet, 20);
 });

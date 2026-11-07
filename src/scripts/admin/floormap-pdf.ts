@@ -8,7 +8,7 @@
  * (the floors business is `business.sister` until the two businesses split,
  * D18), never typed here.
  */
-import { formatFeet, planToMap, measureFloorMap, wall, alongWall, doorSpan, wallLength, type EditedFloorQuote, type FloorPlan, type Pt } from '@ked/pricing';
+import { formatFeet, planToMap, measureFloorMap, wall, alongWall, doorSpan, wallLength, stemSpan, type EditedFloorQuote, type FloorPlan, type Pt } from '@ked/pricing';
 import { business } from '../../data/site';
 
 export interface QuoteDoc {
@@ -195,9 +195,10 @@ function drawFloor(page: import('pdf-lib').PDFPage, plan: FloorPlan, x0: number,
   // Curb: a heavier line just inside the wall.
   const cx = xs.reduce((a, b) => a + b, 0) / o.length;
   const cy = ys.reduce((a, b) => a + b, 0) / o.length;
-  for (const i of plan.stemWalls) {
-    const { a, b } = wall(plan, i);
-    const [A, B] = [P(a), P(b)];
+  for (const r of plan.stemWalls) {
+    if (r.wall >= o.length) continue;
+    const { from, to } = stemSpan(plan, r);
+    const [A, B] = [P(alongWall(plan, r.wall, from)), P(alongWall(plan, r.wall, to))];
     const L = Math.hypot(B.x - A.x, B.y - A.y) || 1;
     let [nx, ny] = [-(B.y - A.y) / L, (B.x - A.x) / L];
     const C = P([cx, cy]);

@@ -22,6 +22,8 @@ import {
   moveCorner,
   nearestWall,
   pointInPolygon,
+  setStemEnd,
+  stemSpan,
   polygonArea,
   project,
   toggleStemWall,
@@ -41,6 +43,7 @@ export type Selection =
   | { kind: 'coat'; i: number }
   | { kind: 'excluded'; i: number }
   | { kind: 'fixture'; i: number }
+  | { kind: 'curb'; i: number }
   | null;
 
 export interface CanvasHost {
@@ -60,6 +63,9 @@ export interface CanvasHost {
   /** Tapped something that belongs to another step: go there with it selected. */
   jump: (sel: Exclude<Selection, null>) => void;
 }
+
+/** The step each kind of drawn thing belongs to: tapping it elsewhere goes there. */
+export const HOME_STEP: Record<string, StepId> = { door: 'doors', crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating', fixture: 'things', curb: 'curb' };
 
 const NS = 'http://www.w3.org/2000/svg';
 const C = {
@@ -90,7 +96,15 @@ const WALL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 export const wallName = (i: number) => WALL_LETTERS[i % 26]!;
 
 export function fixtureLabel(kind: FloorFixtureKind): string {
-  return { drain: 'Drain', post: 'Post', 'water-heater': 'Water heater', 'outlet-120': 'Outlet 120V', 'outlet-240': 'Outlet 240V', step: 'Step', other: 'Other' }[kind];
+  return {
+    drain: 'Drain',
+    post: 'Post',
+    'water-heater': 'Water heater',
+    'outlet-120': 'Outlet 120V',
+    'outlet-240': 'Outlet 240V',
+    step: 'Step',
+    other: 'Other',
+  }[kind];
 }
 const fixtureGlyph = (kind: FloorFixtureKind) =>
   ({ drain: '', post: '', 'water-heater': 'WH', 'outlet-120': '120V', 'outlet-240': '240V', step: 'Step', other: '?' })[kind];
@@ -218,7 +232,7 @@ export class FloorCanvas {
 
     // Anything already drawn can be edited from any step: tapping it goes
     // to its step with it selected.
-    const home: Record<string, StepId> = { door: 'doors', crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating', fixture: 'things' };
+    const home = HOME_STEP;
     if (hit && home[hit.kind] && home[hit.kind] !== step) {
       const sel = { kind: hit.kind, i: hit.i } as Exclude<Selection, null>;
       return pan(() => this.host.jump(sel));
@@ -254,13 +268,19 @@ export class FloorCanvas {
       if (hit?.kind === 'corner') {
         const i = hit.i;
         this.host.select({ kind: 'corner', i });
-        return drag((p) => moveCorner(plan, i, p), () => this.host.select({ kind: 'corner', i }));
+        return drag(
+          (p) => moveCorner(plan, i, p),
+          () => this.host.select({ kind: 'corner', i }),
+        );
       }
       if (hit?.kind === 'add') {
         const added = insertCorner(plan, hit.i, alongWall(plan, hit.i, wallLength(plan, hit.i) / 2));
         const i = hit.i + 1;
         this.host.select({ kind: 'corner', i });
-        return drag((p) => moveCorner(added, i, p), () => this.host.commit(added, plan));
+        return drag(
+          (p) => moveCorner(added, i, p),
+          () => this.host.commit(added, plan),
+        );
       }
       if (hit?.kind === 'len') {
         const i = hit.i;
@@ -294,9 +314,28 @@ export class FloorCanvas {
     }
 
     if (step === 'curb') {
+      if (hit?.kind === 'cend' && hit.j !== undefined) {
+        const [k, end] = [hit.i, hit.j === 0 ? ('from' as const) : ('to' as const)];
+        const { a, b } = wall(plan, plan.stemWalls[k]!.wall);
+        return drag((p) => setStemEnd(plan, k, end, project(p, a, b).at));
+      }
+      if (hit?.kind === 'curb') {
+        const k = hit.i;
+        return pan(() => this.host.select({ kind: 'curb', i: k }));
+      }
       const near = nearestWall(plan, ft);
-      if (near.wall >= 0 && near.dist <= this.reach()) return pan(() => this.host.commit(toggleStemWall(plan, near.wall), plan));
-      return pan();
+      if (near.wall >= 0 && near.dist <= this.reach())
+        return pan(() => {
+          // A wall with no curb gets one end to end, selected so its ends can be dragged.
+          if (plan.stemWalls.some((r) => r.wall === near.wall)) {
+            const k = plan.stemWalls.findIndex((r) => r.wall === near.wall);
+            return this.host.select({ kind: 'curb', i: k });
+          }
+          const next = toggleStemWall(plan, near.wall);
+          this.host.commit(next, plan);
+          this.host.select({ kind: 'curb', i: next.stemWalls.length - 1 });
+        });
+      return pan(() => this.host.select(null));
     }
 
     if (step === 'things') {
@@ -402,7 +441,13 @@ export class FloorCanvas {
       const last = g.pts[g.pts.length - 1]!;
       if (Math.hypot(p[0] - last[0], p[1] - last[1]) * this.view.s < 3) return;
       g.pts.push(p);
-      this.live?.setAttribute('points', g.pts.map((q) => this.toScreen(q)).map((q) => `${q.x},${q.y}`).join(' '));
+      this.live?.setAttribute(
+        'points',
+        g.pts
+          .map((q) => this.toScreen(q))
+          .map((q) => `${q.x},${q.y}`)
+          .join(' '),
+      );
     }
   }
 
@@ -464,7 +509,11 @@ export class FloorCanvas {
     this.svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     const kids: SVGElement[] = [];
     const P = this.toScreen;
-    const pts = (list: Pt[]) => list.map((q) => P(q)).map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`).join(' ');
+    const pts = (list: Pt[]) =>
+      list
+        .map((q) => P(q))
+        .map((q) => `${q.x.toFixed(1)},${q.y.toFixed(1)}`)
+        .join(' ');
     const isSel = (kind: string, i: number) => sel?.kind === kind && sel.i === i;
 
     // Grid, one line a foot, a stronger one every five.
@@ -492,13 +541,34 @@ export class FloorCanvas {
       if (plan.oldCoating === 'all') kids.push(s('polygon', { points: pts(o), fill: 'url(#fm-coat)', stroke: 'none' }));
       else if (plan.oldCoating !== 'none')
         plan.oldCoating.forEach((a, i) =>
-          kids.push(s('polygon', { points: pts(a), fill: 'url(#fm-coat)', stroke: C.coat, 'stroke-width': isSel('coat', i) ? 3 : 1.5, 'data-k': 'coat', 'data-i': i })),
+          kids.push(
+            s('polygon', { points: pts(a), fill: 'url(#fm-coat)', stroke: C.coat, 'stroke-width': isSel('coat', i) ? 3 : 1.5, 'data-k': 'coat', 'data-i': i }),
+          ),
         );
       plan.excluded.forEach((a, i) =>
-        kids.push(s('polygon', { points: pts(a), fill: 'url(#fm-out)', stroke: C.excluded, 'stroke-width': isSel('excluded', i) ? 3 : 1.5, 'stroke-dasharray': '5 4', 'data-k': 'excluded', 'data-i': i })),
+        kids.push(
+          s('polygon', {
+            points: pts(a),
+            fill: 'url(#fm-out)',
+            stroke: C.excluded,
+            'stroke-width': isSel('excluded', i) ? 3 : 1.5,
+            'stroke-dasharray': '5 4',
+            'data-k': 'excluded',
+            'data-i': i,
+          }),
+        ),
       );
       plan.spalls.forEach((a, i) =>
-        kids.push(s('polygon', { points: pts(a), fill: 'url(#fm-spall)', stroke: C.spall, 'stroke-width': isSel('spall', i) ? 3 : 1.5, 'data-k': 'spall', 'data-i': i })),
+        kids.push(
+          s('polygon', {
+            points: pts(a),
+            fill: 'url(#fm-spall)',
+            stroke: C.spall,
+            'stroke-width': isSel('spall', i) ? 3 : 1.5,
+            'data-k': 'spall',
+            'data-i': i,
+          }),
+        ),
       );
 
       // Walls, with the curb drawn as a band on the inside.
@@ -508,20 +578,34 @@ export class FloorCanvas {
         const { a, b } = wall(plan, i);
         const [A, B] = [P(a), P(b)];
         kids.push(s('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: C.wall, 'stroke-width': 3, 'stroke-linecap': 'round' }));
-        if (plan.stemWalls.includes(i)) {
-          // inward normal in screen space
-          const dx = B.x - A.x;
-          const dy = B.y - A.y;
-          const L = Math.hypot(dx, dy) || 1;
-          const off = 5;
-          let nx = -dy / L;
-          let ny = dx / L;
-          const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
-          const c = P([cx, cy]);
-          if ((c.x - mid.x) * nx + (c.y - mid.y) * ny < 0) [nx, ny] = [-nx, -ny];
-          kids.push(s('line', { x1: A.x + nx * off, y1: A.y + ny * off, x2: B.x + nx * off, y2: B.y + ny * off, stroke: C.curb, 'stroke-width': 6, 'stroke-linecap': 'butt', opacity: 0.9, 'pointer-events': 'none' }));
-        }
       }
+      // Curb runs: a band just inside the wall, selectable like anything else.
+      plan.stemWalls.forEach((r, k) => {
+        if (r.wall >= o.length) return;
+        const { from, to } = stemSpan(plan, r);
+        const [A, B] = [P(alongWall(plan, r.wall, from)), P(alongWall(plan, r.wall, to))];
+        const dx = B.x - A.x;
+        const dy = B.y - A.y;
+        const L = Math.hypot(dx, dy) || 1;
+        const off = 5;
+        let nx = -dy / L;
+        let ny = dx / L;
+        const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+        const c = P([cx, cy]);
+        if ((c.x - mid.x) * nx + (c.y - mid.y) * ny < 0) [nx, ny] = [-nx, -ny];
+        const on = isSel('curb', k);
+        const line = { x1: A.x + nx * off, y1: A.y + ny * off, x2: B.x + nx * off, y2: B.y + ny * off };
+        kids.push(s('line', { ...line, stroke: on ? C.goldHi : C.curb, 'stroke-width': on ? 8 : 6, 'stroke-linecap': 'butt', opacity: 0.95 }));
+        kids.push(s('line', { ...line, stroke: 'transparent', 'stroke-width': 26, 'data-k': 'curb', 'data-i': k, class: 'fm-tap' }));
+        if (on && step === 'curb')
+          [from, to].forEach((at, j) => {
+            const q = P(alongWall(plan, r.wall, at));
+            const g = s('g', { 'data-k': 'cend', 'data-i': k, 'data-j': j, class: 'fm-grab' });
+            g.append(s('circle', { cx: q.x + nx * off, cy: q.y + ny * off, r: 20, fill: 'transparent' }));
+            g.append(s('rect', { x: q.x + nx * off - 6, y: q.y + ny * off - 6, width: 12, height: 12, fill: C.goldHi, stroke: C.ink, 'stroke-width': 2 }));
+            kids.push(g);
+          });
+      });
       // Doors: a gap in the wall and a swing-free bar, labelled.
       plan.doors.forEach((d, i) => {
         if (d.wall >= o.length) return;
@@ -530,16 +614,41 @@ export class FloorCanvas {
         const selD = isSel('door', i);
         kids.push(s('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: C.ink, 'stroke-width': 7 }));
         kids.push(s('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: selD ? C.goldHi : C.gold, 'stroke-width': selD ? 5 : 3, 'stroke-dasharray': '8 5' }));
-        kids.push(s('line', { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: 'transparent', 'stroke-width': 30, 'data-k': 'door', 'data-i': i, class: step === 'doors' ? 'fm-grab' : '' }));
+        kids.push(
+          s('line', {
+            x1: A.x,
+            y1: A.y,
+            x2: B.x,
+            y2: B.y,
+            stroke: 'transparent',
+            'stroke-width': 30,
+            'data-k': 'door',
+            'data-i': i,
+            class: step === 'doors' ? 'fm-grab' : '',
+          }),
+        );
         const m = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
         // Inside the floor, clear of the wall's own label and the shape step's + handle.
         const out = outward(m, { x: P([cx, cy]).x, y: P([cx, cy]).y }, -56);
-        kids.push(label(out.x, out.y, `Door ${formatFeet(to - from)}`, C.gold, 11));
+        {
+          const lab = label(out.x, out.y, `Door ${formatFeet(to - from)}`, C.gold, 11);
+          lab.setAttribute('pointer-events', 'none');
+          kids.push(lab);
+        }
       });
 
       // Cracks.
       plan.cracks.forEach((c, i) => {
-        kids.push(s('polyline', { points: pts(c), fill: 'none', stroke: C.crack, 'stroke-width': isSel('crack', i) ? 4 : 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+        kids.push(
+          s('polyline', {
+            points: pts(c),
+            fill: 'none',
+            stroke: C.crack,
+            'stroke-width': isSel('crack', i) ? 4 : 2.5,
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round',
+          }),
+        );
         kids.push(s('polyline', { points: pts(c), fill: 'none', stroke: 'transparent', 'stroke-width': 24, 'data-k': 'crack', 'data-i': i }));
       });
 
@@ -574,8 +683,21 @@ export class FloorCanvas {
         const g = s('g', { 'data-k': 'fixture', 'data-i': i, class: step === 'things' ? 'fm-grab' : '' });
         if (f.kind === 'step') {
           const half = ((f.width ?? 4) * this.view.s) / 2;
-          g.append(s('rect', { x: q.x - half, y: q.y - 9, width: half * 2, height: 18, fill: '#2a2927', stroke: on ? C.goldHi : C.wall, 'stroke-width': on ? 2.5 : 1.5, rx: 2 }));
-          g.append(s('text', { x: q.x, y: q.y + 4, 'text-anchor': 'middle', fill: C.text, 'font-size': 11, 'font-weight': 600 }, `Step ${formatFeet(f.width ?? 4)}`));
+          g.append(
+            s('rect', {
+              x: q.x - half,
+              y: q.y - 9,
+              width: half * 2,
+              height: 18,
+              fill: '#2a2927',
+              stroke: on ? C.goldHi : C.wall,
+              'stroke-width': on ? 2.5 : 1.5,
+              rx: 2,
+            }),
+          );
+          g.append(
+            s('text', { x: q.x, y: q.y + 4, 'text-anchor': 'middle', fill: C.text, 'font-size': 11, 'font-weight': 600 }, `Step ${formatFeet(f.width ?? 4)}`),
+          );
         } else {
           g.append(s('circle', { cx: q.x, cy: q.y, r: 22, fill: 'transparent' }));
           const ring = on ? C.goldHi : C.wall;
@@ -601,6 +723,8 @@ export class FloorCanvas {
         const at = outward(m, ctr, 22);
         const text = `${wallName(i)}  ${formatFeet(wallLength(plan, i))}`;
         const g = label(at.x, at.y, text, step === 'shape' ? C.ink : C.text, 12, step === 'shape' ? C.gold : '#1c1c1c');
+        // Only the shape step taps a length; elsewhere a label must not swallow a tap meant for what's under it.
+        if (step !== 'shape') g.setAttribute('pointer-events', 'none');
         if (step === 'shape') {
           g.setAttribute('data-k', 'len');
           g.setAttribute('data-i', String(i));
@@ -611,7 +735,11 @@ export class FloorCanvas {
 
       // Area in the middle.
       const area = polygonArea(o) - plan.excluded.reduce((t, a) => t + polygonArea(a), 0);
-      kids.push(label(ctr.x, ctr.y, `${Math.round(area)} sq ft`, C.muted, 13, 'transparent'));
+      {
+        const lab = label(ctr.x, ctr.y, `${Math.round(area)} sq ft`, C.muted, 13, 'transparent');
+        lab.setAttribute('pointer-events', 'none');
+        kids.push(lab);
+      }
 
       // Shape handles: corners and "add a corner" on each wall.
       if (step === 'shape') {
@@ -636,13 +764,7 @@ export class FloorCanvas {
       }
     }
 
-    const defs = s(
-      'defs',
-      {},
-      hatch('fm-spall', C.spall, 0.55),
-      hatch('fm-out', C.excluded, 0.45),
-      hatch('fm-coat', C.coat, 0.35),
-    );
+    const defs = s('defs', {}, hatch('fm-spall', C.spall, 0.55), hatch('fm-out', C.excluded, 0.45), hatch('fm-coat', C.coat, 0.35));
     this.svg.replaceChildren(defs, ...kids);
     if (this.live) this.svg.append(this.live);
   }
@@ -672,7 +794,13 @@ function label(x: number, y: number, text: string, color: string, size: number, 
   const w = text.length * size * 0.58 + 14;
   const hgt = size + 10;
   g.append(s('rect', { x: x - w / 2, y: y - hgt / 2, width: w, height: hgt, rx: 3, fill: bg }));
-  g.append(s('text', { x, y: y + size * 0.36, 'text-anchor': 'middle', fill: color, 'font-size': size, 'font-weight': 700, 'font-family': 'Inter, system-ui, sans-serif' }, text));
+  g.append(
+    s(
+      'text',
+      { x, y: y + size * 0.36, 'text-anchor': 'middle', fill: color, 'font-size': size, 'font-weight': 700, 'font-family': 'Inter, system-ui, sans-serif' },
+      text,
+    ),
+  );
   return g;
 }
 

@@ -24,6 +24,8 @@ import {
   rectanglePlan,
   removeCorner,
   setWallLength,
+  stemSpan,
+  upgradePlan,
   wallLength,
   type EditedFloorQuote,
   type FloorFixtureKind,
@@ -32,7 +34,7 @@ import {
   type FloorQuoteEdits,
 } from '@ked/pricing';
 import { h, $, small, heading, headingStyle, ghost, input } from './core';
-import { FloorCanvas, fixtureLabel, wallName, type Selection, type StepId } from './floormap-canvas';
+import { FloorCanvas, HOME_STEP, fixtureLabel, wallName, type Selection, type StepId } from './floormap-canvas';
 
 /* ------------------------------------------------------------ storage */
 
@@ -56,6 +58,7 @@ interface SavedMap {
 function normalize(m: SavedMap): SavedMap {
   return {
     ...m,
+    plan: upgradePlan(m.plan),
     notes: m.notes ?? '',
     customer: {
       name: m.customer?.name ?? m.name ?? '',
@@ -118,7 +121,7 @@ const STEPS: { id: StepId; title: string; short: string; how: string }[] = [
     id: 'curb',
     short: 'Curb',
     title: 'Raised curb (stem wall)',
-    how: 'Tap each wall that has a raised concrete curb along the bottom. Tap again to take it off. The curb stops at doors on its own.',
+    how: 'Tap a wall that has a raised concrete curb along the bottom. If it doesn’t run the whole wall, drag its gold squares to where it starts and stops. Tap a curb to select it.',
   },
   {
     id: 'cracks',
@@ -497,8 +500,7 @@ function showEditor(saved: SavedMap) {
       el?.scrollIntoView({ block: 'nearest' });
     },
     jump: (sel) => {
-      const home: Record<string, StepId> = { door: 'doors', crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating', fixture: 'things' };
-      goto(STEPS.findIndex((st) => st.id === home[sel.kind]));
+      goto(STEPS.findIndex((st) => st.id === HOME_STEP[sel.kind]));
       selection = sel;
       canvas.draw();
       panel();
@@ -654,7 +656,11 @@ function showEditor(saved: SavedMap) {
       const d = p.doors[sel.i];
       if (!d) return null;
       box.append(
-        h('p', { class: 'text-bone-200' }, `Door on wall ${wallName(d.wall)}, ${formatFeet(Math.min(d.width, wallLength(p, d.wall)))} wide. Drag a gold square to make it wider or narrower, drag the door to slide it, or pick a size:`),
+        h(
+          'p',
+          { class: 'text-bone-200' },
+          `Door on wall ${wallName(d.wall)}, ${formatFeet(Math.min(d.width, wallLength(p, d.wall)))} wide. Drag a gold square to make it wider or narrower, drag the door to slide it, or pick a size:`,
+        ),
         h(
           'div',
           { class: 'flex flex-wrap gap-2' },
@@ -671,6 +677,36 @@ function showEditor(saved: SavedMap) {
           ...p,
           doors: p.doors.filter((_, i) => i !== sel.i),
         })),
+      );
+    } else if (sel.kind === 'curb') {
+      const r = p.stemWalls[sel.i];
+      if (!r) return null;
+      const { from, to } = stemSpan(p, r);
+      const whole = r.from === undefined && r.to === undefined;
+      box.append(
+        h(
+          'p',
+          { class: 'text-bone-200' },
+          `Curb on wall ${wallName(r.wall)}, ${formatFeet(to - from)}${whole ? ', the whole wall' : ''}. Drag a gold square to where the curb starts or stops.`,
+        ),
+        ...(whole
+          ? []
+          : [
+              h(
+                'button',
+                {
+                  type: 'button',
+                  class: `${ghost} fm-big`,
+                  onclick: () => {
+                    const next = structuredClone(p);
+                    next.stemWalls[sel.i] = { wall: r.wall };
+                    change(next);
+                  },
+                },
+                'Run it the whole wall',
+              ),
+            ]),
+        remove('Remove this curb', () => ({ ...p, stemWalls: p.stemWalls.filter((_, i) => i !== sel.i) })),
       );
     } else if (sel.kind === 'crack') {
       const c = p.cracks[sel.i];
@@ -704,7 +740,35 @@ function showEditor(saved: SavedMap) {
     } else if (sel.kind === 'fixture') {
       const f = p.fixtures[sel.i];
       if (!f) return null;
-      box.append(h('p', { class: 'text-bone-200' }, `${fixtureLabel(f.kind)}. Drag it to move it.`));
+      box.append(
+        h('p', { class: 'text-bone-200' }, `${fixtureLabel(f.kind)}. Drag it to move it. Wrong kind? Change it:`),
+        h(
+          'div',
+          { class: 'flex flex-wrap gap-2' },
+          ...FIXTURES.map((k) =>
+            chip(fixtureLabel(k), f.kind === k, () => {
+              const next = structuredClone(p);
+              const g = next.fixtures[sel.i]!;
+              g.kind = k;
+              if (k === 'step') g.width = g.width ?? stepWidth;
+              else delete g.width;
+              change(next);
+            }),
+          ),
+        ),
+      );
+      {
+        const note = h('input', { class: input, placeholder: 'e.g. floor drain, keep clear', 'aria-label': 'Note' }) as HTMLInputElement;
+        note.value = f.note ?? '';
+        note.addEventListener('change', () => {
+          const next = structuredClone(doc.plan);
+          const v = note.value.trim();
+          if (v) next.fixtures[sel.i]!.note = v;
+          else delete next.fixtures[sel.i]!.note;
+          change(next);
+        });
+        box.append(h('label', { class: 'flex flex-col gap-1' }, h('span', { class: small }, 'Note'), note));
+      }
       if (f.kind === 'step') {
         const W = lengthInput(
           'Step width',
@@ -849,17 +913,37 @@ function showEditor(saved: SavedMap) {
           'p',
           { class: 'text-sm text-bone-400' },
           p.stemWalls.length
-            ? `Curb on wall ${p.stemWalls.map(wallName).join(', ')}: ${formatFeet(m.stemWallFeet ?? 0)} in all.`
+            ? `${formatFeet(m.stemWallFeet ?? 0)} of curb in all (it stops at doors).`
             : 'No curb marked. Skip this step if the floor meets the walls flat.',
         ),
         p.stemWalls.length
-          ? null
+          ? h(
+              'div',
+              { class: 'flex flex-col gap-1' },
+              ...p.stemWalls.map((r, k) => {
+                const { from, to } = stemSpan(p, r);
+                const whole = r.from === undefined && r.to === undefined;
+                return h(
+                  'button',
+                  {
+                    type: 'button',
+                    class: `text-left text-sm ${selection?.kind === 'curb' && selection.i === k ? 'text-gold-400' : 'text-bone-200'} underline-offset-4 hover:underline`,
+                    onclick: () => {
+                      selection = { kind: 'curb', i: k };
+                      canvas.draw();
+                      panel();
+                    },
+                  },
+                  `Wall ${wallName(r.wall)}: ${formatFeet(to - from)}${whole ? ', whole wall' : ''}`,
+                );
+              }),
+            )
           : h(
               'button',
               {
                 type: 'button',
                 class: `${ghost} self-start`,
-                onclick: () => change({ ...p, stemWalls: p.outline.map((_, i) => i) }),
+                onclick: () => change({ ...p, stemWalls: p.outline.map((_, i) => ({ wall: i })) }),
               },
               'Curb on every wall',
             ),

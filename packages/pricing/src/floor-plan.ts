@@ -20,12 +20,23 @@ export interface DoorOnWall {
   width: number;
 }
 
+/**
+ * A run of raised curb (stem wall) along one wall, in feet from the wall's
+ * start corner. A missing end means "to the corner", so a curb that runs the
+ * whole wall keeps doing so when the wall's length changes.
+ */
+export interface StemRun {
+  wall: number;
+  from?: number;
+  to?: number;
+}
+
 export interface FloorPlan {
   version: 1;
   outline: Pt[];
   doors: DoorOnWall[];
-  /** Walls with a raised concrete curb to coat. The curb stops at doors. */
-  stemWalls: number[];
+  /** Raised concrete curb to coat, in runs along the walls. The curb stops at doors. */
+  stemWalls: StemRun[];
   cracks: Pt[][];
   spalls: Pt[][];
   oldCoating: 'none' | 'all' | Pt[][];
@@ -47,7 +58,15 @@ export const emptyPlan = (): FloorPlan => ({
 
 /** The usual start: a rectangle with the garage door wall along y = 0. */
 export function rectanglePlan(width: number, depth: number): FloorPlan {
-  return { ...emptyPlan(), outline: [[0, 0], [width, 0], [width, depth], [0, depth]] };
+  return {
+    ...emptyPlan(),
+    outline: [
+      [0, 0],
+      [width, 0],
+      [width, depth],
+      [0, depth],
+    ],
+  };
 }
 
 /** An L: the rectangle plus a bump-out at the back right. */
@@ -55,7 +74,14 @@ export function lPlan(width: number, depth: number, bumpWidth: number, bumpDepth
   const bx = width - bumpWidth;
   return {
     ...emptyPlan(),
-    outline: [[0, 0], [width, 0], [width, depth + bumpDepth], [bx, depth + bumpDepth], [bx, depth], [0, depth]],
+    outline: [
+      [0, 0],
+      [width, 0],
+      [width, depth + bumpDepth],
+      [bx, depth + bumpDepth],
+      [bx, depth],
+      [0, depth],
+    ],
   };
 }
 
@@ -148,7 +174,10 @@ export function convexHull(points: Pt[]): Pt[] {
  * Null when it's too small to mean anything.
  */
 export function areaFromStroke(plan: FloorPlan, stroke: Pt[], tol = 0.2): Pt[] | null {
-  let pts = simplify(stroke.map((p) => keepInside(plan, p)), tol);
+  let pts = simplify(
+    stroke.map((p) => keepInside(plan, p)),
+    tol,
+  );
   if (pts.length > 3 && len(sub(pts[0]!, pts[pts.length - 1]!)) < 0.5) pts = pts.slice(0, -1);
   if (pts.length < 3) return null;
   if (selfIntersects(pts)) pts = convexHull(pts);
@@ -157,7 +186,10 @@ export function areaFromStroke(plan: FloorPlan, stroke: Pt[], tol = 0.2): Pt[] |
 
 /** A hand-drawn crack, kept on the floor and smoothed. Null when it's a tap, not a line. */
 export function lineFromStroke(plan: FloorPlan, stroke: Pt[], tol = 0.15): Pt[] | null {
-  const pts = simplify(stroke.map((p) => keepInside(plan, p)), tol);
+  const pts = simplify(
+    stroke.map((p) => keepInside(plan, p)),
+    tol,
+  );
   let L = 0;
   for (let i = 1; i < pts.length; i++) L += len(sub(pts[i]!, pts[i - 1]!));
   return L >= 0.5 ? pts : null;
@@ -192,7 +224,18 @@ export function insertCorner(plan: FloorPlan, i: number, at: Pt): FloorPlan {
     if (d.wall === i && d.at > r.at) return { ...d, wall: i + 1, at: d.at - r.at };
     return d;
   });
-  out.stemWalls = [...new Set(out.stemWalls.flatMap((w) => (w > i ? [w + 1] : w === i ? [i, i + 1] : [w])))].sort((p, q) => p - q);
+  const L = wallLength(plan, i);
+  const cut = r.at;
+  out.stemWalls = plan.stemWalls.flatMap((run): StemRun[] => {
+    if (run.wall > i) return [{ ...run, wall: run.wall + 1 }];
+    if (run.wall < i) return [run];
+    const from = run.from ?? 0;
+    const to = run.to ?? L;
+    const parts: StemRun[] = [];
+    if (from < cut - 0.01) parts.push({ wall: i, ...(run.from !== undefined ? { from } : {}), ...(to < cut - 0.01 ? { to } : {}) });
+    if (to > cut + 0.01) parts.push({ wall: i + 1, ...(from > cut + 0.01 ? { from: from - cut } : {}), ...(run.to !== undefined ? { to: to - cut } : {}) });
+    return parts;
+  });
   return out;
 }
 
@@ -208,7 +251,13 @@ export function removeCorner(plan: FloorPlan, i: number): FloorPlan {
   // Walls after i shift down by one; wall i (starting at the removed corner) joins `before`.
   const remap = (w: number) => (w === i ? (before > i ? before - 1 : before) : w > i ? w - 1 : w) % m;
   out.doors = plan.doors.map((d) => ({ ...d, wall: remap(d.wall), at: d.wall === i ? d.at + lenBefore : d.at }));
-  out.stemWalls = [...new Set(plan.stemWalls.map(remap))].sort((p, q) => p - q);
+  const lenAfter = wallLength(plan, i);
+  out.stemWalls = plan.stemWalls.map((r): StemRun => {
+    if (r.wall === i) return { wall: remap(i), from: (r.from ?? 0) + lenBefore, ...(r.to !== undefined ? { to: r.to + lenBefore } : {}) };
+    if (r.wall === before) return { wall: remap(before), ...(r.from !== undefined ? { from: r.from } : {}), to: r.to ?? lenBefore };
+    return { ...r, wall: remap(r.wall) };
+  });
+  out.stemWalls = mergeRuns(out, out.stemWalls, lenBefore + lenAfter);
   return out;
 }
 
@@ -235,10 +284,79 @@ export function setWallLength(plan: FloorPlan, i: number, feet: number): FloorPl
   return out;
 }
 
+/** Curb on wall i end to end, or none if it has any. */
 export function toggleStemWall(plan: FloorPlan, i: number): FloorPlan {
   const out = clone(plan);
-  out.stemWalls = out.stemWalls.includes(i) ? out.stemWalls.filter((w) => w !== i) : [...out.stemWalls, i].sort((p, q) => p - q);
+  out.stemWalls = out.stemWalls.some((r) => r.wall === i) ? out.stemWalls.filter((r) => r.wall !== i) : [...out.stemWalls, { wall: i }];
   return out;
+}
+
+/** A run's two ends in feet, kept on its wall. */
+export function stemSpan(plan: FloorPlan, r: StemRun): { from: number; to: number } {
+  const L = wallLength(plan, r.wall);
+  const from = Math.max(0, Math.min(L, r.from ?? 0));
+  const to = Math.max(from, Math.min(L, r.to ?? L));
+  return { from, to };
+}
+
+/**
+ * Move one end of curb run `k` to `at` feet along its wall. An end dragged
+ * to within half a foot of the corner snaps to it, and then follows the
+ * corner if the wall changes length.
+ */
+export function setStemEnd(plan: FloorPlan, k: number, end: 'from' | 'to', at: number): FloorPlan {
+  const out = clone(plan);
+  const r = out.stemWalls[k];
+  if (!r) return plan;
+  const L = wallLength(plan, r.wall);
+  const { from, to } = stemSpan(plan, r);
+  const v = Math.round(Math.max(0, Math.min(L, at)) * 4) / 4;
+  if (end === 'from') {
+    const f = Math.min(v, to - 0.5);
+    if (f <= 0.5) delete r.from;
+    else r.from = f;
+  } else {
+    const t = Math.max(v, from + 0.5);
+    if (t >= L - 0.5) delete r.to;
+    else r.to = t;
+  }
+  return out;
+}
+
+function mergeRuns(plan: FloorPlan, runs: StemRun[], _len: number): StemRun[] {
+  // Overlapping runs on one wall become one.
+  const byWall = new Map<number, StemRun[]>();
+  for (const r of runs) byWall.set(r.wall, [...(byWall.get(r.wall) ?? []), r]);
+  const out: StemRun[] = [];
+  for (const [wall, list] of byWall) {
+    const spans = list.map((r) => ({ r, ...stemSpan(plan, r) })).sort((p, q) => p.from - q.from);
+    let cur = spans[0]!;
+    for (const sp of spans.slice(1)) {
+      if (sp.from <= cur.to + 0.01) {
+        cur = {
+          r: {
+            wall,
+            ...(cur.r.from !== undefined ? { from: cur.r.from } : {}),
+            ...(sp.r.to !== undefined && sp.to >= cur.to ? { to: sp.r.to } : cur.r.to !== undefined && cur.to >= sp.to ? { to: cur.r.to } : {}),
+          },
+          from: cur.from,
+          to: Math.max(cur.to, sp.to),
+        };
+      } else {
+        out.push(cur.r);
+        cur = sp;
+      }
+    }
+    out.push(cur.r);
+  }
+  return out;
+}
+
+/** Plans saved when the curb was whole walls only (numbers) read as whole-wall runs. */
+export function upgradePlan(plan: FloorPlan): FloorPlan {
+  const raw = plan.stemWalls as unknown as (number | StemRun)[];
+  if (!raw.some((r) => typeof r === 'number')) return plan;
+  return { ...plan, stemWalls: raw.map((r) => (typeof r === 'number' ? { wall: r } : r)) };
 }
 
 /** The door's ends on its wall, kept within the wall. */
@@ -262,15 +380,17 @@ export function planToMap(plan: FloorPlan): FloorMap {
     cuts.set(d.wall, [...(cuts.get(d.wall) ?? []), [from, to]]);
   }
   const stemWalls: Segment[] = [];
-  for (const w of plan.stemWalls) {
+  for (const r of plan.stemWalls) {
+    const w = r.wall;
     if (w < 0 || w >= plan.outline.length) continue;
-    const L = wallLength(plan, w);
-    let start = 0;
+    const span = stemSpan(plan, r);
+    let start = span.from;
     for (const [from, to] of (cuts.get(w) ?? []).sort((p, q) => p[0] - q[0])) {
+      if (to <= start || from >= span.to) continue;
       if (from - start > 0.01) stemWalls.push({ a: alongWall(plan, w, start), b: alongWall(plan, w, from) });
       start = Math.max(start, to);
     }
-    if (L - start > 0.01) stemWalls.push({ a: alongWall(plan, w, start), b: alongWall(plan, w, L) });
+    if (span.to - start > 0.01) stemWalls.push({ a: alongWall(plan, w, start), b: alongWall(plan, w, span.to) });
   }
   return {
     version: 1,
