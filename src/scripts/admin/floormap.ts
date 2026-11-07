@@ -709,7 +709,7 @@ function showEditor(saved: SavedMap) {
     h('button', { type: 'button', class: `${ghost} bg-ink-950/90 text-lg`, 'aria-label': 'Zoom out', onclick: () => canvas.zoom(0.8) }, '−'),
     h('button', { type: 'button', class: `${ghost} bg-ink-950/90 text-xs`, onclick: () => canvas.fit() }, 'Fit'),
   );
-  canvas.el.append(zoomBar, h('p', { class: 'pointer-events-none absolute bottom-2 left-3 text-xs text-bone-500' }, 'Two fingers or the scroll wheel to move and zoom'));
+  canvas.el.append(zoomBar, h('p', { class: 'pointer-events-none absolute bottom-2 left-3 text-xs text-bone-500' }, 'Zoom with + and −. Drag empty space to move. On a phone: two fingers.'));
 
   view().replaceChildren(
     h(

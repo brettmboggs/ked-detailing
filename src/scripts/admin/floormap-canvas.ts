@@ -6,8 +6,10 @@
  * listens.
  *
  * One finger or the mouse does the step's job (drag a corner, draw a crack,
- * place a drain). Two fingers, the scroll wheel, or a drag on empty floor
- * where the step doesn't draw, move and zoom the view.
+ * place a drain). Two fingers, or a drag on empty floor where the step
+ * doesn't draw, move the view; two fingers pinch to zoom. The scroll wheel
+ * is left to the page (Brett: scrolling the page mustn't zoom the drawing),
+ * so on a computer the + and − buttons zoom.
  */
 import {
   alongWall,
@@ -114,7 +116,6 @@ export class FloorCanvas {
     this.svg.addEventListener('pointermove', (e) => this.move(e));
     this.svg.addEventListener('pointerup', (e) => this.up(e));
     this.svg.addEventListener('pointercancel', (e) => this.cancel(e));
-    this.svg.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
     this.svg.addEventListener('contextmenu', (e) => e.preventDefault());
     new ResizeObserver(() => {
       if (!this.fitted) this.fit();
@@ -176,16 +177,6 @@ export class FloorCanvas {
 
   zoom(k: number) {
     this.zoomAt(this.el.clientWidth / 2, this.el.clientHeight / 2, k);
-  }
-
-  private wheel(e: WheelEvent) {
-    e.preventDefault();
-    const { x, y } = this.local(e);
-    if (e.ctrlKey || e.metaKey || Math.abs(e.deltaY) > Math.abs(e.deltaX)) this.zoomAt(x, y, Math.exp(-e.deltaY * 0.0022));
-    else {
-      this.view.tx -= e.deltaX;
-      this.draw();
-    }
   }
 
   /* ---------------------------------------------------------- input */
