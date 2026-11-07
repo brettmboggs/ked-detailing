@@ -11,6 +11,7 @@
  * database (D3), maps are kept in this browser's storage.
  */
 import {
+  applyFloorQuoteEdits,
   checkFloorMap,
   defaultFloorConfig,
   floorQuote,
@@ -24,8 +25,11 @@ import {
   removeCorner,
   setWallLength,
   wallLength,
+  type EditedFloorQuote,
   type FloorFixtureKind,
+  type FloorLineId,
   type FloorPlan,
+  type FloorQuoteEdits,
 } from '@ked/pricing';
 import { h, $, small, heading, headingStyle, ghost, input } from './core';
 import { FloorCanvas, fixtureLabel, wallName, type Selection, type StepId } from './floormap-canvas';
@@ -38,7 +42,37 @@ interface SavedMap {
   updated: string;
   plan: FloorPlan;
   moisture: 'untested' | 'passed' | 'failed';
+  /** For the crew; not on the quote. */
   notes: string;
+  customer: { name: string; address: string; phone: string; email: string };
+  /** The owner's changes to the formula's quote. */
+  edits: FloorQuoteEdits;
+  /** Printed on the quote. */
+  note: string;
+  quoteNo: string;
+}
+
+/** Maps saved before a field existed get its empty value. */
+function normalize(m: SavedMap): SavedMap {
+  return {
+    ...m,
+    notes: m.notes ?? '',
+    customer: {
+      name: m.customer?.name ?? m.name ?? '',
+      address: m.customer?.address ?? '',
+      phone: m.customer?.phone ?? '',
+      email: m.customer?.email ?? '',
+    },
+    edits: { lines: m.edits?.lines ?? {}, extras: m.edits?.extras ?? [] },
+    note: m.note ?? '',
+    quoteNo: m.quoteNo ?? quoteNumber(new Date(m.updated || Date.now())),
+  };
+}
+
+/** Q-2611-0742: year, month, and a short random tail; readable over the phone. */
+function quoteNumber(d = new Date()) {
+  const yymm = `${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `Q-${yymm}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 }
 
 const STORE = 'ked-floor-maps';
@@ -46,7 +80,7 @@ const STORE = 'ked-floor-maps';
 function loadAll(): SavedMap[] {
   try {
     const list = JSON.parse(localStorage.getItem(STORE) ?? '[]') as SavedMap[];
-    return Array.isArray(list) ? list : [];
+    return Array.isArray(list) ? list.map(normalize) : [];
   } catch {
     return [];
   }
@@ -68,15 +102,60 @@ const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toStrin
 /* ------------------------------------------------------------ steps */
 
 const STEPS: { id: StepId; title: string; short: string; how: string }[] = [
-  { id: 'shape', short: 'Shape', title: 'The floor’s shape', how: 'Type each wall’s length below, or tap a length on the drawing. Drag a gold corner to move it. Tap a + to add a corner for an L or a notch.' },
-  { id: 'doors', short: 'Doors', title: 'Garage doors', how: 'Pick the door size, then tap the wall where the door is. Drag a door to slide it along its wall.' },
-  { id: 'curb', short: 'Curb', title: 'Raised curb (stem wall)', how: 'Tap each wall that has a raised concrete curb along the bottom. Tap again to take it off. The curb stops at doors on its own.' },
-  { id: 'cracks', short: 'Cracks', title: 'Cracks', how: 'Trace each crack with your finger or the mouse, start to end. Its length is measured for you.' },
-  { id: 'damage', short: 'Damage', title: 'Pitted or flaking concrete', how: 'Draw a loop around each damaged patch. The area is measured for you.' },
-  { id: 'coating', short: 'Old coating', title: 'Old paint, epoxy or coating', how: 'Is there a coating on the floor now? It all has to be ground off first.' },
-  { id: 'things', short: 'Things', title: 'Things on the floor', how: 'Pick what it is, then tap where it is. Drag one to move it.' },
-  { id: 'uncoated', short: 'Skip areas', title: 'Areas we won’t coat', how: 'Draw a loop around anything that stays: a fixed cabinet, a heater pad. It’s taken off the square feet.' },
-  { id: 'price', short: 'Price', title: 'Measurements and price', how: 'Check the numbers, mark the moisture test, and this is the firm quote.' },
+  {
+    id: 'shape',
+    short: 'Shape',
+    title: 'The floor’s shape',
+    how: 'Type each wall’s length below, or tap a length on the drawing. Drag a gold corner to move it. Tap a + to add a corner for an L or a notch.',
+  },
+  {
+    id: 'doors',
+    short: 'Doors',
+    title: 'Garage doors',
+    how: 'Pick the door size, then tap the wall where the door is. Drag a door to slide it along its wall.',
+  },
+  {
+    id: 'curb',
+    short: 'Curb',
+    title: 'Raised curb (stem wall)',
+    how: 'Tap each wall that has a raised concrete curb along the bottom. Tap again to take it off. The curb stops at doors on its own.',
+  },
+  {
+    id: 'cracks',
+    short: 'Cracks',
+    title: 'Cracks',
+    how: 'Trace each crack with your finger or the mouse, start to end. Its length is measured for you.',
+  },
+  {
+    id: 'damage',
+    short: 'Damage',
+    title: 'Pitted or flaking concrete',
+    how: 'Draw a loop around each damaged patch. The area is measured for you.',
+  },
+  {
+    id: 'coating',
+    short: 'Old coating',
+    title: 'Old paint, epoxy or coating',
+    how: 'Is there a coating on the floor now? It all has to be ground off first.',
+  },
+  {
+    id: 'things',
+    short: 'Things',
+    title: 'Things on the floor',
+    how: 'Pick what it is, then tap where it is. Drag one to move it.',
+  },
+  {
+    id: 'uncoated',
+    short: 'Skip areas',
+    title: 'Areas we won’t coat',
+    how: 'Draw a loop around anything that stays: a fixed cabinet, a heater pad. It’s taken off the square feet.',
+  },
+  {
+    id: 'price',
+    short: 'Price',
+    title: 'Measurements and price',
+    how: 'Check the numbers, mark the moisture test, and this is the firm quote.',
+  },
 ];
 
 const DOOR_SIZES = [8, 9, 10, 12, 16, 18];
@@ -92,6 +171,8 @@ const STYLE = `
 .fm-step[aria-current=step]{color:#eae6dc;border-color:#c9a961}
 .fm-step b{display:inline-block;min-width:1.4em;color:#c9a961;font-weight:700}
 .fm-big{min-height:52px}
+@media (min-width:1024px){.fm-aside{height:min(68svh,720px);min-height:360px}.fm-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:.5rem;overscroll-behavior:contain}}
+.fm-money{width:6.5rem;text-align:right}
 `;
 
 /* ------------------------------------------------------------ entry */
@@ -111,11 +192,17 @@ function showList() {
     'div',
     { class: 'max-w-3xl' },
     h('h2', { class: heading, style: headingStyle }, 'Floor maps'),
-    h('p', { class: 'mt-2 max-w-2xl text-bone-400' }, 'Draw the garage floor at the measure visit. It measures itself and gives you the firm price. Saved on this device for now.'),
+    h(
+      'p',
+      { class: 'mt-2 max-w-2xl text-bone-400' },
+      'Draw the garage floor at the measure visit. It measures itself and gives you the firm price. Saved on this device for now.',
+    ),
     h('button', { type: 'button', class: 'btn-gold mt-6', onclick: () => showNew() }, 'New floor map'),
   );
   if (maps.length) {
-    const ul = h('ul', { class: 'mt-10 divide-y divide-ink-800 border-y border-ink-800' });
+    const ul = h('ul', {
+      class: 'mt-10 divide-y divide-ink-800 border-y border-ink-800',
+    });
     for (const m of maps) {
       let sqft = 0;
       try {
@@ -123,12 +210,39 @@ function showList() {
       } catch {
         sqft = 0;
       }
-      const confirm = h('span', { class: 'flex items-center gap-2', hidden: true });
-      const del = h('button', { type: 'button', class: ghost, onclick: () => ((del.hidden = true), (confirm.hidden = false)) }, 'Delete');
+      const confirm = h('span', {
+        class: 'flex items-center gap-2',
+        hidden: true,
+      });
+      const del = h(
+        'button',
+        {
+          type: 'button',
+          class: ghost,
+          onclick: () => ((del.hidden = true), (confirm.hidden = false)),
+        },
+        'Delete',
+      );
       confirm.append(
         h('span', { class: 'text-sm text-bone-400' }, 'Delete for good?'),
-        h('button', { type: 'button', class: ghost, onclick: () => (saveAll(loadAll().filter((x) => x.id !== m.id)), showList()) }, 'Yes, delete'),
-        h('button', { type: 'button', class: ghost, onclick: () => ((del.hidden = false), (confirm.hidden = true)) }, 'Keep'),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: ghost,
+            onclick: () => (saveAll(loadAll().filter((x) => x.id !== m.id)), showList()),
+          },
+          'Yes, delete',
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: ghost,
+            onclick: () => ((del.hidden = false), (confirm.hidden = true)),
+          },
+          'Keep',
+        ),
       );
       ul.append(
         h(
@@ -136,9 +250,17 @@ function showList() {
           { class: 'flex flex-wrap items-center justify-between gap-3 py-4' },
           h(
             'button',
-            { type: 'button', class: 'min-w-0 flex-1 text-left', onclick: () => showEditor(m) },
+            {
+              type: 'button',
+              class: 'min-w-0 flex-1 text-left',
+              onclick: () => showEditor(m),
+            },
             h('span', { class: 'block text-lg text-bone-50' }, m.name || 'Untitled floor'),
-            h('span', { class: 'block text-sm text-bone-400' }, `${Math.round(sqft)} sq ft · changed ${new Date(m.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`),
+            h(
+              'span',
+              { class: 'block text-sm text-bone-400' },
+              `${Math.round(sqft)} sq ft · changed ${new Date(m.updated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`,
+            ),
           ),
           h('span', { class: 'flex items-center gap-2' }, h('button', { type: 'button', class: ghost, onclick: () => showEditor(m) }, 'Open'), del, confirm),
         ),
@@ -152,17 +274,27 @@ function showList() {
 /* ------------------------------------------------------------ new */
 
 function lengthInput(label: string, value: number, onChange: (v: number | null) => void, hint?: string) {
-  const el = h('input', { class: `${input} fm-big text-lg`, inputmode: 'decimal', autocomplete: 'off', 'aria-label': label, placeholder: 'e.g. 22 6' }) as HTMLInputElement;
+  const el = h('input', {
+    class: `${input} fm-big text-lg`,
+    inputmode: 'decimal',
+    autocomplete: 'off',
+    'aria-label': label,
+    placeholder: 'e.g. 22 6',
+  }) as HTMLInputElement;
   el.value = formatFeet(value);
   const msg = h('span', { class: 'text-xs text-bone-400' }, hint ?? 'Feet and inches: “22 6” is 22 feet 6 inches.');
   el.addEventListener('input', () => {
     const v = parseFeet(el.value);
-    msg.textContent = el.value.trim() && v === null ? 'That doesn’t read as a length. Try “22 6” or “22.5”.' : hint ?? 'Feet and inches: “22 6” is 22 feet 6 inches.';
+    msg.textContent =
+      el.value.trim() && v === null ? 'That doesn’t read as a length. Try “22 6” or “22.5”.' : (hint ?? 'Feet and inches: “22 6” is 22 feet 6 inches.');
     msg.className = `text-xs ${el.value.trim() && v === null ? 'text-red-300' : 'text-bone-400'}`;
     onChange(v);
   });
   el.addEventListener('focus', () => el.select());
-  return { el, wrap: h('label', { class: 'flex flex-col gap-1.5' }, h('span', { class: small }, label), el, msg) };
+  return {
+    el,
+    wrap: h('label', { class: 'flex flex-col gap-1.5' }, h('span', { class: small }, label), el, msg),
+  };
 }
 
 function showNew() {
@@ -171,7 +303,12 @@ function showNew() {
   let d: number | null = 22;
   let bw: number | null = 10;
   let bd: number | null = 8;
-  const name = h('input', { class: `${input} fm-big text-lg`, placeholder: 'e.g. Smith, 14 Oak Lane', autocomplete: 'off', 'aria-label': 'Whose garage' }) as HTMLInputElement;
+  const name = h('input', {
+    class: `${input} fm-big text-lg`,
+    placeholder: 'e.g. Smith, 14 Oak Lane',
+    autocomplete: 'off',
+    'aria-label': 'Whose garage',
+  }) as HTMLInputElement;
 
   const W = lengthInput('Across the garage door wall', 22, (v) => (w = v));
   const D = lengthInput('From the door to the back wall', 22, (v) => (d = v));
@@ -182,7 +319,11 @@ function showNew() {
   const shapeBtn = (id: 'rect' | 'l', title: string, note: string, svg: string) => {
     const b = h(
       'button',
-      { type: 'button', class: 'fm-chip flex flex-1 items-center gap-4 p-4 text-left', 'aria-pressed': String(shape === id) },
+      {
+        type: 'button',
+        class: 'fm-chip flex flex-1 items-center gap-4 p-4 text-left',
+        'aria-pressed': String(shape === id),
+      },
       h('span', { class: 'shrink-0' }),
       h('span', {}, h('span', { class: 'block font-semibold' }, title), h('span', { class: 'block text-sm opacity-80' }, note)),
     );
@@ -197,8 +338,18 @@ function showNew() {
   const shapes = h(
     'div',
     { class: 'flex flex-col gap-3 sm:flex-row' },
-    shapeBtn('rect', 'Rectangle', 'Most garages', '<svg width="44" height="36"><rect x="4" y="4" width="36" height="28" fill="none" stroke="currentColor" stroke-width="3"/></svg>'),
-    shapeBtn('l', 'L-shape', 'A bump-out at the back', '<svg width="44" height="36"><path d="M4 32V12h22V4h14v28z" fill="none" stroke="currentColor" stroke-width="3"/></svg>'),
+    shapeBtn(
+      'rect',
+      'Rectangle',
+      'Most garages',
+      '<svg width="44" height="36"><rect x="4" y="4" width="36" height="28" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
+    ),
+    shapeBtn(
+      'l',
+      'L-shape',
+      'A bump-out at the back',
+      '<svg width="44" height="36"><path d="M4 32V12h22V4h14v28z" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
+    ),
   );
 
   const presets = h(
@@ -234,7 +385,15 @@ function showNew() {
       return;
     }
     const plan = shape === 'l' ? lPlan(w, d, bw!, bd!) : rectanglePlan(w, d);
-    const m: SavedMap = { id: newId(), name: name.value.trim(), updated: new Date().toISOString(), plan, moisture: 'untested', notes: '' };
+    const who = name.value.trim();
+    const m: SavedMap = normalize({
+      id: newId(),
+      name: who,
+      updated: new Date().toISOString(),
+      plan,
+      moisture: 'untested',
+      notes: '',
+    } as SavedMap);
     upsert(m);
     showEditor(m);
   };
@@ -243,18 +402,40 @@ function showNew() {
     h(
       'div',
       { class: 'max-w-2xl' },
-      h('button', { type: 'button', class: 'text-sm text-bone-400 underline underline-offset-4', onclick: showList }, '← All floor maps'),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'text-sm text-bone-400 underline underline-offset-4',
+          onclick: showList,
+        },
+        '← All floor maps',
+      ),
       h('h2', { class: `${heading} mt-6`, style: headingStyle }, 'New floor map'),
       h(
         'div',
         { class: 'mt-8 flex flex-col gap-8' },
         h('label', { class: 'flex flex-col gap-1.5' }, h('span', { class: small }, 'Whose garage'), name),
-        h('div', { class: 'flex flex-col gap-3' }, h('span', { class: small }, 'What shape is it?'), shapes, h('p', { class: 'text-sm text-bone-400' }, 'Something else? Start with a rectangle; you can add and move corners next.')),
+        h(
+          'div',
+          { class: 'flex flex-col gap-3' },
+          h('span', { class: small }, 'What shape is it?'),
+          shapes,
+          h('p', { class: 'text-sm text-bone-400' }, 'Something else? Start with a rectangle; you can add and move corners next.'),
+        ),
         h('div', { class: 'flex flex-col gap-3' }, h('span', { class: small }, 'Quick sizes'), presets),
         h('div', { class: 'grid gap-5 sm:grid-cols-2' }, W.wrap, D.wrap),
         extra,
         err,
-        h('button', { type: 'button', class: 'btn-gold fm-big self-start', onclick: start }, 'Start drawing'),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn-gold fm-big self-start',
+            onclick: start,
+          },
+          'Start drawing',
+        ),
       ),
     ),
   );
@@ -347,22 +528,58 @@ function showEditor(saved: SavedMap) {
   };
 
   const undoBtn = h('button', { type: 'button', class: ghost, onclick: doUndo, title: 'Undo (Ctrl+Z)' }, 'Undo');
-  const redoBtn = h('button', { type: 'button', class: ghost, onclick: doRedo, title: 'Redo (Ctrl+Shift+Z)' }, 'Redo');
+  const redoBtn = h(
+    'button',
+    {
+      type: 'button',
+      class: ghost,
+      onclick: doRedo,
+      title: 'Redo (Ctrl+Shift+Z)',
+    },
+    'Redo',
+  );
 
-  const nameEl = h('input', { class: `${input} max-w-xs`, placeholder: 'Whose garage', 'aria-label': 'Whose garage' }) as HTMLInputElement;
+  const nameEl = h('input', {
+    class: `${input} max-w-xs`,
+    placeholder: 'Whose garage',
+    'aria-label': 'Whose garage',
+  }) as HTMLInputElement;
   nameEl.value = doc.name;
   nameEl.addEventListener('input', () => {
     doc.name = nameEl.value.trim();
     save();
   });
 
-  const stepsBar = h('nav', { class: 'mt-5 flex overflow-x-auto border-b border-ink-800', 'aria-label': 'Steps' });
+  const stepsBar = h('nav', {
+    class: 'mt-5 flex overflow-x-auto border-b border-ink-800',
+    'aria-label': 'Steps',
+  });
   const panelEl = h('div', { class: 'flex flex-col gap-5' });
   // Phones: what to do, right above the drawing, so nobody scrolls to find it.
-  const tip = h('p', { class: 'mt-4 border-l-2 border-gold-500 pl-3 text-sm text-bone-200 lg:hidden', role: 'status' });
+  const tip = h('p', {
+    class: 'mt-4 border-l-2 border-gold-500 pl-3 text-sm text-bone-200 lg:hidden',
+    role: 'status',
+  });
   // Phones: the step's choices (door size, what to place) above the drawing too.
-  const tipControls = h('div', { class: 'mt-3 flex flex-wrap gap-2 lg:hidden' });
-  const summary = h('div', { class: 'mt-auto border-t border-ink-800 pt-4' });
+  const tipControls = h('div', {
+    class: 'mt-3 flex flex-wrap gap-2 lg:hidden',
+  });
+  const summary = h('div', { class: 'border-t border-ink-800 pt-3' });
+  const navEl = h('div', { class: 'flex flex-wrap items-center gap-3' });
+
+  /** The quote as it stands: the formula, then the owner's changes. */
+  const quoteNow = () => {
+    const m = measureFloorMap(planToMap(doc.plan));
+    const base = floorQuote(defaultFloorConfig, {
+      ...m,
+      moisturePrimer: doc.moisture === 'failed',
+    });
+    return {
+      m,
+      base,
+      q: applyFloorQuoteEdits(defaultFloorConfig, base, doc.edits),
+    };
+  };
 
   const goto = (i: number) => {
     stepIx = Math.max(0, Math.min(STEPS.length - 1, i));
@@ -374,14 +591,34 @@ function showEditor(saved: SavedMap) {
   const drawSteps = () => {
     stepsBar.replaceChildren(
       ...STEPS.map((st, i) =>
-        h('button', { type: 'button', class: 'fm-step', 'aria-current': i === stepIx ? 'step' : undefined, onclick: () => goto(i) }, h('b', {}, String(i + 1)), st.short),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'fm-step',
+            'aria-current': i === stepIx ? 'step' : undefined,
+            onclick: () => goto(i),
+          },
+          h('b', {}, String(i + 1)),
+          st.short,
+        ),
       ),
     );
     stepsBar.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
     tip.textContent = `${stepIx + 1}. ${STEPS[stepIx]!.how}`;
   };
 
-  const chip = (label: string, on: boolean, click: () => void) => h('button', { type: 'button', class: 'fm-chip', 'aria-pressed': String(on), onclick: click }, label);
+  const chip = (label: string, on: boolean, click: () => void) =>
+    h(
+      'button',
+      {
+        type: 'button',
+        class: 'fm-chip',
+        'aria-pressed': String(on),
+        onclick: click,
+      },
+      label,
+    );
 
   /** What's selected, in words, with the way to delete it. */
   const selectionBox = () => {
@@ -389,8 +626,19 @@ function showEditor(saved: SavedMap) {
     const sel = selection;
     const p = doc.plan;
     const remove = (label: string, next: () => FloorPlan) =>
-      h('button', { type: 'button', class: `${ghost} fm-big`, 'data-remove': true, onclick: () => ((selection = null), change(next())) }, label);
-    const box = h('div', { class: 'flex flex-col gap-3 border-l-2 border-gold-500 pl-4' });
+      h(
+        'button',
+        {
+          type: 'button',
+          class: `${ghost} fm-big`,
+          'data-remove': true,
+          onclick: () => ((selection = null), change(next())),
+        },
+        label,
+      );
+    const box = h('div', {
+      class: 'flex flex-col gap-3 border-l-2 border-gold-500 pl-4',
+    });
     if (sel.kind === 'corner') {
       box.append(h('p', { class: 'text-bone-200' }, 'Corner selected. Drag it, or:'));
       if (p.outline.length > 3) box.append(remove('Remove this corner', () => removeCorner(p, sel.i)));
@@ -412,14 +660,23 @@ function showEditor(saved: SavedMap) {
             }),
           ),
         ),
-        remove('Remove this door', () => ({ ...p, doors: p.doors.filter((_, i) => i !== sel.i) })),
+        remove('Remove this door', () => ({
+          ...p,
+          doors: p.doors.filter((_, i) => i !== sel.i),
+        })),
       );
     } else if (sel.kind === 'crack') {
       const c = p.cracks[sel.i];
       if (!c) return null;
       let L = 0;
       for (let i = 1; i < c.length; i++) L += Math.hypot(c[i]![0] - c[i - 1]![0], c[i]![1] - c[i - 1]![1]);
-      box.append(h('p', { class: 'text-bone-200' }, `Crack, ${formatFeet(L)} long.`), remove('Remove this crack', () => ({ ...p, cracks: p.cracks.filter((_, i) => i !== sel.i) })));
+      box.append(
+        h('p', { class: 'text-bone-200' }, `Crack, ${formatFeet(L)} long.`),
+        remove('Remove this crack', () => ({
+          ...p,
+          cracks: p.cracks.filter((_, i) => i !== sel.i),
+        })),
+      );
     } else if (sel.kind === 'spall' || sel.kind === 'excluded' || sel.kind === 'coat') {
       const list = sel.kind === 'spall' ? p.spalls : sel.kind === 'excluded' ? p.excluded : Array.isArray(p.oldCoating) ? p.oldCoating : [];
       const a = list[sel.i];
@@ -441,16 +698,26 @@ function showEditor(saved: SavedMap) {
       if (!f) return null;
       box.append(h('p', { class: 'text-bone-200' }, `${fixtureLabel(f.kind)}. Drag it to move it.`));
       if (f.kind === 'step') {
-        const W = lengthInput('Step width', f.width ?? 4, (v) => {
-          if (!v) return;
-          const next = structuredClone(doc.plan);
-          next.fixtures[sel.i]!.width = v;
-          stepWidth = v;
-          change(next);
-        }, 'How wide the step is, wall to wall.');
+        const W = lengthInput(
+          'Step width',
+          f.width ?? 4,
+          (v) => {
+            if (!v) return;
+            const next = structuredClone(doc.plan);
+            next.fixtures[sel.i]!.width = v;
+            stepWidth = v;
+            change(next);
+          },
+          'How wide the step is, wall to wall.',
+        );
         box.append(W.wrap);
       }
-      box.append(remove('Remove it', () => ({ ...p, fixtures: p.fixtures.filter((_, i) => i !== sel.i) })));
+      box.append(
+        remove('Remove it', () => ({
+          ...p,
+          fixtures: p.fixtures.filter((_, i) => i !== sel.i),
+        })),
+      );
     }
     return box;
   };
@@ -485,13 +752,25 @@ function showEditor(saved: SavedMap) {
           : []),
     );
     const parts: (HTMLElement | null)[] = [
-      h('div', {}, h('p', { class: small }, `Step ${stepIx + 1} of ${STEPS.length}`), h('h3', { class: `${heading} mt-1 text-xl` }, st.title), h('p', { class: 'mt-2 text-bone-200' }, st.how)),
+      h(
+        'div',
+        {},
+        h('p', { class: small }, `Step ${stepIx + 1} of ${STEPS.length}`),
+        h('h3', { class: `${heading} mt-1 text-xl` }, st.title),
+        h('p', { class: 'mt-2 text-bone-200' }, st.how),
+      ),
     ];
 
     if (st.id === 'shape') {
       const walls = h('div', { class: 'grid gap-3' });
       for (let i = 0; i < p.outline.length; i++) {
-        const el = h('input', { id: `fm-wall-${i}`, class: `${input} fm-big`, inputmode: 'decimal', autocomplete: 'off', 'aria-label': `Wall ${wallName(i)} length` }) as HTMLInputElement;
+        const el = h('input', {
+          id: `fm-wall-${i}`,
+          class: `${input} fm-big`,
+          inputmode: 'decimal',
+          autocomplete: 'off',
+          'aria-label': `Wall ${wallName(i)} length`,
+        }) as HTMLInputElement;
         el.value = formatFeet(wallLength(p, i));
         el.addEventListener('focus', () => el.select());
         const apply = () => {
@@ -517,18 +796,40 @@ function showEditor(saved: SavedMap) {
           h(
             'label',
             { class: 'grid grid-cols-[2.5rem_1fr] items-center gap-x-3' },
-            h('span', { class: 'row-span-2 text-center font-display text-lg text-gold-400' }, wallName(i)),
+            h(
+              'span',
+              {
+                class: 'row-span-2 text-center font-display text-lg text-gold-400',
+              },
+              wallName(i),
+            ),
             h('span', { class: 'text-xs text-bone-400' }, side(p, i)),
             el,
           ),
         );
       }
-      parts.push(walls, h('button', { type: 'button', class: `${ghost} self-start`, onclick: () => canvas.fit() }, 'Fit the drawing to the screen'));
+      parts.push(
+        walls,
+        h(
+          'button',
+          {
+            type: 'button',
+            class: `${ghost} self-start`,
+            onclick: () => canvas.fit(),
+          },
+          'Fit the drawing to the screen',
+        ),
+      );
     }
 
     if (st.id === 'doors') {
       parts.push(
-        h('div', { class: 'flex flex-col gap-2' }, h('span', { class: small }, 'Door size'), h('div', { class: 'flex flex-wrap gap-2' }, ...DOOR_SIZES.map((sz) => chip(`${sz}′`, doorWidth === sz, () => ((doorWidth = sz), panel()))))),
+        h(
+          'div',
+          { class: 'flex flex-col gap-2' },
+          h('span', { class: small }, 'Door size'),
+          h('div', { class: 'flex flex-wrap gap-2' }, ...DOOR_SIZES.map((sz) => chip(`${sz}′`, doorWidth === sz, () => ((doorWidth = sz), panel())))),
+        ),
         h('p', { class: 'text-sm text-bone-400' }, counts(p.doors.length, 'door', 'doors')),
       );
     }
@@ -536,21 +837,51 @@ function showEditor(saved: SavedMap) {
     if (st.id === 'curb') {
       const m = measureFloorMap(planToMap(p));
       parts.push(
-        h('p', { class: 'text-sm text-bone-400' }, p.stemWalls.length ? `Curb on wall ${p.stemWalls.map(wallName).join(', ')}: ${formatFeet(m.stemWallFeet ?? 0)} in all.` : 'No curb marked. Skip this step if the floor meets the walls flat.'),
+        h(
+          'p',
+          { class: 'text-sm text-bone-400' },
+          p.stemWalls.length
+            ? `Curb on wall ${p.stemWalls.map(wallName).join(', ')}: ${formatFeet(m.stemWallFeet ?? 0)} in all.`
+            : 'No curb marked. Skip this step if the floor meets the walls flat.',
+        ),
         p.stemWalls.length
           ? null
-          : h('button', { type: 'button', class: `${ghost} self-start`, onclick: () => change({ ...p, stemWalls: p.outline.map((_, i) => i) }) }, 'Curb on every wall'),
+          : h(
+              'button',
+              {
+                type: 'button',
+                class: `${ghost} self-start`,
+                onclick: () => change({ ...p, stemWalls: p.outline.map((_, i) => i) }),
+              },
+              'Curb on every wall',
+            ),
       );
     }
 
     if (st.id === 'cracks') {
       const m = measureFloorMap(planToMap(p));
-      parts.push(h('p', { class: 'text-sm text-bone-400' }, p.cracks.length ? `${counts(p.cracks.length, 'crack', 'cracks')} ${formatFeet(m.crackFeet ?? 0)} in all.` : 'No cracks yet. Skip this step if there are none.'));
+      parts.push(
+        h(
+          'p',
+          { class: 'text-sm text-bone-400' },
+          p.cracks.length
+            ? `${counts(p.cracks.length, 'crack', 'cracks')} ${formatFeet(m.crackFeet ?? 0)} in all.`
+            : 'No cracks yet. Skip this step if there are none.',
+        ),
+      );
     }
 
     if (st.id === 'damage') {
       const m = measureFloorMap(planToMap(p));
-      parts.push(h('p', { class: 'text-sm text-bone-400' }, p.spalls.length ? `${counts(p.spalls.length, 'patch', 'patches')} ${Math.round(m.spalledSqft ?? 0)} sq ft in all.` : 'Nothing marked. Skip this step if the concrete is sound.'));
+      parts.push(
+        h(
+          'p',
+          { class: 'text-sm text-bone-400' },
+          p.spalls.length
+            ? `${counts(p.spalls.length, 'patch', 'patches')} ${Math.round(m.spalledSqft ?? 0)} sq ft in all.`
+            : 'Nothing marked. Skip this step if the concrete is sound.',
+        ),
+      );
     }
 
     if (st.id === 'coating') {
@@ -570,35 +901,71 @@ function showEditor(saved: SavedMap) {
     if (st.id === 'things') {
       parts.push(
         h('div', { class: 'flex flex-wrap gap-2' }, ...FIXTURES.map((k) => chip(fixtureLabel(k), fixtureKind === k, () => ((fixtureKind = k), panel())))),
-        fixtureKind === 'step' ? h('p', { class: 'text-sm text-bone-400' }, 'Steps are priced each. Tap where the step meets the floor, then set its width.') : null,
+        fixtureKind === 'step'
+          ? h('p', { class: 'text-sm text-bone-400' }, 'Steps are priced each. Tap where the step meets the floor, then set its width.')
+          : null,
         h('p', { class: 'text-sm text-bone-400' }, counts(p.fixtures.length, 'thing marked', 'things marked')),
       );
     }
 
     if (st.id === 'uncoated') {
-      parts.push(h('p', { class: 'text-sm text-bone-400' }, p.excluded.length ? counts(p.excluded.length, 'area', 'areas') : 'Nothing left out. Skip this step if the whole floor gets coated.'));
+      parts.push(
+        h(
+          'p',
+          { class: 'text-sm text-bone-400' },
+          p.excluded.length ? counts(p.excluded.length, 'area', 'areas') : 'Nothing left out. Skip this step if the whole floor gets coated.',
+        ),
+      );
     }
 
     if (st.id === 'price') parts.push(...pricePanel());
 
     parts.push(selectionBox());
 
-    const nav = h(
-      'div',
-      { class: 'flex flex-wrap items-center gap-3' },
-      stepIx > 0 ? h('button', { type: 'button', class: `${ghost} fm-big`, onclick: () => goto(stepIx - 1) }, '← Back') : null,
-      stepIx < STEPS.length - 1 ? h('button', { type: 'button', class: 'btn-gold fm-big', onclick: () => goto(stepIx + 1) }, `Next: ${STEPS[stepIx + 1]!.short}`) : null,
+    navEl.replaceChildren(
+      ...[
+        stepIx > 0
+          ? h(
+              'button',
+              {
+                type: 'button',
+                class: `${ghost} fm-big`,
+                onclick: () => goto(stepIx - 1),
+              },
+              '← Back',
+            )
+          : null,
+        stepIx < STEPS.length - 1
+          ? h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn-gold fm-big',
+                onclick: () => goto(stepIx + 1),
+              },
+              `Next: ${STEPS[stepIx + 1]!.short}`,
+            )
+          : null,
+      ].filter((x): x is HTMLButtonElement => !!x),
     );
-    parts.push(nav);
     panelEl.replaceChildren(...parts.filter((x): x is HTMLElement => !!x));
 
     // Always visible: size and price so far.
     try {
-      const m = measureFloorMap(planToMap(p));
-      const q = floorQuote(defaultFloorConfig, { ...m, moisturePrimer: doc.moisture === 'failed' });
+      const { m, q } = quoteNow();
       summary.replaceChildren(
-        h('div', { class: 'flex items-baseline justify-between gap-4' }, h('span', { class: small }, 'Floor'), h('span', { class: 'font-display text-lg text-bone-50 tabular-nums' }, `${Math.round(m.sqft)} sq ft`)),
-        h('div', { class: 'mt-1 flex items-baseline justify-between gap-4' }, h('span', { class: small }, 'Price so far'), h('span', { class: 'font-display text-2xl text-gold-400 tabular-nums' }, formatMoney(q.total))),
+        h(
+          'div',
+          { class: 'flex items-baseline justify-between gap-4' },
+          h('span', { class: small }, 'Floor'),
+          h('span', { class: 'font-display text-lg text-bone-50 tabular-nums' }, `${Math.round(m.sqft)} sq ft`),
+        ),
+        h(
+          'div',
+          { class: 'mt-1 flex items-baseline justify-between gap-4' },
+          h('span', { class: small }, 'Price so far'),
+          h('span', { class: 'font-display text-2xl text-gold-400 tabular-nums' }, formatMoney(q.total)),
+        ),
       );
     } catch {
       summary.replaceChildren(h('p', { class: 'text-sm text-bone-400' }, 'Draw the floor to see its size and price.'));
@@ -615,33 +982,45 @@ function showEditor(saved: SavedMap) {
       out.push(
         h(
           'div',
-          { class: 'border-l-2 border-red-400 pl-4 text-red-200', role: 'alert' },
+          {
+            class: 'border-l-2 border-red-400 pl-4 text-red-200',
+            role: 'alert',
+          },
           h('p', { class: 'font-semibold' }, 'Fix these first:'),
           h('ul', { class: 'mt-1 list-disc pl-5 text-sm' }, ...problems.map((pr) => h('li', {}, pr.message))),
         ),
       );
     if (!doc.plan.doors.length)
-      out.push(h('p', { class: 'border-l-2 border-gold-500 pl-4 text-sm text-bone-200' }, 'No garage door is marked. If there is one, go back to step 2: the curb and the edge work stop at doors.'));
-    const moisture = h(
-      'div',
-      { class: 'flex flex-col gap-2' },
-      h('span', { class: small }, 'Moisture test'),
-      ...(
-        [
-          ['untested', 'Not tested yet'],
-          ['passed', 'Passed: dry enough'],
-          ['failed', 'Failed: the primer goes down'],
-        ] as const
-      ).map(([v, label]) =>
-        chip(label, doc.moisture === v, () => {
-          doc.moisture = v;
-          save();
-          panel();
-        }),
+      out.push(
+        h(
+          'p',
+          { class: 'border-l-2 border-gold-500 pl-4 text-sm text-bone-200' },
+          'No garage door is marked. If there is one, go back to step 2: the curb and the edge work stop at doors.',
+        ),
+      );
+
+    out.push(
+      h(
+        'div',
+        { class: 'flex flex-col gap-2' },
+        h('span', { class: small }, 'Moisture test'),
+        ...(
+          [
+            ['untested', 'Not tested yet'],
+            ['passed', 'Passed: dry enough'],
+            ['failed', 'Failed: the primer goes down'],
+          ] as const
+        ).map(([v, label]) =>
+          chip(label, doc.moisture === v, () => {
+            doc.moisture = v;
+            save();
+            panel();
+          }),
+        ),
       ),
     );
-    out.push(moisture);
-    const m = measureFloorMap(map);
+
+    const { m, q } = quoteNow();
     const rows: [string, string][] = [
       ['Floor', `${Math.round(m.sqft)} sq ft`],
       ['Cracks', formatFeet(m.crackFeet ?? 0)],
@@ -652,38 +1031,285 @@ function showEditor(saved: SavedMap) {
       ['Garage doors', formatFeet(m.doorFeet)],
     ];
     out.push(
+      h('p', { class: small }, 'Measured'),
       h(
         'dl',
-        { class: 'grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-sm' },
+        { class: '-mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-sm' },
         ...rows.flatMap(([k, v]) => [h('dt', { class: 'text-bone-400' }, k), h('dd', { class: 'text-right tabular-nums text-bone-50' }, v)]),
       ),
     );
-    if (!problems.length) {
-      const q = floorQuote(defaultFloorConfig, { ...m, moisturePrimer: doc.moisture === 'failed' });
-      out.push(
-        h(
-          'div',
-          { class: 'border-t border-ink-800 pt-4' },
-          h('p', { class: small }, 'Firm quote'),
-          h(
-            'ul',
-            { class: 'mt-2 divide-y divide-ink-800' },
-            ...q.lines.map((l) => h('li', { class: 'flex justify-between gap-4 py-2 text-sm' }, h('span', { class: 'text-bone-200' }, l.label), h('span', { class: 'tabular-nums text-bone-50' }, formatMoney(l.amount)))),
-          ),
-          h('p', { class: 'mt-3 flex items-baseline justify-between' }, h('span', { class: 'text-bone-200' }, 'Total'), h('span', { class: 'font-display text-3xl text-gold-400 tabular-nums' }, formatMoney(q.total))),
-          doc.moisture === 'untested' ? h('p', { class: 'mt-2 text-sm text-bone-400' }, 'Do the moisture test before you give this price: a failed test adds the primer.') : null,
-          h('p', { class: 'mt-2 text-xs text-bone-500' }, 'Priced with the starting floor prices.'),
-        ),
+    if (problems.length) return [...out, notesField()];
+
+    out.push(quoteEditor(q), customerFields(), noteField(), pdfButton(q));
+    out.push(notesField());
+    return out;
+  }
+
+  /** Every line can be renamed, re-priced or taken out; the owner can add their own. */
+  function quoteEditor(q: EditedFloorQuote) {
+    const edits = doc.edits;
+    const setLine = (id: string, e: { label?: string; amount?: number; removed?: boolean } | null) => {
+      if (id.startsWith('x-')) return;
+      const key = id as FloorLineId;
+      if (e === null) delete edits.lines[key];
+      else edits.lines[key] = { ...edits.lines[key], ...e };
+      save();
+    };
+    const dollars = (cents: number) => (cents / 100).toFixed(cents % 100 ? 2 : 0);
+    const moneyIn = (cents: number, onChange: (c: number) => void, label: string) => {
+      const el = h('input', {
+        class: `${input} fm-money`,
+        inputmode: 'decimal',
+        'aria-label': label,
+      }) as HTMLInputElement;
+      el.value = dollars(cents);
+      el.addEventListener('focus', () => el.select());
+      el.addEventListener('change', () => {
+        const v = Number(el.value.replace(/[$,\s]/g, ''));
+        if (Number.isFinite(v)) onChange(Math.round(v * 100));
+        else el.value = dollars(cents);
+      });
+      return h('span', { class: 'flex items-center gap-1 text-bone-400' }, '$', el);
+    };
+    const textIn = (value: string, onChange: (t: string) => void, label: string) => {
+      const el = h('input', {
+        class: `${input} min-w-0 flex-1`,
+        'aria-label': label,
+      }) as HTMLInputElement;
+      el.value = value;
+      el.addEventListener('change', () => onChange(el.value));
+      return el;
+    };
+    const list = h('div', { class: 'flex flex-col gap-3' });
+    for (const l of q.lines) {
+      const added = l.source === 'added';
+      const row = h('div', { class: 'flex flex-col gap-1.5' });
+      const line = h('div', { class: 'flex items-center gap-2' });
+      if (l.id === 'minimum') {
+        line.append(
+          h('span', { class: 'min-w-0 flex-1 text-sm text-bone-200' }, `${l.label} (tops it up to the minimum)`),
+          h('span', { class: 'fm-money tabular-nums text-bone-50' }, formatMoney(l.amount)),
+        );
+      } else if (added) {
+        const x = edits.extras.find((e) => e.id === l.id)!;
+        line.append(
+          textIn(x.label, (t) => ((x.label = t), save(), panel()), 'What it is'),
+          moneyIn(x.amount, (c) => ((x.amount = c), save(), panel()), 'Price'),
+        );
+      } else {
+        line.append(
+          textIn(l.label, (t) => (setLine(l.id, { label: t }), panel()), 'Line'),
+          moneyIn(l.amount, (c) => (setLine(l.id, { amount: c }), panel()), 'Price'),
+        );
+      }
+      const remove = h(
+        'button',
+        {
+          type: 'button',
+          class: 'px-2 text-xl leading-none text-bone-400 hover:text-red-300',
+          'aria-label': `Take out ${l.label}`,
+          title: 'Take this line out',
+        },
+        '×',
       );
+      remove.addEventListener('click', () => {
+        if (added) edits.extras = edits.extras.filter((e) => e.id !== l.id);
+        else setLine(l.id, { removed: true });
+        save();
+        panel();
+      });
+      line.append(remove);
+      row.append(line);
+      if (l.source === 'changed' && l.formula)
+        row.append(
+          h(
+            'p',
+            { class: 'text-xs text-bone-400' },
+            `Changed. The formula said ${formatMoney(l.formula.amount)}. `,
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'underline underline-offset-2',
+                onclick: () => (setLine(l.id, null), panel()),
+              },
+              'Use the formula',
+            ),
+          ),
+        );
+      list.append(row);
     }
-    const notes = h('textarea', { class: input, rows: 3, placeholder: 'Anything the crew should know', 'aria-label': 'Notes' }) as HTMLTextAreaElement;
-    notes.value = doc.notes;
-    notes.addEventListener('input', () => {
-      doc.notes = notes.value;
+    const removed = q.removed.length
+      ? h(
+          'div',
+          { class: 'flex flex-wrap items-center gap-2 text-xs text-bone-400' },
+          'Taken out:',
+          ...q.removed.map((r) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'underline underline-offset-2',
+                onclick: () => (setLine(r.id, { removed: false }), panel()),
+              },
+              `put back ${r.label}`,
+            ),
+          ),
+        )
+      : null;
+    const add = (label: string, amount: number) => {
+      edits.extras.push({ id: `x-${newId()}`, label, amount });
+      save();
+      panel();
+      requestAnimationFrame(() => {
+        const inputs = panelEl.querySelectorAll<HTMLInputElement>('[aria-label="What it is"]');
+        inputs[inputs.length - 1]?.focus();
+      });
+    };
+    return h(
+      'div',
+      { class: 'flex flex-col gap-3 border-t border-ink-800 pt-4' },
+      h('p', { class: small }, 'Firm quote'),
+      h(
+        'p',
+        { class: '-mt-1 text-sm text-bone-400' },
+        'Change any wording or price, take a line out, or add one the formula doesn’t cover. A minus price is a discount.',
+      ),
+      list,
+      removed,
+      h(
+        'div',
+        { class: 'flex flex-wrap gap-2' },
+        h('button', { type: 'button', class: ghost, onclick: () => add('', 0) }, '+ Add a line'),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: ghost,
+            onclick: () => add('Discount', -10000),
+          },
+          '+ Discount',
+        ),
+      ),
+      h(
+        'p',
+        { class: 'mt-1 flex items-baseline justify-between' },
+        h('span', { class: 'text-bone-200' }, 'Total'),
+        h('span', { class: 'font-display text-3xl text-gold-400 tabular-nums' }, formatMoney(q.total)),
+      ),
+      doc.moisture === 'untested'
+        ? h('p', { class: 'text-sm text-bone-400' }, 'Do the moisture test before you give this price: a failed test adds the primer.')
+        : null,
+      h('p', { class: 'text-xs text-bone-500' }, 'Priced with the starting floor prices.'),
+    );
+  }
+
+  function customerFields() {
+    const c = doc.customer;
+    const f = (label: string, key: keyof typeof c, type = 'text', auto = 'off') => {
+      const el = h('input', {
+        class: input,
+        type,
+        autocomplete: auto,
+        'aria-label': label,
+      }) as HTMLInputElement;
+      el.value = c[key];
+      el.addEventListener('input', () => {
+        c[key] = el.value;
+        if (key === 'name' && !doc.name) {
+          doc.name = el.value.trim();
+          nameEl.value = doc.name;
+        }
+        save();
+      });
+      return h('label', { class: 'flex flex-col gap-1' }, h('span', { class: small }, label), el);
+    };
+    return h(
+      'div',
+      { class: 'flex flex-col gap-3 border-t border-ink-800 pt-4' },
+      h('p', { class: small }, 'On the quote'),
+      f('Customer name', 'name'),
+      f('Address', 'address'),
+      f('Phone', 'phone', 'tel'),
+      f('Email', 'email', 'email'),
+    );
+  }
+
+  function noteField() {
+    const el = h('textarea', {
+      class: input,
+      rows: 3,
+      placeholder: 'Printed on the quote, e.g. what’s included or when we can start',
+      'aria-label': 'Note for the customer',
+    }) as HTMLTextAreaElement;
+    el.value = doc.note;
+    el.addEventListener('input', () => {
+      doc.note = el.value;
       save();
     });
-    out.push(h('label', { class: 'flex flex-col gap-1.5' }, h('span', { class: small }, 'Notes'), notes));
-    return out;
+    return h('label', { class: 'flex flex-col gap-1' }, h('span', { class: small }, 'Note for the customer'), el);
+  }
+
+  function notesField() {
+    const el = h('textarea', {
+      class: input,
+      rows: 3,
+      placeholder: 'Only for us, not on the quote',
+      'aria-label': 'Crew notes',
+    }) as HTMLTextAreaElement;
+    el.value = doc.notes;
+    el.addEventListener('input', () => {
+      doc.notes = el.value;
+      save();
+    });
+    return h('label', { class: 'flex flex-col gap-1 border-t border-ink-800 pt-4' }, h('span', { class: small }, 'Crew notes'), el);
+  }
+
+  function pdfButton(q: EditedFloorQuote) {
+    const status = h('span', {
+      class: 'text-sm text-bone-400',
+      role: 'status',
+    });
+    const btn = h('button', { type: 'button', class: 'btn-gold fm-big' }, 'Download the quote (PDF)') as HTMLButtonElement;
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      status.textContent = 'Making the PDF…';
+      try {
+        const { quotePdf } = await import('./floormap-pdf');
+        const m = measureFloorMap(planToMap(doc.plan));
+        const blob = await quotePdf({
+          quoteNo: doc.quoteNo,
+          date: new Date(),
+          customer: doc.customer,
+          plan: doc.plan,
+          quote: q,
+          moisture: doc.moisture,
+          primerIfFailed: Math.round(m.sqft) * defaultFloorConfig.moisturePrimer.rate,
+          note: doc.note,
+        });
+        const url = URL.createObjectURL(blob);
+        const a = h('a', {
+          href: url,
+          download: `Quote ${doc.quoteNo}${doc.customer.name ? ` - ${doc.customer.name.replace(/[\\/:*?"<>|]/g, '')}` : ''}.pdf`,
+        });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        status.textContent = `Downloaded quote ${doc.quoteNo}.`;
+      } catch (err) {
+        status.textContent = `Couldn’t make the PDF: ${(err as Error).message}`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    return h(
+      'div',
+      { class: 'flex flex-col gap-2 border-t border-ink-800 pt-4' },
+      btn,
+      status,
+      h('p', { class: 'text-xs text-bone-500' }, `Quote ${doc.quoteNo}. Turning a quote into an invoice comes once floors has its own books and Stripe.`),
+    );
   }
 
   // Keyboard: undo/redo, delete the selection.
@@ -705,11 +1331,46 @@ function showEditor(saved: SavedMap) {
   const zoomBar = h(
     'div',
     { class: 'absolute right-3 top-3 flex flex-col gap-2' },
-    h('button', { type: 'button', class: `${ghost} bg-ink-950/90 text-lg`, 'aria-label': 'Zoom in', onclick: () => canvas.zoom(1.25) }, '+'),
-    h('button', { type: 'button', class: `${ghost} bg-ink-950/90 text-lg`, 'aria-label': 'Zoom out', onclick: () => canvas.zoom(0.8) }, '−'),
-    h('button', { type: 'button', class: `${ghost} bg-ink-950/90 text-xs`, onclick: () => canvas.fit() }, 'Fit'),
+    h(
+      'button',
+      {
+        type: 'button',
+        class: `${ghost} bg-ink-950/90 text-lg`,
+        'aria-label': 'Zoom in',
+        onclick: () => canvas.zoom(1.25),
+      },
+      '+',
+    ),
+    h(
+      'button',
+      {
+        type: 'button',
+        class: `${ghost} bg-ink-950/90 text-lg`,
+        'aria-label': 'Zoom out',
+        onclick: () => canvas.zoom(0.8),
+      },
+      '−',
+    ),
+    h(
+      'button',
+      {
+        type: 'button',
+        class: `${ghost} bg-ink-950/90 text-xs`,
+        onclick: () => canvas.fit(),
+      },
+      'Fit',
+    ),
   );
-  canvas.el.append(zoomBar, h('p', { class: 'pointer-events-none absolute bottom-2 left-3 text-xs text-bone-500' }, 'Zoom with + and −. Drag empty space to move. On a phone: two fingers.'));
+  canvas.el.append(
+    zoomBar,
+    h(
+      'p',
+      {
+        class: 'pointer-events-none absolute bottom-2 left-3 text-xs text-bone-500',
+      },
+      'Zoom with + and −. Drag empty space to move. On a phone: two fingers.',
+    ),
+  );
 
   view().replaceChildren(
     h(
@@ -718,14 +1379,36 @@ function showEditor(saved: SavedMap) {
       h(
         'div',
         { class: 'flex flex-wrap items-center gap-3' },
-        h('button', { type: 'button', class: 'text-sm text-bone-400 underline underline-offset-4', onclick: showList }, '← All floor maps'),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'text-sm text-bone-400 underline underline-offset-4',
+            onclick: showList,
+          },
+          '← All floor maps',
+        ),
         nameEl,
         h('span', { class: 'ml-auto flex items-center gap-2' }, status, undoBtn, redoBtn),
       ),
       stepsBar,
       tip,
       tipControls,
-      h('div', { class: 'mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]' }, canvas.el, h('aside', { class: 'flex flex-col gap-5' }, panelEl, summary)),
+      h(
+        'div',
+        {
+          class: 'mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start',
+        },
+        canvas.el,
+        // As tall as the drawing on a computer: the step scrolls inside it,
+        // Back/Next and the price stay at its foot.
+        h(
+          'aside',
+          { class: 'fm-aside flex flex-col gap-4' },
+          h('div', { class: 'fm-scroll flex flex-col gap-5' }, panelEl),
+          h('div', { class: 'flex flex-col gap-3' }, navEl, summary),
+        ),
+      ),
     ),
   );
   drawSteps();
