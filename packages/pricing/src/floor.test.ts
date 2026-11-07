@@ -6,6 +6,14 @@ import type { FloorPricingConfig } from './index.ts';
 const config = defaultFloorConfig;
 const clone = (): FloorPricingConfig => structuredClone(defaultFloorConfig);
 
+test('a length in a label is the length that was priced', () => {
+  const q = floorQuote(config, { sqft: 500, stemWallFeet: 46.54, crackFeet: 32.26 });
+  const stem = q.lines.find((l) => l.id === 'stem-wall')!;
+  assert.equal(stem.label, 'Stem wall, 46.5 ft');
+  assert.equal(stem.amount, 46500);
+  assert.equal(q.lines.find((l) => l.id === 'cracks')!.label, 'Crack repair, 12.3 ft past the first 20');
+});
+
 test('the shipped floor defaults are valid', () => {
   assert.deepEqual(validateFloorConfig(config), []);
 });

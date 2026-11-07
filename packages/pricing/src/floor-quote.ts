@@ -24,17 +24,21 @@ export function floorQuote(config: FloorPricingConfig, m: FloorMeasurements): Fl
   const sqft = Math.round(m.sqft);
   add({ id: 'floor', label: `Full-flake floor, ${sqft} sq ft`, amount: sqft * config.rate });
 
-  const crackFeet = Math.max(0, n(m.crackFeet) - config.cracks.freeFeet);
+  // Lengths are shown and priced at the same tenth of a foot, so a line's
+  // label always agrees with its amount.
+  const tenth = (v: number) => Math.round(v * 10) / 10;
+  const crackFeet = tenth(Math.max(0, n(m.crackFeet) - config.cracks.freeFeet));
+  const stemFeet = tenth(n(m.stemWallFeet));
   add({
     id: 'cracks',
-    label: `${config.cracks.label}, ${Math.round(crackFeet)} ft past the first ${config.cracks.freeFeet}`,
+    label: `${config.cracks.label}, ${crackFeet} ft past the first ${config.cracks.freeFeet}`,
     amount: crackFeet * config.cracks.rate,
   });
   add({ id: 'removal', label: config.removal.label, amount: n(m.removalSqft) * config.removal.rate });
   add({
     id: 'stem-wall',
-    label: `${config.stemWall.label}, ${Math.round(n(m.stemWallFeet))} ft`,
-    amount: n(m.stemWallFeet) * config.stemWall.rate,
+    label: `${config.stemWall.label}, ${stemFeet} ft`,
+    amount: stemFeet * config.stemWall.rate,
   });
   const steps = Math.round(n(m.steps));
   add({ id: 'steps', label: steps === 1 ? config.steps.label : `${config.steps.label} × ${steps}`, amount: steps * config.steps.rate });
