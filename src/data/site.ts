@@ -100,6 +100,16 @@ export const business = {
   rating: '5.0',
   /** Exact count on the Google Business Profile, verified 10 Sep 2026. */
   reviewCount: 25,
+  /**
+   * The sister business, a trade name of the same LLC. Every page links to
+   * it from the footer and it links back from every page of its own
+   * (ked-coatings DECISIONS D15); the structured data says they're one company.
+   */
+  sister: {
+    name: 'KED Coatings',
+    what: 'Garage floor coatings',
+    url: 'https://kedcoatings.com/',
+  },
   bookingUrl:
     'https://book.housecallpro.com/book/Knock-Em-Down-Auto--Marine-Detailing/18c82a94d510423988a8e7909d38557d?v2=true',
 } as const;

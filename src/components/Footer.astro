@@ -23,6 +23,14 @@ const year = new Date().getFullYear();
           Mobile auto and marine detailing across {business.serviceArea}, based in {business.baseCity}.
           We come to your home or office. {hours.line}.
         </p>
+        <p class="mt-4 max-w-sm text-sm leading-relaxed text-bone-500">
+          Garage floors too:{' '}
+          <a
+            href={business.sister.url}
+            class="text-bone-200 underline decoration-ink-600 underline-offset-4 transition-colors hover:text-gold-400"
+          >{business.sister.name}</a>,
+          our sister company. {business.sister.what} in {business.city}.
+        </p>
       </div>
 
       <nav aria-label="Footer" class="lg:col-span-3">
