@@ -10,3 +10,4 @@ export { validateFloorConfig } from './floor-validate.ts';
 export { defaultFloorConfig } from './floor-defaults.ts';
 export * from './floor-map.ts';
 export * from './floor-plan.ts';
+export * from './floor-quote-edit.ts';
