@@ -8,3 +8,4 @@ export * from './floor-types.ts';
 export { floorQuote, quickFloorQuote } from './floor-quote.ts';
 export { validateFloorConfig } from './floor-validate.ts';
 export { defaultFloorConfig } from './floor-defaults.ts';
+export * from './floor-map.ts';
