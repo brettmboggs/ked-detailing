@@ -171,7 +171,7 @@ const STYLE = `
 .fm-step[aria-current=step]{color:#eae6dc;border-color:#c9a961}
 .fm-step b{display:inline-block;min-width:1.4em;color:#c9a961;font-weight:700}
 .fm-big{min-height:52px}
-@media (min-width:1024px){.fm-aside{height:min(68svh,720px);min-height:360px}.fm-scroll{flex:1;min-height:0;overflow-y:auto;padding-right:.5rem;overscroll-behavior:contain}}
+@media (min-width:1024px){.fm-stick{position:sticky;top:1rem}}
 .fm-money{width:6.5rem;text-align:right}
 `;
 
@@ -496,6 +496,13 @@ function showEditor(saved: SavedMap) {
       el?.focus();
       el?.scrollIntoView({ block: 'nearest' });
     },
+    jump: (sel) => {
+      const home: Record<string, StepId> = { door: 'doors', crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating', fixture: 'things' };
+      goto(STEPS.findIndex((st) => st.id === home[sel.kind]));
+      selection = sel;
+      canvas.draw();
+      panel();
+    },
   });
 
   const change = (p: FloorPlan) => {
@@ -564,7 +571,7 @@ function showEditor(saved: SavedMap) {
   const tipControls = h('div', {
     class: 'mt-3 flex flex-wrap gap-2 lg:hidden',
   });
-  const summary = h('div', { class: 'border-t border-ink-800 pt-3' });
+  const summary = h('div', { class: 'grid grid-cols-2 gap-6 border-t border-ink-800 pt-3' });
   const navEl = h('div', { class: 'flex flex-wrap items-center gap-3' });
 
   /** The quote as it stands: the formula, then the owner's changes. */
@@ -647,7 +654,7 @@ function showEditor(saved: SavedMap) {
       const d = p.doors[sel.i];
       if (!d) return null;
       box.append(
-        h('p', { class: 'text-bone-200' }, `Door on wall ${wallName(d.wall)}, ${formatFeet(Math.min(d.width, wallLength(p, d.wall)))} wide.`),
+        h('p', { class: 'text-bone-200' }, `Door on wall ${wallName(d.wall)}, ${formatFeet(Math.min(d.width, wallLength(p, d.wall)))} wide. Drag a gold square to make it wider or narrower, drag the door to slide it, or pick a size:`),
         h(
           'div',
           { class: 'flex flex-wrap gap-2' },
@@ -670,8 +677,9 @@ function showEditor(saved: SavedMap) {
       if (!c) return null;
       let L = 0;
       for (let i = 1; i < c.length; i++) L += Math.hypot(c[i]![0] - c[i - 1]![0], c[i]![1] - c[i - 1]![1]);
+      L = Math.round(L * 10) / 10; // the same tenth of a foot the measuring uses
       box.append(
-        h('p', { class: 'text-bone-200' }, `Crack, ${formatFeet(L)} long.`),
+        h('p', { class: 'text-bone-200' }, `Crack, ${formatFeet(L)} long. Drag the gold dots to reshape it, or drag the crack to move it.`),
         remove('Remove this crack', () => ({
           ...p,
           cracks: p.cracks.filter((_, i) => i !== sel.i),
@@ -684,7 +692,7 @@ function showEditor(saved: SavedMap) {
       const area = measureFloorMap({ ...planToMap(p), spalls: [a] }).spalledSqft ?? 0;
       const what = sel.kind === 'spall' ? 'Damaged patch' : sel.kind === 'excluded' ? 'Area we won’t coat' : 'Old coating area';
       box.append(
-        h('p', { class: 'text-bone-200' }, `${what}, ${Math.round(area * 10) / 10} sq ft.`),
+        h('p', { class: 'text-bone-200' }, `${what}, ${Math.round(area * 10) / 10} sq ft. Drag the gold dots to reshape it, or drag it to move it.`),
         remove('Remove it', () => {
           const next = structuredClone(p);
           if (sel.kind === 'spall') next.spalls.splice(sel.i, 1);
@@ -962,7 +970,7 @@ function showEditor(saved: SavedMap) {
         ),
         h(
           'div',
-          { class: 'mt-1 flex items-baseline justify-between gap-4' },
+          { class: 'flex items-baseline justify-between gap-4' },
           h('span', { class: small }, 'Price so far'),
           h('span', { class: 'font-display text-2xl text-gold-400 tabular-nums' }, formatMoney(q.total)),
         ),
@@ -1004,19 +1012,24 @@ function showEditor(saved: SavedMap) {
         'div',
         { class: 'flex flex-col gap-2' },
         h('span', { class: small }, 'Moisture test'),
-        ...(
-          [
-            ['untested', 'Not tested yet'],
-            ['passed', 'Passed: dry enough'],
-            ['failed', 'Failed: the primer goes down'],
-          ] as const
-        ).map(([v, label]) =>
-          chip(label, doc.moisture === v, () => {
-            doc.moisture = v;
-            save();
-            panel();
-          }),
+        h(
+          'div',
+          { class: 'grid grid-cols-3 gap-2' },
+          ...(
+            [
+              ['untested', 'Not yet'],
+              ['passed', 'Passed'],
+              ['failed', 'Failed'],
+            ] as const
+          ).map(([v, label]) =>
+            chip(label, doc.moisture === v, () => {
+              doc.moisture = v;
+              save();
+              panel();
+            }),
+          ),
         ),
+        doc.moisture === 'failed' ? h('p', { class: 'text-xs text-bone-400' }, 'The moisture-blocking primer is added to the quote.') : null,
       ),
     );
 
@@ -1034,7 +1047,7 @@ function showEditor(saved: SavedMap) {
       h('p', { class: small }, 'Measured'),
       h(
         'dl',
-        { class: '-mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-sm' },
+        { class: '-mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm' },
         ...rows.flatMap(([k, v]) => [h('dt', { class: 'text-bone-400' }, k), h('dd', { class: 'text-right tabular-nums text-bone-50' }, v)]),
       ),
     );
@@ -1399,15 +1412,11 @@ function showEditor(saved: SavedMap) {
         {
           class: 'mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start',
         },
-        canvas.el,
-        // As tall as the drawing on a computer: the step scrolls inside it,
-        // Back/Next and the price stay at its foot.
-        h(
-          'aside',
-          { class: 'fm-aside flex flex-col gap-4' },
-          h('div', { class: 'fm-scroll flex flex-col gap-5' }, panelEl),
-          h('div', { class: 'flex flex-col gap-3' }, navEl, summary),
-        ),
+        // On a computer the drawing, with the floor size and price under
+        // it, stays in view while the page scrolls the steps beside it: no
+        // box-in-a-box scrolling (Brett hated it).
+        h('div', { class: 'fm-stick flex flex-col gap-3' }, canvas.el, summary),
+        h('aside', { class: 'flex flex-col gap-5' }, panelEl, navEl),
       ),
     ),
   );

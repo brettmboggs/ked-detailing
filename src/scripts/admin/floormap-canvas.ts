@@ -57,6 +57,8 @@ export interface CanvasHost {
   stepWidth: () => number;
   /** Tapped a wall's length label: ask for the exact length. */
   editWall: (i: number, at: { x: number; y: number }) => void;
+  /** Tapped something that belongs to another step: go there with it selected. */
+  jump: (sel: Exclude<Selection, null>) => void;
 }
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -181,10 +183,10 @@ export class FloorCanvas {
 
   /* ---------------------------------------------------------- input */
 
-  private hit(e: PointerEvent): { kind: string; i: number; j?: number } | null {
+  private hit(e: PointerEvent): { kind: string; i: number; j?: number; w?: string } | null {
     const t = (e.target as Element).closest('[data-k]') as SVGElement | null;
     if (!t) return null;
-    return { kind: t.dataset.k!, i: Number(t.dataset.i), j: t.dataset.j !== undefined ? Number(t.dataset.j) : undefined };
+    return { kind: t.dataset.k!, i: Number(t.dataset.i), j: t.dataset.j !== undefined ? Number(t.dataset.j) : undefined, w: t.dataset.w };
   }
 
   /** How close, in feet, a finger needs to be to a wall to mean it. */
@@ -213,6 +215,40 @@ export class FloorCanvas {
       (this.gesture = { kind: 'drag', before: plan, moved: false, x: at.x, y: at.y, move, onTap });
     // Right or middle button: always move the view.
     if (e.button === 1 || e.button === 2) return pan();
+
+    // Anything already drawn can be edited from any step: tapping it goes
+    // to its step with it selected.
+    const home: Record<string, StepId> = { door: 'doors', crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating', fixture: 'things' };
+    if (hit && home[hit.kind] && home[hit.kind] !== step) {
+      const sel = { kind: hit.kind, i: hit.i } as Exclude<Selection, null>;
+      return pan(() => this.host.jump(sel));
+    }
+
+    // A reshape dot on the selected crack or area.
+    if (hit?.kind === 'vtx' && hit.w && hit.j !== undefined) {
+      const [w, i, j] = [hit.w, hit.i, hit.j];
+      return drag((p) => {
+        const next = structuredClone(plan);
+        const list = listOf(next, w);
+        const q = keepInside(plan, p);
+        if (list?.[i]) list[i]![j] = [Math.round(q[0] * 4) / 4, Math.round(q[1] * 4) / 4];
+        return next;
+      });
+    }
+    // A door's end: drag to make it wider or narrower.
+    if (hit?.kind === 'dend' && hit.j !== undefined) {
+      const [i, end] = [hit.i, hit.j];
+      const d = plan.doors[i]!;
+      const { a, b } = wall(plan, d.wall);
+      const span = doorSpan(plan, d);
+      return drag((p) => {
+        const at = Math.round(project(p, a, b).at * 4) / 4;
+        const [from, to] = end === 0 ? [Math.min(at, span.to - 1), span.to] : [span.from, Math.max(at, span.from + 1)];
+        const next = structuredClone(plan);
+        next.doors[i] = { ...d, at: (from + to) / 2, width: to - from };
+        return next;
+      });
+    }
 
     if (step === 'shape') {
       if (hit?.kind === 'corner') {
@@ -297,7 +333,19 @@ export class FloorCanvas {
     if (d && !(step === 'coating' && !Array.isArray(plan.oldCoating))) {
       if (hit?.kind === d.sel) {
         const i = hit.i;
-        return pan(() => this.host.select({ kind: d.sel, i } as Selection));
+        const kind = d.sel;
+        const start = ft;
+        this.host.select({ kind, i } as Selection);
+        return drag(
+          (p) => {
+            const next = structuredClone(plan);
+            const list = listOf(next, kind);
+            const [dx, dy] = [Math.round((p[0] - start[0]) * 4) / 4, Math.round((p[1] - start[1]) * 4) / 4];
+            if (list?.[i]) list[i] = list[i]!.map(([x, y]) => keepInside(plan, [x + dx, y + dy]));
+            return next;
+          },
+          () => this.host.select({ kind, i } as Selection),
+        );
       }
       this.host.select(null);
       this.gesture = { kind: 'stroke', pts: [ft], closed: d.closed };
@@ -495,6 +543,30 @@ export class FloorCanvas {
         kids.push(s('polyline', { points: pts(c), fill: 'none', stroke: 'transparent', 'stroke-width': 24, 'data-k': 'crack', 'data-i': i }));
       });
 
+      // Reshape dots on the selected crack or area, in its own step.
+      const dotsFor: Record<string, StepId> = { crack: 'cracks', spall: 'damage', excluded: 'uncoated', coat: 'coating' };
+      if (sel && dotsFor[sel.kind] === step) {
+        const list = listOf(plan, sel.kind);
+        list?.[sel.i]?.forEach((p, j) => {
+          const q = P(p);
+          const g = s('g', { 'data-k': 'vtx', 'data-i': sel.i, 'data-j': j, 'data-w': sel.kind, class: 'fm-grab' });
+          g.append(s('circle', { cx: q.x, cy: q.y, r: 20, fill: 'transparent' }));
+          g.append(s('circle', { cx: q.x, cy: q.y, r: 6.5, fill: C.goldHi, stroke: C.ink, 'stroke-width': 2 }));
+          kids.push(g);
+        });
+      }
+      if (sel?.kind === 'door' && step === 'doors' && plan.doors[sel.i]) {
+        const d = plan.doors[sel.i]!;
+        const { from, to } = doorSpan(plan, d);
+        [from, to].forEach((at, j) => {
+          const q = P(alongWall(plan, d.wall, at));
+          const g = s('g', { 'data-k': 'dend', 'data-i': sel.i, 'data-j': j, class: 'fm-grab' });
+          g.append(s('circle', { cx: q.x, cy: q.y, r: 20, fill: 'transparent' }));
+          g.append(s('rect', { x: q.x - 6, y: q.y - 6, width: 12, height: 12, fill: C.goldHi, stroke: C.ink, 'stroke-width': 2 }));
+          kids.push(g);
+        });
+      }
+
       // Things on the floor.
       plan.fixtures.forEach((f, i) => {
         const q = P(f.at);
@@ -577,6 +649,15 @@ export class FloorCanvas {
 }
 
 /* ------------------------------------------------------------ helpers */
+
+/** The list a selection kind lives in. */
+function listOf(plan: FloorPlan, kind: string): Pt[][] | null {
+  if (kind === 'crack') return plan.cracks;
+  if (kind === 'spall') return plan.spalls;
+  if (kind === 'excluded') return plan.excluded;
+  if (kind === 'coat') return Array.isArray(plan.oldCoating) ? plan.oldCoating : null;
+  return null;
+}
 
 /** A point `d` px from `m`, away from the centre (negative: toward it). */
 function outward(m: { x: number; y: number }, c: { x: number; y: number }, d: number) {
