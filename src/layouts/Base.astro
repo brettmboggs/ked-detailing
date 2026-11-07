@@ -81,14 +81,6 @@ const schema = {
       priceRange: '$$-$$$',
       currenciesAccepted: 'USD',
       sameAs: [business.instagram, business.facebook],
-      // The sister business, a trade name of this LLC. Its site marks this
-      // business as its parentOrganization.
-      subOrganization: {
-        '@type': 'HomeAndConstructionBusiness',
-        '@id': `${business.sister.url}#business`,
-        name: business.sister.name,
-        url: business.sister.url,
-      },
       address: {
         '@type': 'PostalAddress',
         addressLocality: business.baseCity,
