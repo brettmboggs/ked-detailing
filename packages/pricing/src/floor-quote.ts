@@ -85,8 +85,9 @@ export function quickFloorQuote(config: FloorPricingConfig, input: QuickFloorInp
   const low = floorQuote(config, guess(0));
   const high = floorQuote(config, guess(1));
 
+  // The spread allows for a size taken by eye, but never quotes under the minimum.
   const range: [number, number] = [
-    roundDown(low.total * (1 - quick.spread), config.roundTo),
+    Math.max(config.minimum, roundDown(low.total * (1 - quick.spread), config.roundTo)),
     roundUp(high.total * (1 + quick.spread), config.roundTo),
   ];
 

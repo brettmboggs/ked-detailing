@@ -84,7 +84,7 @@ test('quick quote: typed sizes, and odd ones wait for the visit', () => {
 
   const tiny = quickFloorQuote(config, { garage: { width: 10, depth: 12 } });
   assert.equal(tiny.measureFirst, true);
-  assert.deepEqual(tiny.range, [170000, 190000]); // the $1,800 minimum, ±5%, out to $25
+  assert.deepEqual(tiny.range, [180000, 190000]); // the $1,800 minimum, +5% out to $25, never below it
   assert.throws(() => quickFloorQuote(config, { garage: { width: 0, depth: 20 } }), QuoteError);
   assert.throws(() => quickFloorQuote(config, { garage: { size: '9-car' } }), QuoteError);
 });
