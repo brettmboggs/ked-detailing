@@ -5,6 +5,7 @@
  */
 import { renderBooks } from './books';
 import { renderBookings } from './bookings';
+import { renderFloorMap } from './floormap';
 import { renderCustomers } from './customers';
 import { renderHours } from './hours';
 import { renderInventory } from './inventory';
@@ -54,6 +55,7 @@ const views: Record<string, () => Promise<void>> = {
   hours: renderHours,
   website: renderWebsite,
   usage: renderUsage,
+  floormap: renderFloorMap,
 };
 
 /** Checks in for the Usage page. Best effort: never gets in the way. */

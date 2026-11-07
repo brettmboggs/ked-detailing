@@ -22,6 +22,8 @@ const groups = [
   { id: 'schedule', label: 'Schedule', tabs: [['bookings', 'Calendar'], ['hours', 'Hours']] },
   { id: 'money', label: 'Money', tabs: [['invoices', 'Invoices'], ['books', 'Books']] },
   { id: 'supplies', label: 'Supplies', tabs: [['inventory', 'Inventory']] },
+  // The floor-coating trade: its own place until the two businesses split (coatings repo DECISIONS D18, D19).
+  { id: 'floors', label: 'Floors', tabs: [['floormap', 'Floor map']] },
   { id: 'site', label: 'Website', tabs: [['website', 'Words and photos'], ['prices', 'Prices']] },
   { id: 'usage', label: 'Usage', tabs: [['usage', 'Usage']] },
 ];
@@ -95,6 +97,7 @@ const tab =
       <section data-view="hours" hidden></section>
       <section data-view="website" hidden></section>
       <section data-view="usage" hidden></section>
+      <section data-view="floormap" hidden></section>
 
       <p class="mt-16 text-xs text-bone-500">Something wrong? Text Brett. {business.name}</p>
     </div>
