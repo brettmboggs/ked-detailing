@@ -42,7 +42,13 @@ const mailTo = (addr: string) => mail.filter((m) => m.to[0] === addr);
 const day = (offset: number, from = new Date()) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date(from.getTime() + offset * 864e5));
 /** Noon in St. Louis, `offset` days from today. */
-const noon = (offset: number) => `${day(offset)}T17:00:00.000Z`;
+// Noon in St. Louis on that day: 17:00 UTC in daylight time, 18:00 in
+// standard time. A fixed 17:00Z read as 11 AM after the clocks went back.
+const noon = (offset: number) => {
+  const d = day(offset);
+  const hour = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', hourCycle: 'h23' });
+  return [17, 18].map((h) => `${d}T${h}:00:00.000Z`).find((iso) => hour.format(new Date(iso)) === '12')!;
+};
 const input = (service: string) => ({ service, vehicleClass: 'sedan', conditions: {}, addOns: [] });
 
 async function job(customer: object | string, offset: number, service = 'level-1', done = true) {
